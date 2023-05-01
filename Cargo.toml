@@ -1,8 +1,25 @@
 [workspace]
 resolver = "2"
-members = ["crates/*", "crates/betfair-types/betfair-xml-parser"]
+members = [
+  "crates/*",
+  "crates/betfair-types/betfair-xml-parser",
+  "crates/betfair-types/betfair-typegen",
+]
 
 [workspace.dependencies]
+# Our crates
+betfair-types = { path = "crates/betfair-types" }
+betfair-xml-parser = { path = "crates/betfair-types/betfair-xml-parser" }
+betfair-typegen = { path = "crates/betfair-types/betfair-typegen" }
+
+# Utils
+rust_decimal = "1.29"
+chrono = { version = "0.4", default-features = false, features = [
+  "serde",
+  "clock",
+  "std",
+] }
+
 # Async
 tokio = { version = "1.0", features = ["full", "tracing"] }
 
@@ -20,6 +37,10 @@ reqwest = { version = "0.11", default-features = false, features = [
   "stream",
 ] }
 
+# Type gen
+quote = "1.0"
+proc-macro2 = "1.0"
+syn = "2.0"
 
 # Testnig
 rstest = { version = "0.17" }

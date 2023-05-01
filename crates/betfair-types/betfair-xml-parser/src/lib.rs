@@ -17,9 +17,8 @@ pub struct Interface {
 }
 
 pub mod interface {
-    use crate::common::Description;
-
     use super::*;
+    use crate::common::Description;
 
     #[derive(Debug, Serialize, Deserialize, PartialEq)]
     #[serde(rename_all = "camelCase")]
@@ -65,7 +64,7 @@ pub mod common {
         pub items: Vec<parameter::Items>,
     }
 
-    mod parameter {
+    pub mod parameter {
         use super::*;
 
         #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -92,18 +91,16 @@ pub mod common {
         "#;
 
             let parameter: Parameter = from_str(xml).unwrap();
-            assert_eq!(parameter.mandatory, Some(false));
-            assert_eq!(parameter.name, "total");
-            assert_eq!(parameter.r#type, "double");
-            assert_eq!(
-                parameter.items[0],
-                parameter::Items::Description(Description {
-                    value: Some(
-                        "Set a limit on total (matched + unmatched) bet exposure on market group"
-                            .to_string()
-                    )
-                })
-            );
+            assert_eq!(parameter, Parameter {
+                mandatory: Some(false),
+                name: "total".to_string(),
+                r#type: "double".to_string(),
+                items: vec![
+                    parameter::Items::Description(Description {
+                        value: Some("Set a limit on total (matched + unmatched) bet exposure on market group".to_string())
+                    })
+                ]
+            });
         }
 
         #[rstest]
@@ -123,35 +120,38 @@ pub mod common {
         "#;
 
             let parameter = from_str::<Parameter>(xml).unwrap();
-            assert_eq!(parameter.mandatory, None);
-            assert_eq!(parameter.name, "errorCode");
-            assert_eq!(parameter.r#type, "string");
             assert_eq!(
-                parameter.items[0],
-                parameter::Items::Description(Description {
-                    value: Some("the unique code for this error".to_string())
-                })
-            );
-            assert_eq!(
-                parameter.items[1],
-                parameter::Items::ValidValues(ValidValues {
+                parameter,
+                Parameter {
+                    mandatory: None,
+                    name: "errorCode".to_string(),
+                    r#type: "string".to_string(),
                     items: vec![
-                        Value {
-                            id: Some("1".to_string()),
-                            name: "TOO_MUCH_DATA".to_string(),
-                            description: Description {
-                                value: Some("The operation requested too much data".to_string())
-                            }
-                        },
-                        Value {
-                            id: Some("2".to_string()),
-                            name: "INVALID_INPUT_DATA".to_string(),
-                            description: Description {
-                                value: Some("Invalid input data".to_string())
-                            }
-                        }
+                        parameter::Items::Description(Description {
+                            value: Some("the unique code for this error".to_string())
+                        }),
+                        parameter::Items::ValidValues(ValidValues {
+                            items: vec![
+                                Value {
+                                    id: Some("1".to_string()),
+                                    name: "TOO_MUCH_DATA".to_string(),
+                                    description: Description {
+                                        value: Some(
+                                            "The operation requested too much data".to_string()
+                                        )
+                                    }
+                                },
+                                Value {
+                                    id: Some("2".to_string()),
+                                    name: "INVALID_INPUT_DATA".to_string(),
+                                    description: Description {
+                                        value: Some("Invalid input data".to_string())
+                                    }
+                                }
+                            ]
+                        })
                     ]
-                })
+                }
             );
         }
     }
@@ -162,9 +162,8 @@ mod tests {
     use rstest::rstest;
     use serde_xml_rs::from_str;
 
-    use crate::interface::Items;
-
     use super::*;
+    use crate::interface::Items;
 
     #[rstest]
     fn interface_test() {
