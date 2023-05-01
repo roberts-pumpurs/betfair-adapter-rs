@@ -1,0 +1,113 @@
+permissions:
+  contents: read
+on:
+  push:
+    branches: [main]
+  pull_request:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+name: check
+jobs:
+  fmt:
+    runs-on: ubuntu-22.04
+    name: stable / fmt
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+
+      - name: cargo fmt --check
+        run: cargo +nightly fmt --all --check
+
+  clippy:
+    runs-on: ubuntu-22.04
+    name: ${{ matrix.toolchain }} / clippy
+    permissions:
+      contents: read
+      checks: write
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain: [stable, beta]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+
+      - name: cargo clippy
+        uses: actions-rs/clippy-check@v1
+        with:
+          args: --workspace --bins --tests --all-features -- -D warnings
+          token: ${{ secrets.GITHUB_TOKEN }}
+  doc:
+    runs-on: ubuntu-22.04
+    name: nightly / doc
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+
+      - name: cargo doc
+        run: cargo doc --no-deps --all-features
+        env:
+          RUSTDOCFLAGS: --cfg docsrs
+  hack:
+    runs-on: ubuntu-22.04
+    name: ubuntu / stable / features
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly
+      - uses: Swatinem/rust-cache@v2
+
+      - name: cargo install cargo-hack
+        uses: taiki-e/install-action@cargo-hack
+
+      - name: cargo hack
+        run: cargo hack --feature-powerset check
+  msrv:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        msrv: [1.56.1] # 2021 edition requires 1.56
+    name: ubuntu / ${{ matrix.msrv }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Install ${{ matrix.msrv }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.msrv }}
+
+      - name: cargo +${{ matrix.msrv }} check
+        run: cargo check --workspace --bins --tests --examples --benches --all-features
