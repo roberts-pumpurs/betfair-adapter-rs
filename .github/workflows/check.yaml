@@ -11,7 +11,7 @@ name: check
 jobs:
   fmt:
     runs-on: ubuntu-22.04
-    name: stable / fmt
+    name: nightly / fmt
     steps:
       - uses: actions/checkout@v3
         with:
@@ -36,7 +36,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        toolchain: [stable, beta]
+        toolchain: [nightly]
     steps:
       - uses: actions/checkout@v3
         with:
@@ -74,7 +74,7 @@ jobs:
           RUSTDOCFLAGS: --cfg docsrs
   hack:
     runs-on: ubuntu-22.04
-    name: ubuntu / stable / features
+    name: ubuntu / nightly / features
     steps:
       - uses: actions/checkout@v3
         with:
@@ -108,6 +108,7 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.msrv }}
+      - uses: Swatinem/rust-cache@v2
 
       - name: cargo +${{ matrix.msrv }} check
         run: cargo check --workspace --bins --tests --examples --benches --all-features
