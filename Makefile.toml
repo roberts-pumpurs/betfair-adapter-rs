@@ -19,6 +19,7 @@ dependencies = [
     "unused-deps",
     "coverage",
     "audit",
+    "deny",
 ]
 
 [tasks.format]
@@ -121,3 +122,9 @@ workspace = false
 install_crate = "cargo-audit"
 command = "cargo"
 args = ["audit"]
+
+[tasks.deny]
+workspace = false
+install_crate = "cargo-deny"
+command = "cargo"
+args = ["deny", "check"]
