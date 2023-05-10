@@ -1,0 +1,27 @@
+# https://github.com/marketplace/actions/conventional-pr-title
+# This is helpful when you're using semantic-release with the Conventional Commits preset.
+# When using the Squash and merge strategy, GitHub will suggest to use the PR title as
+# the commit message. With this action you can validate that the PR title will l
+# ead to a correct commit message.
+
+name: conventional-pr
+permissions:
+  contents: read
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - edited
+      - synchronize
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    steps:
+      - uses: aslafy-z/conventional-pr-title-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
