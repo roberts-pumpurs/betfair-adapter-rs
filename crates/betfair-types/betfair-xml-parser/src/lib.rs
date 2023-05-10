@@ -4,172 +4,72 @@
     no_crate_inject,
     attr(deny(warnings, rust_2018_idioms), allow(dead_code, unused_variables))
 ))]
+//! Betfair XML file parser.
+//! The intended use is to parse the XML files and generate Rust structs that
+//! can be used to generate code for the Betfair API-NG in Rust (or other languages?)
+//!
+//! Input: XML files from Betfair API-NG
+//! Output: Rust structs as representation of the XML files
+
+use common::Description;
 use serde::{Deserialize, Serialize};
 
+pub mod common;
 pub mod data_type;
 pub mod exception_type;
 pub mod operation;
 pub mod simple_type;
 
+/// Top level representation of the XML file
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Interface {
+    /// The name of the interface
     pub name: String,
+    /// The owner of the interface
     pub owner: String,
+    /// The version of the interface
     pub version: String,
+    /// The date of publication
     pub date: String,
+    /// The namespace of the interface
     pub namespace: String,
+    /// Vector of possible values enclosed within the interface
     #[serde(rename = "$value")]
-    pub items: Vec<interface::Items>,
+    pub items: Vec<InterfaceItems>,
 }
 
-pub mod interface {
-    use super::*;
-    use crate::common::Description;
-
-    #[derive(Debug, Serialize, Deserialize, PartialEq)]
-    #[serde(rename_all = "camelCase")]
-    pub enum Items {
-        Description(Description),
-        SimpleType(simple_type::SimpleType),
-        DataType(data_type::DataType),
-        ExceptionType(exception_type::ExceptionType),
-        Operation(operation::Operation),
-    }
+/// A child item of the <interface> tag
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum InterfaceItems {
+    /// The description of the interface
+    Description(Description),
+    /// A simple type tag
+    SimpleType(simple_type::SimpleType),
+    /// A data type tag
+    DataType(data_type::DataType),
+    /// An exception type tag
+    ExceptionType(exception_type::ExceptionType),
+    /// An operation tag
+    Operation(operation::Operation),
 }
 
-pub mod common {
-    use serde::{Deserialize, Serialize};
+/// Parse the XML file into a Rust struct
+pub fn parse_interface(xml: &str) -> Result<Interface, serde_xml_rs::Error> {
+    serde_xml_rs::from_str(xml)
+}
 
-    #[derive(Debug, Serialize, Deserialize, PartialEq)]
-    #[serde(rename_all = "camelCase")]
-    pub struct ValidValues {
-        #[serde(rename = "$value")]
-        pub items: Vec<Value>,
-    }
-
-    #[derive(Debug, Serialize, Deserialize, PartialEq)]
-    #[serde(rename_all = "camelCase")]
-    pub struct Value {
-        pub id: Option<String>,
-        pub name: String,
-        pub description: Description,
-    }
-
-    #[derive(Debug, Serialize, Deserialize, PartialEq)]
-    pub struct Description {
-        #[serde(rename = "$value")]
-        pub value: Option<String>,
-    }
-
-    #[derive(Debug, Serialize, Deserialize, PartialEq)]
-    pub struct Parameter {
-        pub mandatory: Option<bool>,
-        pub name: String,
-        pub r#type: String,
-        #[serde(rename = "$value")]
-        pub items: Vec<parameter::Items>,
-    }
-
-    pub mod parameter {
-        use super::*;
-
-        #[derive(Debug, Serialize, Deserialize, PartialEq)]
-        #[serde(rename_all = "camelCase")]
-        pub enum Items {
-            Description(super::Description),
-            ValidValues(super::ValidValues),
-        }
-    }
-
-    #[cfg(test)]
-    mod tests {
-        use rstest::rstest;
-        use serde_xml_rs::from_str;
-
-        use super::*;
-
-        #[rstest]
-        fn parameter_test() {
-            let xml = r#"
-        <parameter mandatory="false" name="total" type="double">
-            <description>Set a limit on total (matched + unmatched) bet exposure on market group</description>
-        </parameter>
-        "#;
-
-            let parameter: Parameter = from_str(xml).unwrap();
-            assert_eq!(parameter, Parameter {
-                mandatory: Some(false),
-                name: "total".to_string(),
-                r#type: "double".to_string(),
-                items: vec![
-                    parameter::Items::Description(Description {
-                        value: Some("Set a limit on total (matched + unmatched) bet exposure on market group".to_string())
-                    })
-                ]
-            });
-        }
-
-        #[rstest]
-        fn parameter_test_2() {
-            let xml = r#"
-        <parameter name="errorCode" type="string">
-            <description>the unique code for this error</description>
-            <validValues>
-                <value id="1" name="TOO_MUCH_DATA">
-                    <description>The operation requested too much data</description>
-                </value>
-                <value id="2" name="INVALID_INPUT_DATA">
-                    <description>Invalid input data</description>
-                </value>
-            </validValues>
-        </parameter>
-        "#;
-
-            let parameter = from_str::<Parameter>(xml).unwrap();
-            assert_eq!(
-                parameter,
-                Parameter {
-                    mandatory: None,
-                    name: "errorCode".to_string(),
-                    r#type: "string".to_string(),
-                    items: vec![
-                        parameter::Items::Description(Description {
-                            value: Some("the unique code for this error".to_string())
-                        }),
-                        parameter::Items::ValidValues(ValidValues {
-                            items: vec![
-                                Value {
-                                    id: Some("1".to_string()),
-                                    name: "TOO_MUCH_DATA".to_string(),
-                                    description: Description {
-                                        value: Some(
-                                            "The operation requested too much data".to_string()
-                                        )
-                                    }
-                                },
-                                Value {
-                                    id: Some("2".to_string()),
-                                    name: "INVALID_INPUT_DATA".to_string(),
-                                    description: Description {
-                                        value: Some("Invalid input data".to_string())
-                                    }
-                                }
-                            ]
-                        })
-                    ]
-                }
-            );
-        }
+impl From<&str> for Interface {
+    fn from(val: &str) -> Self {
+        parse_interface(val).expect("Failed to parse XML file")
     }
 }
 
 #[cfg(test)]
 mod tests {
     use rstest::rstest;
-    use serde_xml_rs::from_str;
 
     use super::*;
-    use crate::interface::Items;
 
     #[rstest]
     fn interface_test() {
@@ -310,17 +210,17 @@ mod tests {
 </interface>
         "#;
 
-        let interface = from_str::<Interface>(xml).unwrap();
+        let interface: Interface = xml.into();
         assert_eq!(interface.name, "HeartbeatAPING");
         assert_eq!(interface.owner, "BDP");
         assert_eq!(interface.version, "1.0.0");
         assert_eq!(interface.date, "now()");
         assert_eq!(interface.namespace, "com.betfair.heartbeat.api");
         assert_eq!(interface.items.len(), 5);
-        assert!(matches!(interface.items[0], Items::Description(_)));
-        assert!(matches!(interface.items[1], Items::Operation(_)));
-        assert!(matches!(interface.items[2], Items::DataType(_)));
-        assert!(matches!(interface.items[3], Items::ExceptionType(_)));
-        assert!(matches!(interface.items[4], Items::SimpleType(_)));
+        assert!(matches!(interface.items[0], InterfaceItems::Description(_)));
+        assert!(matches!(interface.items[1], InterfaceItems::Operation(_)));
+        assert!(matches!(interface.items[2], InterfaceItems::DataType(_)));
+        assert!(matches!(interface.items[3], InterfaceItems::ExceptionType(_)));
+        assert!(matches!(interface.items[4], InterfaceItems::SimpleType(_)));
     }
 }

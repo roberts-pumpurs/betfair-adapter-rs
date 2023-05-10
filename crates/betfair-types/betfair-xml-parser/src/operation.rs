@@ -1,65 +1,83 @@
+//! Betfair XML file <operation> tag parser
+
 use serde::{Deserialize, Serialize};
 
 use crate::common::{Description, Parameter};
 
+/// Representation of the <operation> tag
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Operation {
+    /// The name of the operation
     pub name: String,
+    /// Version specifier of when the operation was introduced
     pub since: String,
+    /// Potential children of the tag
     #[serde(rename = "$value")]
-    pub values: Vec<operation::Items>,
-}
-pub mod operation {
-    use super::*;
-
-    #[derive(Debug, Serialize, Deserialize, PartialEq)]
-    #[serde(rename_all = "camelCase")]
-    pub enum Items {
-        Description(Description),
-        Parameters(Parameters),
-    }
+    pub values: Vec<OperationItems>,
 }
 
+/// A child item of the <operation> tag
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum OperationItems {
+    /// Description tag
+    Description(Description),
+    /// Parameters tag
+    Parameters(Parameters),
+}
+
+/// Representation of the <parameters> tag
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Parameters {
+    /// Vector of potential children of the tag
     #[serde(rename = "$value")]
-    pub values: Vec<parameters::Items>,
+    pub values: Vec<ParametersItems>,
 }
 
-mod parameters {
-    use super::*;
-
-    #[derive(Debug, Serialize, Deserialize, PartialEq)]
-    #[serde(rename_all = "camelCase")]
-    pub enum Items {
-        Request(Request),
-        SimpleResponse(SimpleResponse),
-        Exceptions(Exceptions),
-    }
+/// A child item of the <parameters> tag
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum ParametersItems {
+    /// Request tag
+    Request(Request),
+    /// SimpleResponse tag
+    SimpleResponse(SimpleResponse),
+    /// Exceptions tag
+    Exceptions(Exceptions),
 }
 
+/// Representation of the <request> tag
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Request {
+    /// Vector of potential children of the tag
     #[serde(rename = "$value")]
     pub values: Vec<Parameter>,
 }
 
+/// Representation of the <simpleResponse> tag
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct SimpleResponse {
+    /// The type of the response
     pub r#type: String,
+    /// The description of the response
     pub description: Description,
 }
 
+/// Representation of the <exceptions> tag
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Exceptions {
+    /// Vector of potential exact Exception tags
     #[serde(rename = "$value")]
     pub values: Vec<Exception>,
 }
 
+/// Representation of the <exception> tag
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Exception {
+    /// The type of the exception
     pub r#type: String,
+    /// The description of the exception
     pub description: Description,
 }
 
@@ -115,10 +133,7 @@ mod tests {
 
         let exceptions = from_str::<Exceptions>(xml).unwrap();
         assert_eq!(exceptions.values.len(), 1);
-        assert_eq!(
-            exceptions.values[0].r#type,
-            "APINGException".to_string()
-        );
+        assert_eq!(exceptions.values[0].r#type, "APINGException".to_string());
     }
 
     #[rstest]
@@ -149,9 +164,9 @@ mod tests {
 
         let params = from_str::<Parameters>(xml).unwrap();
         assert_eq!(params.values.len(), 3);
-        assert!(matches!(params.values[0], parameters::Items::Request(_)));
-        assert!(matches!(params.values[1], parameters::Items::SimpleResponse(_)));
-        assert!(matches!(params.values[2], parameters::Items::Exceptions(_)));
+        assert!(matches!(params.values[0], ParametersItems::Request(_)));
+        assert!(matches!(params.values[1], ParametersItems::SimpleResponse(_)));
+        assert!(matches!(params.values[2], ParametersItems::Exceptions(_)));
     }
 
     #[rstest]
@@ -189,7 +204,7 @@ mod tests {
         assert_eq!(op.name, "listEventTypes");
         assert_eq!(op.since, "1.0.0");
         assert_eq!(op.values.len(), 2);
-        assert!(matches!(op.values[0], operation::Items::Description(_)));
-        assert!(matches!(op.values[1], operation::Items::Parameters(_)));
+        assert!(matches!(op.values[0], OperationItems::Description(_)));
+        assert!(matches!(op.values[1], OperationItems::Parameters(_)));
     }
 }

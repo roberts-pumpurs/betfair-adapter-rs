@@ -1,3 +1,5 @@
+permissions:
+  contents: read
 on:
   push:
     branches: [main]
@@ -7,11 +9,14 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
-name: test
+name: msrv
 jobs:
-  test:
+  msrv:
     runs-on: ubuntu-22.04
-    name: test
+    strategy:
+      matrix:
+        msrv: [1.56.1] # 2021 edition requires 1.56
+    name: ${{ matrix.msrv }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -20,14 +25,8 @@ jobs:
 
       - name: Setup repo
         uses: ./.github/actions/setup-repo
-
-      - name: cargo coverage
-        run: cargo make coverage
-
-      - name: Output coverage
-        uses: 5monkeys/cobertura-action@v13
         with:
-          path: target/coverage/cobertura.xml
-          minimum_coverage: 85
-          fail_below_threshold: true
-          show_missing: true
+          toolchain: ${{ matrix.msrv }}
+
+      - name: cargo +${{ matrix.msrv }} check
+        run: cargo check --workspace --bins --tests --examples --benches --all-features

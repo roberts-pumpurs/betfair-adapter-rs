@@ -1,23 +1,28 @@
+//! Betfair XML file <dataType> tag parser
+
 use serde::{Deserialize, Serialize};
 
 use crate::common::{Description, Parameter};
 
+/// Representation of the <dataType> tag
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct DataType {
+    /// The name of the data type
     pub name: String,
+    /// Vector of possible values
     #[serde(rename = "$value")]
-    pub values: Vec<data_type::Items>,
+    pub values: Vec<DataTypeItems>,
 }
-pub mod data_type {
-    use super::*;
 
-    #[derive(Debug, Serialize, Deserialize, PartialEq)]
-    #[serde(rename_all = "camelCase")]
-    pub enum Items {
-        Description(Description),
-        Parameter(Parameter),
-    }
+/// A child item of the <dataType> tag
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum DataTypeItems {
+    /// The description of the data type
+    Description(Description),
+    /// A parameter tag of the data type
+    Parameter(Parameter),
 }
 
 #[cfg(test)]
@@ -54,11 +59,11 @@ mod tests {
         let req = from_str::<DataType>(xml).unwrap();
         assert_eq!(req.values.len(), 6);
         assert_eq!(req.name, "RunnerCatalog");
-        assert!(matches!(req.values[0], data_type::Items::Description(_)));
-        assert!(matches!(req.values[1], data_type::Items::Parameter(_)));
-        assert!(matches!(req.values[2], data_type::Items::Parameter(_)));
-        assert!(matches!(req.values[3], data_type::Items::Parameter(_)));
-        assert!(matches!(req.values[4], data_type::Items::Parameter(_)));
-        assert!(matches!(req.values[5], data_type::Items::Parameter(_)));
+        assert!(matches!(req.values[0], DataTypeItems::Description(_)));
+        assert!(matches!(req.values[1], DataTypeItems::Parameter(_)));
+        assert!(matches!(req.values[2], DataTypeItems::Parameter(_)));
+        assert!(matches!(req.values[3], DataTypeItems::Parameter(_)));
+        assert!(matches!(req.values[4], DataTypeItems::Parameter(_)));
+        assert!(matches!(req.values[5], DataTypeItems::Parameter(_)));
     }
 }

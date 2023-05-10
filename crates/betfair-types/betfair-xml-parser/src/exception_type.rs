@@ -1,20 +1,29 @@
-use serde::{Serialize, Deserialize};
+//! Betfair XML file <exceptionType> tag parser
+
+use serde::{Deserialize, Serialize};
 
 use crate::common::{Description, Parameter};
 
+/// Representation of the <exceptionType> tag
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ExceptionType {
+    /// The name of the exception
     pub name: String,
+    /// The prefix of the exception
     pub prefix: String,
+    /// Vector of possible values
     #[serde(rename = "$value")]
-    pub values: Vec<Items>,
+    pub values: Vec<ExceptionTypeItems>,
 }
 
+/// A child item of the <exceptionType> tag
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub enum Items {
+pub enum ExceptionTypeItems {
+    /// The description of the exception
     Description(Description),
+    /// A parameter tag of the exception
     Parameter(Parameter),
 }
 
@@ -22,8 +31,8 @@ pub enum Items {
 mod tests {
     use rstest::rstest;
     use serde_xml_rs::from_str;
-    use super::*;
 
+    use super::*;
 
     #[rstest]
     fn test_parse_aping_exception() {
@@ -109,9 +118,12 @@ mod tests {
         assert_eq!(exception.name, "APINGException");
         assert_eq!(exception.prefix, "ANGX");
         assert_eq!(exception.values.len(), 4);
-        assert_eq!(exception.values[0], Items::Description(Description {
-            value: Some("This exception is thrown when an operation fails".to_string()),
-        }));
-        assert!(matches!(exception.values[1], Items::Parameter(_)));
+        assert_eq!(
+            exception.values[0],
+            ExceptionTypeItems::Description(Description {
+                value: Some("This exception is thrown when an operation fails".to_string()),
+            })
+        );
+        assert!(matches!(exception.values[1], ExceptionTypeItems::Parameter(_)));
     }
 }

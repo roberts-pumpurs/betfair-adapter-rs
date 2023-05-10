@@ -1,24 +1,28 @@
+//! Betfair XML file <simpleType tag parser
+
 use serde::{Deserialize, Serialize};
 
 use crate::common::ValidValues;
 
+/// Representation of the <simpleType> tag
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SimpleType {
-    name: String,
-    r#type: String,
-    valid_values: Option<ValidValues>,
+    /// The name of the simple type
+    pub name: String,
+    /// The type of the simple type
+    pub r#type: String,
+    /// Optional children of the tag
+    pub valid_values: Option<ValidValues>,
 }
-
 
 #[cfg(test)]
 mod tests {
 
     use serde_xml_rs::from_str;
 
-    use crate::common::{Value, Description};
-
     use super::*;
+    use crate::common::{Description, Value};
 
     #[rstest::rstest]
     fn test_simple_raw_type() {

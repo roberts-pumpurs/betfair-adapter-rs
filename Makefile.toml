@@ -1,0 +1,123 @@
+[config]
+# Skip loading of all core tasks which saves up a bit on toml parsing and task creation
+skip_core_tasks = true
+
+[env]
+CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
+
+[tasks.setup]
+workspace = false
+install_crate = "rusty-hook"
+command = "rusty-hook"
+args = ["init"]
+
+[tasks.local-ci]
+workspace = false
+dependencies = [
+    "check",
+    "test",
+    "unused-deps",
+    "coverage",
+    "audit",
+]
+
+[tasks.format]
+workspace = false
+command = "cargo"
+args = ["fmt", "--all", "--", "--emit=files"]
+dependencies = ["format-clippy"]
+
+[tasks.format-clippy]
+workspace = false
+install_crate = "clippy"
+command = "cargo"
+args = ["clippy", "--fix", "--allow-dirty", "--allow-staged", "--workspace"]
+
+[tasks.unused-deps]
+workspace = false
+install_crate = "cargo-udeps"
+command = "cargo"
+args = ["udeps", "--all-targets", "--backend=depinfo"]
+
+[tasks.hack-check]
+workspace = false
+install_crate = "cargo-hack"
+command = "cargo"
+args = ["hack", "--feature-powerset", "check"]
+
+[tasks.doc]
+command = "cargo"
+args = ["doc", "--no-deps", "--all-features"]
+
+[tasks.check]
+dependencies = [
+    "fmt-check",
+    "clippy-check",
+    "hack-check",
+]
+
+[tasks.fmt-check]
+workspace = false
+command = "cargo"
+args = ["fmt", "--all", "--check"]
+
+[tasks.clippy-check]
+workspace = false
+install_crate = "clippy"
+command = "cargo"
+args = [
+    "clippy",
+    "--workspace",
+    "--locked",
+    "--",
+    "-D",
+    "warnings",
+]
+
+[tasks.nextest-base]
+workspace = false
+install_crate = "cargo-nextest"
+
+[tasks.test]
+workspace = false
+command = "cargo"
+args = [
+    "nextest",
+    "run",
+    "--workspace",
+    "--bins",
+    "--tests",
+    "--all-targets",
+    "--no-fail-fast",
+]
+dependencies = ["nextest-base"]
+
+[tasks.coverage-base]
+workspace = false
+env = { "CARGO_INCREMENTAL"="0", "RUSTFLAGS"="-Cinstrument-coverage", "LLVM_PROFILE_FILE"="target/coverage/%p-%m.profraw"}
+command = "cargo"
+args = [
+    "nextest",
+    "run",
+]
+dependencies = ["nextest-base"]
+
+[tasks.coverage]
+workspace = false
+install_crate = "grcov"
+dependencies = ["coverage-base"]
+script = '''
+mkdir -p target/coverage
+grcov . --binary-path ./target/debug/deps/ -s . -t html,cobertura --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o target/coverage/
+echo "✅✅✅✅"
+echo "View the report: file://$(pwd)/target/coverage/html/index.html"
+cat target/coverage/html/coverage.json
+echo ""
+echo "✅✅✅✅"
+'''
+
+[tasks.audit]
+workspace = false
+install_crate = "cargo-audit"
+command = "cargo"
+args = ["audit"]
