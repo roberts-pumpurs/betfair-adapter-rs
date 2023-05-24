@@ -1,94 +1,86 @@
 //! The first version of BetfairTypeGen implementation
-mod common;
-mod data_type;
-mod exception_type;
-mod operation;
-mod simple_type;
 
-use proc_macro2::TokenStream;
+mod data_types;
+mod documentation;
+
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 
-use crate::BetfairTypeGen;
+use crate::ast::{Aping, Comment, Name};
+use crate::GeneratorStrategy;
 
 /// The first version of BetfairTypeGen implementation
 pub struct GenV1;
 
-impl BetfairTypeGen for GenV1 {
-    fn generate(&self, interface: impl Into<betfair_xml_parser::Interface>) -> TokenStream {
-        let interface: betfair_xml_parser::Interface = interface.into();
+impl GeneratorStrategy for GenV1 {
+    fn generate(&self, aping: impl Into<Aping>) -> TokenStream {
+        let aping = aping.into();
+        let top_level_docs = self.generate_top_level_docs(&aping);
+        let data_types = aping.data_types().iter().fold(quote! {}, |acc, (_name, data)| {
+            let iter_data_type = self.generate_data_type(data);
 
-        // Generate the top level documentation
-        let top_level_docs = interface.items.iter().find_map(|x| match x {
-            betfair_xml_parser::InterfaceItems::Description(x) => Some(x),
-            _ => None,
-        });
-        let top_level_docs = top_level_docs.unwrap();
-        let _ = common::description::docs(top_level_docs);
+            quote! {
+                #acc
 
-        // Generate the top level simple types
-        let _simple_types = interface.items.iter().filter_map(|x| match x {
-            betfair_xml_parser::InterfaceItems::SimpleType(x) => Some(x),
-            _ => None,
+                #iter_data_type
+            }
         });
 
-        // Generate the top level data types
-        let _data_types = interface.items.iter().filter_map(|x| match x {
-            betfair_xml_parser::InterfaceItems::DataType(x) => Some(x),
-            _ => None,
-        });
+        quote!(
+            #top_level_docs
 
-        // Generate the top level exception types
-        let _exception_types = interface.items.iter().filter_map(|x| match x {
-            betfair_xml_parser::InterfaceItems::ExceptionType(x) => Some(x),
-            _ => None,
-        });
-
-        // Generate the top level traits (every operation is a trait)
-
-        quote!()
+            #data_types
+        )
     }
 }
 
-// /// generate methods from attributes on top of struct or enum
-// pub fn top_level_methods(&self) -> TokenStream {
-//     let author = &self.author;
-//     let about = &self.about;
-//     let methods = &self.methods;
-//     let doc_comment = &self.doc_comment;
+impl Comment {
+    pub fn module_comment(&self) -> TokenStream {
+        const MODULE_COMMENT: &str = "///";
+        pad_with(MODULE_COMMENT, &self.item)
+    }
 
-//     quote!( #(#doc_comment)* #author #about #(#methods)*  )
-// }
+    pub fn object_comment(&self) -> TokenStream {
+        const OBJECT_COMMENT: &str = "///";
+        pad_with(OBJECT_COMMENT, &self.item)
+    }
+}
 
-// /// generate methods on top of a field
-// pub fn field_methods(&self) -> TokenStream {
-//     let methods = &self.methods;
-//     let doc_comment = &self.doc_comment;
-//     quote!( #(#doc_comment)* #(#methods)* )
-// }
+impl Name {
+    pub fn ident(&self) -> Ident {
+        Ident::new(&self.0, Span::call_site())
+    }
 
-// pub fn version(&self) -> TokenStream {
-//     match (&self.no_version, &self.version) {
-//         (None, Some(m)) => m.to_token_stream(),
+    pub fn module_comment(&self) -> TokenStream {
+        const MODULE_COMMENT: &str = "///";
+        pad_with(MODULE_COMMENT, &self.0)
+    }
+}
 
-//         (None, None) => std::env::var("CARGO_PKG_VERSION")
-//             .map(|version| quote!( .version(#version) ))
-//             .unwrap_or_default(),
-
-//         _ => quote!(),
-//     }
-// }
+fn pad_with(pad: &str, text: impl AsRef<str>) -> proc_macro2::TokenStream {
+    let text = pad.to_string() + text.as_ref();
+    syn::parse_str::<proc_macro2::TokenStream>(&text).unwrap()
+}
 
 #[cfg(test)]
 mod test {
 
-    use super::*;
-    use crate::BetfairTypeGen;
+    use betfair_xml_parser::Interface;
 
-    #[test]
-    fn test_gen_v1() {
-        let interface = include_str!("../../assets/HeartbeatAPING.xml");
-        let gen = GenV1;
-        let _ = gen.generate(interface);
+    use super::*;
+    use crate::GeneratorStrategy;
+
+    pub(crate) const GEN_V1: GenV1 = GenV1;
+
+    #[rstest::fixture]
+    pub fn aping() -> Aping {
+        let interface: Interface = include_str!("../../assets/HeartbeatAPING.xml").into();
+        interface.into()
+    }
+
+    #[rstest::rstest]
+    fn test_gen_v1(aping: Aping) {
+        let _generated_code = GEN_V1.generate(aping);
 
         // TODO: assert the generated code
     }

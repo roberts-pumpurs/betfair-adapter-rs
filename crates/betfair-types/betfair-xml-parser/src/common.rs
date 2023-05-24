@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Valid values - used to represent an enum
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ValidValues {
     /// Vector of possible values
@@ -11,7 +11,7 @@ pub struct ValidValues {
 }
 
 /// A value of a valid value
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Value {
     /// The id of the value
@@ -23,7 +23,7 @@ pub struct Value {
 }
 
 /// The description tag
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Description {
     /// The value of the description
     #[serde(rename = "$value")]
@@ -31,7 +31,7 @@ pub struct Description {
 }
 
 /// The parameter tag
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Parameter {
     /// Whether the parameter is mandatory
     pub mandatory: Option<bool>,
@@ -41,13 +41,13 @@ pub struct Parameter {
     pub r#type: String,
     /// Vector of possible values enclosed within the parameter
     #[serde(rename = "$value")]
-    pub items: Vec<ParameterItems>,
+    pub items: Vec<ParameterItem>,
 }
 
 /// A child item of the <parameter> tag
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub enum ParameterItems {
+pub enum ParameterItem {
     /// The description tag
     Description(Description),
     /// The valid values tag
@@ -76,7 +76,7 @@ mod tests {
                 mandatory: Some(false),
                 name: "total".to_string(),
                 r#type: "double".to_string(),
-                items: vec![ParameterItems::Description(Description {
+                items: vec![ParameterItem::Description(Description {
                     value: Some(
                         "Set a limit on total (matched + unmatched) bet exposure on market group"
                             .to_string()
@@ -110,10 +110,10 @@ mod tests {
                 name: "errorCode".to_string(),
                 r#type: "string".to_string(),
                 items: vec![
-                    ParameterItems::Description(Description {
+                    ParameterItem::Description(Description {
                         value: Some("the unique code for this error".to_string())
                     }),
-                    ParameterItems::ValidValues(ValidValues {
+                    ParameterItem::ValidValues(ValidValues {
                         items: vec![
                             Value {
                                 id: Some("1".to_string()),

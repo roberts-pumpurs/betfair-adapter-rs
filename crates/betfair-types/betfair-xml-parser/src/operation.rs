@@ -14,13 +14,13 @@ pub struct Operation {
     pub since: String,
     /// Potential children of the tag
     #[serde(rename = "$value")]
-    pub values: Vec<OperationItems>,
+    pub values: Vec<OperationItem>,
 }
 
 /// A child item of the <operation> tag
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub enum OperationItems {
+pub enum OperationItem {
     /// Description tag
     Description(Description),
     /// Parameters tag
@@ -28,7 +28,7 @@ pub enum OperationItems {
 }
 
 /// Representation of the <parameters> tag
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Parameters {
     /// Vector of potential children of the tag
     #[serde(rename = "$value")]
@@ -36,7 +36,7 @@ pub struct Parameters {
 }
 
 /// A child item of the <parameters> tag
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum ParametersItems {
     /// Request tag
@@ -48,15 +48,15 @@ pub enum ParametersItems {
 }
 
 /// Representation of the <request> tag
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Request {
     /// Vector of potential children of the tag
     #[serde(rename = "$value")]
-    pub values: Vec<Parameter>,
+    pub values: Option<Vec<Parameter>>,
 }
 
 /// Representation of the <simpleResponse> tag
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SimpleResponse {
     /// The type of the response
     pub r#type: String,
@@ -65,7 +65,7 @@ pub struct SimpleResponse {
 }
 
 /// Representation of the <exceptions> tag
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Exceptions {
     /// Vector of potential exact Exception tags
     #[serde(rename = "$value")]
@@ -73,7 +73,7 @@ pub struct Exceptions {
 }
 
 /// Representation of the <exception> tag
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Exception {
     /// The type of the exception
     pub r#type: String,
@@ -87,6 +87,7 @@ mod tests {
     use serde_xml_rs::from_str;
 
     use super::*;
+    use crate::common::ParameterItem;
 
     #[rstest]
     fn test_parse_request() {
@@ -105,7 +106,7 @@ mod tests {
     "#;
 
         let req = from_str::<Request>(xml).unwrap();
-        assert_eq!(req.values.len(), 2);
+        assert_eq!(req.values.unwrap().len(), 2);
     }
 
     #[rstest]
@@ -173,14 +174,12 @@ mod tests {
     fn test_parse_operation() {
         let xml = r#"
     <operation name="listEventTypes" since="1.0.0">
-        <description>Returns a list of Event Types (i.e. Sports) associated with the markets selected by the
-            MarketFilter.
+        <description>Returns a list of Event Types (i.e. Sports) associated with the markets selected by the MarketFilter.
         </description>
         <parameters>
             <request>
                 <parameter mandatory="true" name="filter" type="MarketFilter">
-                    <description>The filter to select desired markets. All markets that match the criteria in the filter
-                        are selected.
+                    <description>The filter to select desired markets. All markets that match the criteria in the filter are selected.
                     </description>
                 </parameter>
                 <parameter name="locale" type="string">
@@ -201,10 +200,119 @@ mod tests {
     "#;
 
         let op = from_str::<Operation>(xml).unwrap();
-        assert_eq!(op.name, "listEventTypes");
-        assert_eq!(op.since, "1.0.0");
-        assert_eq!(op.values.len(), 2);
-        assert!(matches!(op.values[0], OperationItems::Description(_)));
-        assert!(matches!(op.values[1], OperationItems::Parameters(_)));
+        let expected = Operation {
+            name: "listEventTypes".to_string(),
+            since: "1.0.0".to_string(),
+
+            values: vec![
+                OperationItem::Description(Description {
+                    value: Some("Returns a list of Event Types (i.e. Sports) associated with the markets selected by the MarketFilter.".to_string())
+                }),
+                OperationItem::Parameters(Parameters {
+                    values: vec![
+                        ParametersItems::Request(Request {
+                            values: Some(vec![
+                                Parameter {
+                                    mandatory: Some(true),
+                                    name: "filter".to_string(),
+                                    r#type: "MarketFilter".to_string(),
+                                    items: vec![
+                                        ParameterItem::Description(Description {
+                                            value: Some("The filter to select desired markets. All markets that match the criteria in the filter are selected.".to_string())
+                                        })
+                                    ]
+                                },
+                                Parameter {
+                                    mandatory: None,
+                                    name: "locale".to_string(),
+                                    r#type: "string".to_string(),
+                                    items: vec![
+                                        ParameterItem::Description(Description {
+                                            value: Some("The language used for the response. If not specified, the default is returned.".to_string())
+                                        })
+                                    ]
+                                }
+                            ])
+                        }),
+                        ParametersItems::SimpleResponse(SimpleResponse {
+                            r#type: "list(EventTypeResult)".to_string(),
+                            description: Description {
+                                value: Some("output data".to_string())
+                            }
+                        }),
+                        ParametersItems::Exceptions(Exceptions {
+                            values: vec![
+                                Exception {
+                                    r#type: "APINGException".to_string(),
+                                    description: Description {
+                                        value: Some("Generic exception that is thrown if this operation fails for any reason.".to_string())
+                                    }
+                                }
+                            ]
+                        })
+                    ]
+                })
+            ]
+        };
+        assert_eq!(op, expected)
+    }
+
+    #[rstest]
+    fn test_parse_operation_2() {
+        let xml = r#"
+    <operation name="getDeveloperAppKeys" since="1.0.0">
+        <description>
+            Get all application keys owned by the given developer/vendor
+        </description>
+        <parameters>
+            <request/>
+            <simpleResponse type="list(DeveloperApp)">
+                <description>
+                    A list of application keys owned by the given developer/vendor
+                </description>
+            </simpleResponse>
+            <exceptions>
+                <exception type="AccountAPINGException">
+                    <description>Generic exception that is thrown if this operation fails for any reason.</description>
+                </exception>
+            </exceptions>
+        </parameters>
+    </operation>
+    "#;
+
+        let op = from_str::<Operation>(xml).unwrap();
+        let expected = Operation {
+            name: "getDeveloperAppKeys".to_string(),
+            since: "1.0.0".to_string(),
+            values: vec![
+                OperationItem::Description(Description {
+                    value: Some("Get all application keys owned by the given developer/vendor".to_string())
+                }),
+                OperationItem::Parameters(Parameters {
+                    values: vec![
+                        ParametersItems::Request(Request {
+                            values: None
+                        }),
+                        ParametersItems::SimpleResponse(SimpleResponse {
+                            description: Description {
+                                value: Some("A list of application keys owned by the given developer/vendor".to_string())
+                            },
+                            r#type: "list(DeveloperApp)".to_string()
+                        }),
+                        ParametersItems::Exceptions(Exceptions {
+                            values: vec![
+                                Exception {
+                                    r#type: "AccountAPINGException".to_string(),
+                                    description: Description {
+                                        value: Some("Generic exception that is thrown if this operation fails for any reason.".to_string())
+                                    }
+                                }
+                            ]
+                        })
+                    ]
+                })
+            ]
+        };
+        assert_eq!(op, expected);
     }
 }
