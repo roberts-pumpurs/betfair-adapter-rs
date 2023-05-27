@@ -2,17 +2,20 @@ use std::collections::HashMap;
 
 pub(crate) mod data_type;
 pub(crate) mod rpc_calls;
+pub(crate) mod types;
 
 use betfair_xml_parser::Interface;
 use heck::ToPascalCase;
-use rpc_calls::data_type::ValidEnumValue;
 use typed_builder::TypedBuilder;
 
-use self::data_type::{DataType, DataTypeVariant, EnumValue, StructField, StructValue, TypeAlias};
+use self::data_type::{
+    DataType, DataTypeVariant, EnumValue, StructField, StructValue, TypeAlias, ValidEnumValue,
+};
 use self::rpc_calls::{Exception, Param, Returns, RpcCall};
+use self::types::{Comment, Name};
 
 #[derive(Debug, Clone, TypedBuilder)]
-pub struct Aping {
+pub(crate) struct Aping {
     #[builder(default)]
     name: Name,
     #[builder(default)]
@@ -29,20 +32,6 @@ pub struct Aping {
     rpc_calls: HashMap<Name, rpc_calls::RpcCall>,
     #[builder(default)]
     data_types: HashMap<Name, data_type::DataType>,
-}
-
-#[derive(Debug, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]
-pub struct Name(pub String);
-
-#[derive(Debug, Clone, PartialEq, PartialOrd, Ord, Eq, Hash)]
-pub struct Comment {
-    pub item: String,
-}
-
-impl Comment {
-    pub fn new(item: String) -> Self {
-        Self { item }
-    }
 }
 
 impl From<Interface> for Aping {
@@ -81,7 +70,7 @@ impl From<Interface> for Aping {
 impl Aping {
     pub(self) fn insert_top_level_docs(&mut self, desc: &betfair_xml_parser::common::Description) {
         if let Some(x) = &desc.value {
-            self.top_level_docs.push(Comment { item: x.clone() });
+            self.top_level_docs.push(Comment::new(x.clone()));
         }
     }
     pub(self) fn insert_simple_data_type(
@@ -99,7 +88,7 @@ impl Aping {
                         .description
                         .value
                         .clone()
-                        .map(|x| vec![Comment { item: x }])
+                        .map(|x| vec![Comment::new(x)])
                         .unwrap_or(vec![]);
                     ValidEnumValue {
                         id: x.id.clone().unwrap_or_else(|| x.name.clone()),
@@ -113,7 +102,7 @@ impl Aping {
             // Parse as a type alias
             DataTypeVariant::TypeAlias(TypeAlias {
                 name: Name(sdt.name.clone()),
-                data_type: sdt.r#type.clone(),
+                data_type: sdt.r#type.clone().into(),
             })
         };
 
@@ -134,7 +123,7 @@ impl Aping {
                 betfair_xml_parser::data_type::DataTypeItems::Description(x) => x.value.clone(),
                 _ => None,
             })
-            .map(|x| Comment { item: x })
+            .map(Comment::new)
             .collect::<Vec<_>>();
         let fields = data_type
             .values
@@ -155,13 +144,12 @@ impl Aping {
                         }
                         _ => None,
                     })
-                    .map(|x| Comment { item: x })
+                    .map(Comment::new)
                     .collect::<Vec<_>>();
                 StructField {
                     name: Name(x.name.clone()),
                     mandatory: x.mandatory.unwrap_or(true),
-                    data_type: x.r#type, /* TODO - convert to rust type/lookup if we
-                                          * already have such a type stored */
+                    data_type: x.r#type.into(),
                     description,
                 }
             })
@@ -222,7 +210,7 @@ impl Aping {
                 }
                 _ => None,
             })
-            .map(|x| Comment { item: x })
+            .map(Comment::new)
             .collect::<Vec<_>>();
 
         let fields = exception
@@ -244,7 +232,7 @@ impl Aping {
                         }
                         _ => None,
                     })
-                    .map(|x| Comment { item: x })
+                    .map(Comment::new)
                     .collect::<Vec<_>>();
                 let enum_values = x
                     .items
@@ -257,12 +245,8 @@ impl Aping {
                     })
                     .flatten()
                     .map(|v| {
-                        let description = v
-                            .description
-                            .value
-                            .iter()
-                            .map(|x| Comment { item: x.clone() })
-                            .collect();
+                        let description =
+                            v.description.value.iter().map(|x| Comment::new(x.clone())).collect();
 
                         ValidEnumValue {
                             id: format!(
@@ -292,15 +276,14 @@ impl Aping {
                     StructField {
                         name: Name(x.name.clone()),
                         mandatory: x.mandatory.unwrap_or(false),
-                        data_type: enum_name.0,
+                        data_type: enum_name.0.into(),
                         description,
                     }
                 } else {
                     StructField {
                         name: Name(x.name.clone()),
                         mandatory: x.mandatory.unwrap_or(false),
-                        data_type: x.r#type, /* TODO - convert to rust type/lookup if we
-                                              * already have such a type stored */
+                        data_type: x.r#type.into(),
                         description,
                     }
                 }
@@ -318,35 +301,35 @@ impl Aping {
         self.data_types.insert(wrapper_data_type.name.clone(), wrapper_data_type);
     }
 
-    pub fn name(&self) -> &Name {
+    pub(crate) fn name(&self) -> &Name {
         &self.name
     }
 
-    pub fn owner(&self) -> &Name {
+    pub(crate) fn owner(&self) -> &Name {
         &self.owner
     }
 
-    pub fn version(&self) -> &Name {
+    pub(crate) fn version(&self) -> &Name {
         &self.version
     }
 
-    pub fn date(&self) -> &Name {
+    pub(crate) fn date(&self) -> &Name {
         &self.date
     }
 
-    pub fn namespace(&self) -> &Name {
+    pub(crate) fn namespace(&self) -> &Name {
         &self.namespace
     }
 
-    pub fn top_level_docs(&self) -> &[Comment] {
+    pub(crate) fn top_level_docs(&self) -> &[Comment] {
         self.top_level_docs.as_ref()
     }
 
-    pub fn rpc_calls(&self) -> &HashMap<Name, rpc_calls::RpcCall> {
+    pub(crate) fn rpc_calls(&self) -> &HashMap<Name, rpc_calls::RpcCall> {
         &self.rpc_calls
     }
 
-    pub fn data_types(&self) -> &HashMap<Name, data_type::DataType> {
+    pub(crate) fn data_types(&self) -> &HashMap<Name, data_type::DataType> {
         &self.data_types
     }
 }
@@ -367,13 +350,8 @@ mod prism_impls {
                     _ => None,
                 })
                 .map(|x| Returns {
-                    data_type: x.r#type.clone(),
-                    description: x
-                        .description
-                        .value
-                        .map(|x| Comment { item: x })
-                        .into_iter()
-                        .collect(),
+                    data_type: x.r#type.clone().into(),
+                    description: x.description.value.map(Comment::new).into_iter().collect(),
                 })
                 .collect::<Vec<_>>();
             if returns.len() > 1 {
@@ -396,13 +374,8 @@ mod prism_impls {
                 })
                 .flat_map(|x| x.values)
                 .map(|x| Exception {
-                    data_type: x.r#type.clone(),
-                    description: x
-                        .description
-                        .value
-                        .map(|x| Comment { item: x })
-                        .into_iter()
-                        .collect(),
+                    data_type: x.r#type.clone().into(),
+                    description: x.description.value.map(Comment::new).into_iter().collect(),
                 })
                 .collect::<Vec<_>>();
             if exceptions.len() > 1 {
@@ -422,7 +395,7 @@ mod prism_impls {
                     betfair_xml_parser::operation::OperationItem::Description(x) => x.value.clone(),
                     _ => None,
                 })
-                .map(|x| Comment { item: x })
+                .map(Comment::new)
                 .collect();
             doc_comment
         }
@@ -441,7 +414,7 @@ mod prism_impls {
 
                     Param {
                         name: Name(x.name.clone()),
-                        data_type: x.r#type.clone(),
+                        data_type: x.r#type.clone().into(),
                         mandatory: x.mandatory.unwrap_or(true),
                         description: doc_comments,
                     }
@@ -459,7 +432,7 @@ mod prism_impls {
                     betfair_xml_parser::common::ParameterItem::Description(x) => x.value.clone(),
                     _ => None,
                 })
-                .map(|x| Comment { item: x })
+                .map(Comment::new)
                 .collect::<Vec<_>>();
             doc_comments
         }
@@ -496,7 +469,7 @@ mod prism_impls {
                                     .description
                                     .value
                                     .as_ref()
-                                    .map(|x| vec![Comment { item: x.clone() }])
+                                    .map(|x| vec![Comment::new(x.clone())])
                                     .unwrap_or(vec![]);
 
                                 let value = data_type::ValidEnumValue {
@@ -551,7 +524,7 @@ mod tests {
         <description>Account API-NG</description>
         "#;
         let input = serde_xml_rs::from_str(input).unwrap();
-        let expected = vec![Comment { item: "Account API-NG".to_string() }];
+        let expected = vec![Comment::new("Account API-NG".to_string())];
 
         // Action
         aping.insert_top_level_docs(&input);
@@ -596,37 +569,35 @@ mod tests {
                         ValidEnumValue {
                             id: "ALL".to_string(),
                             name: Name("ALL".to_string()),
-                            description: vec![Comment {
-                                item: "Any subscription status".to_string(),
-                            }],
+                            description: vec![Comment::new("Any subscription status".to_string())],
                         },
                         ValidEnumValue {
                             id: "ACTIVATED".to_string(),
                             name: Name("ACTIVATED".to_string()),
-                            description: vec![Comment {
-                                item: "Only activated subscriptions".to_string(),
-                            }],
+                            description: vec![Comment::new(
+                                "Only activated subscriptions".to_string(),
+                            )],
                         },
                         ValidEnumValue {
                             id: "UNACTIVATED".to_string(),
                             name: Name("UNACTIVATED".to_string()),
-                            description: vec![Comment {
-                                item: "Only unactivated subscriptions".to_string(),
-                            }],
+                            description: vec![Comment::new(
+                                "Only unactivated subscriptions".to_string(),
+                            )],
                         },
                         ValidEnumValue {
                             id: "CANCELLED".to_string(),
                             name: Name("CANCELLED".to_string()),
-                            description: vec![Comment {
-                                item: "Only cancelled subscriptions".to_string(),
-                            }],
+                            description: vec![Comment::new(
+                                "Only cancelled subscriptions".to_string(),
+                            )],
                         },
                         ValidEnumValue {
                             id: "EXPIRED".to_string(),
                             name: Name("EXPIRED".to_string()),
-                            description: vec![Comment {
-                                item: "Only expired subscriptions".to_string(),
-                            }],
+                            description: vec![Comment::new(
+                                "Only expired subscriptions".to_string(),
+                            )],
                         },
                     ],
                 }),
@@ -655,7 +626,7 @@ mod tests {
                 name: Name("MarketType".to_string()),
                 variant: DataTypeVariant::TypeAlias(TypeAlias {
                     name: Name("MarketType".to_string()),
-                    data_type: "string".to_string(),
+                    data_type: "string".to_string().into(),
                 }),
                 description: vec![],
             },
@@ -704,23 +675,20 @@ mod tests {
                 ValidEnumValue {
                     id: "AANGX-0001".to_string(),
                     name: Name("INVALID_INPUT_DATA".to_string()),
-                    description: vec![Comment {
-                        item: "Invalid input data".to_string(),
-                    }],
+                    description: vec![Comment::new("Invalid input data".to_string(),
+                )],
                 },
                 ValidEnumValue {
                     id: "AANGX-0002".to_string(),
                     name: Name("INVALID_SESSION_INFORMATION".to_string()),
-                    description: vec![Comment {
-                        item: "The session token passed is invalid or expired".to_string(),
-                    }],
+                    description: vec![Comment::new("The session token passed is invalid or expired".to_string(),
+                )],
                 },
                 ValidEnumValue {
                     id: "AANGX-0013".to_string(),
                     name: Name("UNEXPECTED_ERROR".to_string()),
-                    description: vec![Comment {
-                        item: "An unexpected internal error occurred that prevented successful request processing.".to_string(),
-                    }],
+                    description: vec![Comment::new("An unexpected internal error occurred that prevented successful request processing.".to_string(),
+                )],
                 },
             ],
         };
@@ -729,21 +697,19 @@ mod tests {
             fields: vec![
                 StructField {
                     name: Name("errorCode".to_string()),
-                    data_type: "ErrorCode".to_string(),
-                    description: vec![Comment {
-                        item: "the unique code for this error".to_string(),
-                    }],
+                    data_type: "ErrorCode".to_string().into(),
+                    description: vec![Comment::new("the unique code for this error".to_string())],
                     mandatory: false,
                 },
                 StructField {
                     name: Name("errorDetails".to_string()),
-                    data_type: "string".to_string(),
-                    description: vec![Comment { item: "the stack trace of the error".to_string() }],
+                    data_type: "string".to_string().into(),
+                    description: vec![Comment::new("the stack trace of the error".to_string())],
                     mandatory: false,
                 },
                 StructField {
                     name: Name("requestUUID".to_string()),
-                    data_type: "string".to_string(),
+                    data_type: "string".to_string().into(),
                     description: vec![],
                     mandatory: false,
                 },
@@ -752,9 +718,9 @@ mod tests {
         expected.insert(
             Name("AccountAPINGException".to_string()),
             DataType {
-                description: vec![Comment {
-                    item: "This exception is thrown when an operation fails".to_string(),
-                }],
+                description: vec![Comment::new(
+                    "This exception is thrown when an operation fails".to_string(),
+                )],
                 name: Name("AccountAPINGException".to_string()),
                 variant: DataTypeVariant::StructValue(struct_value),
             },
@@ -800,22 +766,22 @@ mod tests {
             fields: vec![
                 StructField {
                     name: Name("subscriptionTokens".to_string()),
-                    data_type: "list(SubscriptionTokenInfo)".to_string(),
-                    description: vec![Comment {
-                        item: "List of subscription token details".to_string(),
-                    }],
+                    data_type: "list(SubscriptionTokenInfo)".to_string().into(),
+                    description: vec![Comment::new(
+                        "List of subscription token details".to_string(),
+                    )],
                     mandatory: true,
                 },
                 StructField {
                     name: Name("applicationName".to_string()),
-                    data_type: "string".to_string(),
-                    description: vec![Comment { item: "Application name".to_string() }],
+                    data_type: "string".to_string().into(),
+                    description: vec![Comment::new("Application name".to_string())],
                     mandatory: false,
                 },
                 StructField {
                     name: Name("applicationVersionId".to_string()),
-                    data_type: "string".to_string(),
-                    description: vec![Comment { item: "Application version Id".to_string() }],
+                    data_type: "string".to_string().into(),
+                    description: vec![Comment::new("Application version Id".to_string())],
                     mandatory: false,
                 },
             ],
@@ -823,7 +789,7 @@ mod tests {
         expected.insert(
             Name("AccountSubscription".to_string()),
             DataType {
-                description: vec![Comment { item: "Application subscription details".to_string() }],
+                description: vec![Comment::new("Application subscription details".to_string())],
                 name: Name("AccountSubscription".to_string()),
                 variant: DataTypeVariant::StructValue(struct_value),
             },
@@ -871,31 +837,28 @@ mod tests {
             name: Name("createDeveloperAppKeys".to_string()),
             params: vec![Param {
                 name: Name("appName".to_string()),
-                data_type: "string".to_string(),
-                description: vec![Comment {
-                    item: "A Display name for the application.".to_string(),
-                }],
+                data_type: "string".to_string().into(),
+                description: vec![Comment::new("A Display name for the application.".to_string())],
                 mandatory: true,
             }],
             returns: Returns {
-                data_type: "DeveloperApp".to_string(),
-                description: vec![Comment {
-                    item: "A map of application keys, one marked ACTIVE, and the other DELAYED"
+                data_type: "DeveloperApp".to_string().into(),
+                description: vec![Comment::new(
+                    "A map of application keys, one marked ACTIVE, and the other DELAYED"
                         .to_string(),
-                }],
+                )],
             },
             exception: Some(Exception {
-                data_type: "AccountAPINGException".to_string(),
-                description: vec![Comment {
-                    item:
-                        "Generic exception that is thrown if this operation fails for any reason."
-                            .to_string(),
-                }],
+                data_type: "AccountAPINGException".to_string().into(),
+                description: vec![Comment::new(
+                    "Generic exception that is thrown if this operation fails for any reason."
+                        .to_string(),
+                )],
             }),
-            description: vec![Comment {
-                item: "Create 2 application keys for given user; one active and the other delayed"
+            description: vec![Comment::new(
+                "Create 2 application keys for given user; one active and the other delayed"
                     .to_string(),
-            }],
+            )],
         };
         expected_rpc_calls.insert(Name("createDeveloperAppKeys".to_string()), operation);
 
@@ -935,23 +898,21 @@ mod tests {
             name: Name("getDeveloperAppKeys".to_string()),
             params: vec![],
             returns: Returns {
-                data_type: "list(DeveloperApp)".to_string(),
-                description: vec![Comment {
-                    item: "A list of application keys owned by the given developer/vendor"
-                        .to_string(),
-                }],
+                data_type: "list(DeveloperApp)".to_string().into(),
+                description: vec![Comment::new(
+                    "A list of application keys owned by the given developer/vendor".to_string(),
+                )],
             },
             exception: Some(Exception {
-                data_type: "AccountAPINGException".to_string(),
-                description: vec![Comment {
-                    item:
-                        "Generic exception that is thrown if this operation fails for any reason."
-                            .to_string(),
-                }],
+                data_type: "AccountAPINGException".to_string().into(),
+                description: vec![Comment::new(
+                    "Generic exception that is thrown if this operation fails for any reason."
+                        .to_string(),
+                )],
             }),
-            description: vec![Comment {
-                item: "Get all application keys owned by the given developer/vendor".to_string(),
-            }],
+            description: vec![Comment::new(
+                "Get all application keys owned by the given developer/vendor".to_string(),
+            )],
         };
         expected_rpc_calls.insert(Name("getDeveloperAppKeys".to_string()), operation);
 

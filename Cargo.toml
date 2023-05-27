@@ -47,3 +47,4 @@ syn = "2.0"
 
 # Testnig
 rstest = { version = "0.17" }
+proptest = "1.0.0"

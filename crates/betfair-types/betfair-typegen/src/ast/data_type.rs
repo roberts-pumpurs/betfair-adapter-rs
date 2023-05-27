@@ -1,7 +1,8 @@
-pub(crate) use super::*;
+use super::types::DataTypeParameter;
+use super::{Comment, Name};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct DataType {
+pub(crate) struct DataType {
     pub(crate) name: Name,
     pub(crate) variant: DataTypeVariant,
     pub(crate) description: Vec<Comment>,
@@ -30,7 +31,7 @@ pub(crate) struct ValidEnumValue {
 #[derive(Debug, Clone, PartialEq, PartialOrd, Ord, Eq, Hash)]
 pub(crate) struct TypeAlias {
     pub(crate) name: Name,
-    pub(crate) data_type: String,
+    pub(crate) data_type: DataTypeParameter,
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Ord, Eq, Hash)]
@@ -43,6 +44,6 @@ pub(crate) struct StructValue {
 pub(crate) struct StructField {
     pub(crate) name: Name,
     pub(crate) mandatory: bool,
-    pub(crate) data_type: String,
+    pub(crate) data_type: DataTypeParameter,
     pub(crate) description: Vec<Comment>,
 }

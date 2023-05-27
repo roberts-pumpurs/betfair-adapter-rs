@@ -1,4 +1,4 @@
-use proc_macro2::{Ident, Span, TokenStream};
+use proc_macro2::TokenStream;
 use quote::quote;
 
 use super::GenV1;
@@ -25,12 +25,14 @@ impl GenV1 {
 
     fn generate_enum_value(&self, enum_value: &EnumValue) -> TokenStream {
         fn generate_valid_enum_value(valid_enum_value: &ValidEnumValue) -> TokenStream {
-            let name = valid_enum_value.name.ident();
+            let name = valid_enum_value.name.ident_pascal();
+            let serde_version = valid_enum_value.name.0.clone();
             if valid_enum_value.id.is_empty() {
                 let description = valid_enum_value.description.as_slice().object_comment();
 
                 quote! {
                     #description
+                    #[serde(rename = #serde_version)]
                     #name,
                 }
             } else {
@@ -57,7 +59,7 @@ impl GenV1 {
             }
         }
 
-        let name = enum_value.name.ident();
+        let name = enum_value.name.ident_pascal();
         let valid_values = enum_value.valid_values.iter().map(generate_valid_enum_value).fold(
             quote! {},
             |acc, i| {
@@ -77,7 +79,7 @@ impl GenV1 {
     }
 
     fn generate_struct_value(&self, struct_value: &StructValue) -> TokenStream {
-        fn generate_struct_field(struct_field: &StructField) -> TokenStream {
+        fn generate_struct_field(gen: &GenV1, struct_field: &StructField) -> TokenStream {
             let description = struct_field.description.iter().map(|x| x.object_comment()).fold(
                 quote! {},
                 |acc, i| {
@@ -88,8 +90,8 @@ impl GenV1 {
                 },
             );
 
-            let name = struct_field.name.ident();
-            let data_type = Ident::new(&struct_field.data_type, Span::call_site()); // TODO we need to parse the data type here
+            let name = struct_field.name.ident_snake();
+            let data_type = gen.type_resolver.resolve_type(&struct_field.data_type);
             if struct_field.mandatory {
                 quote! {
                     #description
@@ -102,14 +104,16 @@ impl GenV1 {
                 }
             }
         }
-        let name = struct_value.name.ident();
-        let fields =
-            struct_value.fields.iter().map(generate_struct_field).fold(quote! {}, |acc, i| {
+        let name = struct_value.name.ident_pascal();
+        let fields = struct_value.fields.iter().map(|x| generate_struct_field(self, x)).fold(
+            quote! {},
+            |acc, i| {
                 quote! {
                     #acc
                     #i
                 }
-            });
+            },
+        );
 
         quote! {
             #[derive(Debug, Clone, PartialEq)]
@@ -120,8 +124,8 @@ impl GenV1 {
     }
 
     fn generate_type_alias(&self, type_alias: &TypeAlias) -> TokenStream {
-        let name = type_alias.name.ident();
-        let data_type = Ident::new(&type_alias.data_type, Span::call_site()); // TODO we need to parse the data type here
+        let name = type_alias.name.ident_pascal();
+        let data_type = self.type_resolver.resolve_type(&type_alias.data_type);
 
         quote! {
             #[derive(Debug, Clone, PartialEq)]
@@ -135,7 +139,7 @@ mod test {
 
     use super::super::test::GEN_V1;
     use super::*;
-    use crate::ast::{Comment, Name};
+    use crate::ast::types::{Comment, DataTypeParameter, Name};
 
     #[rstest::rstest]
     fn test_generate_structure() {
@@ -148,7 +152,7 @@ mod test {
                     StructField {
                         name: Name("textQuery".to_string()),
                         mandatory: false,
-                        data_type: "String".to_string(),
+                        data_type: DataTypeParameter::new("string".to_string()),
                         description: vec![
                             Comment::new("Restrict markets by any text associated with the market such as the Name, Event, Competition, etc. You can include a wildcard (*) character as long as it is not the first character.".to_string()),
                             Comment::new("Comment 2.".to_string()),
@@ -173,7 +177,7 @@ mod test {
             pub struct MarketFilter {
                 #[doc = "Restrict markets by any text associated with the market such as the Name, Event, Competition, etc. You can include a wildcard (*) character as long as it is not the first character."]
                 #[doc = "Comment 2."]
-                pub textQuery: Option<String>,
+                pub text_query: Option<String>,
             }
         };
         assert_eq!(actual.to_string(), expected.to_string());
@@ -221,13 +225,13 @@ mod test {
             #[derive(Debug, Clone, PartialEq)]
             pub enum MarketProjection {
                 #[doc = "If no value is passed into the marketProjections parameter then the competition will not be returned with marketCatalogue"]
-                COMPETITION = 0i128,
+                Competition = 0i128,
                 #[doc = "If no value is passed into the marketProjections parameter then the event will not be returned with marketCatalogue"]
-                EVENT = 1i128,
+                Event = 1i128,
                 #[doc = "If no value is passed into the marketProjections parameter then the eventType will not be returned with marketCatalogue"]
-                EVENT_TYPE = 2i128,
+                EventType = 2i128,
                 #[doc = "If no value is passed into the marketProjections parameter then the marketStartTime will not be returned with marketCatalogue"]
-                MARKET_START_TIME = 3i128,
+                MarketStartTime = 3i128,
             }
         };
         assert_eq!(actual.to_string(), expected.to_string());
@@ -275,13 +279,17 @@ mod test {
             #[derive(Debug, Clone, PartialEq)]
             pub enum MarketProjection {
                 #[doc = "If no value is passed into the marketProjections parameter then the competition will not be returned with marketCatalogue"]
-                COMPETITION,
+                #[serde(rename = "COMPETITION")]
+                Competition,
                 #[doc = "If no value is passed into the marketProjections parameter then the event will not be returned with marketCatalogue"]
-                EVENT,
+                #[serde(rename = "EVENT")]
+                Event,
                 #[doc = "If no value is passed into the marketProjections parameter then the eventType will not be returned with marketCatalogue"]
-                EVENT_TYPE ,
+                #[serde(rename = "EVENT_TYPE")]
+                EventType,
                 #[doc = "If no value is passed into the marketProjections parameter then the marketStartTime will not be returned with marketCatalogue"]
-                MARKET_START_TIME,
+                #[serde(rename = "MARKET_START_TIME")]
+                MarketStartTime,
             }
         };
         assert_eq!(actual.to_string(), expected.to_string());
@@ -294,7 +302,7 @@ mod test {
             name: Name("MarketProjection".to_string()),
             variant: crate::ast::data_type::DataTypeVariant::TypeAlias(TypeAlias {
                 name: Name("MarketProjection".to_string()),
-                data_type: "String".to_string(),
+                data_type: DataTypeParameter::new("string".to_string()),
             }),
             description: vec![Comment::new(
                 "Type of price data returned by listMarketBook operation".to_string(),

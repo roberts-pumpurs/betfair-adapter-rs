@@ -16,3 +16,4 @@ typed-builder.workspace = true
 [dev-dependencies]
 rstest.workspace = true
 serde-xml-rs.workspace = true
+proptest.workspace = true
