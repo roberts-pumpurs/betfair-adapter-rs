@@ -1,11 +1,12 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use super::GenV1;
-use crate::ast::types::Comment;
-use crate::ast::Aping;
+use super::injector::CodeInjector;
+use super::GenV1GeneratorStrategy;
+use crate::aping_ast::types::Comment;
+use crate::aping_ast::Aping;
 
-impl GenV1 {
+impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
     pub(crate) fn generate_top_level_docs(&self, aping: &Aping) -> TokenStream {
         let description = aping.top_level_docs().module_comment();
         let namespace = aping.namespace().module_comment();
@@ -60,12 +61,13 @@ impl CommentParse for &[Comment] {
 #[cfg(test)]
 mod test {
 
-    use super::super::test::GEN_V1;
+    use super::super::test::gen_v1;
     use super::*;
-    use crate::ast::types::{Comment, Name};
+    use crate::aping_ast::types::{Comment, Name};
+    use crate::gen_v1::injector::CodeInjectorV1;
 
     #[rstest::rstest]
-    fn module_docs() {
+    fn module_docs(gen_v1: GenV1GeneratorStrategy<CodeInjectorV1>) {
         let aping = Aping::builder()
             .top_level_docs(vec![
                 Comment::new("my custom text".to_string()),
@@ -79,7 +81,7 @@ mod test {
             .build();
 
         // Action
-        let generated_code = GEN_V1.generate_top_level_docs(&aping);
+        let generated_code = gen_v1.generate_top_level_docs(&aping);
 
         // Assert
         let expected = quote! {

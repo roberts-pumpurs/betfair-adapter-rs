@@ -1,11 +1,13 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use super::GenV1;
-use crate::ast::rpc_calls::RpcCall;
+use super::injector::CodeInjector;
+use super::GenV1GeneratorStrategy;
+use crate::aping_ast::rpc_calls::RpcCall;
+use crate::aping_ast::types::Name;
 use crate::gen_v1::documentation::CommentParse;
 
-impl GenV1 {
+impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
     pub(crate) fn generate_rpc_call(&self, data_type: &RpcCall) -> TokenStream {
         let description = data_type.description.as_slice().object_comment();
         let module_name = data_type.name.ident_snake();
@@ -15,23 +17,12 @@ impl GenV1 {
         quote! {
             #description
             pub mod #module_name {
+                use super::*;
+
                 #return_type
                 #parameter
                 #call_traits
             }
-        }
-    }
-
-    pub(crate) fn generate_transport_layer(&self) -> TokenStream {
-        quote! {
-            trait TransportLayer<T: Debug, V: Debug> {
-                fn send_request(&self, request: T) -> V;
-            }
-
-            trait BetfairRpcCall<Req, Res> {
-                fn call(&self, request: Req) -> Res;
-            }
-
         }
     }
 
@@ -73,32 +64,46 @@ impl GenV1 {
     }
 
     fn parameter(&self, data_type: &RpcCall) -> TokenStream {
+        let struct_parameter_derives = self.code_injector.struct_parameter_derives();
         let fields = data_type
             .params
             .iter()
             .map(|field| {
                 let description = field.description.as_slice().object_comment();
-                let name = field.name.ident_snake();
+                let name = {
+                    if field.name.0.as_str() == "type" {
+                        Name("r#type".to_string()).ident_snake()
+                    } else if field.name.0.as_str() == "async" {
+                        Name("r#async".to_string()).ident_snake()
+                    } else {
+                        field.name.ident_snake()
+                    }
+                };
                 let data_type = self.type_resolver.resolve_type(&field.data_type);
                 let data_type = if !field.mandatory {
                     quote! {
-                        Option<#data_type>
+                        #[serde(skip_serializing_if = "Option::is_none")]
+                        #struct_parameter_derives
+                        pub #name: Option<#data_type>
                     }
                 } else {
                     quote! {
-                        #data_type
+                        #struct_parameter_derives
+                        pub #name: #data_type
                     }
                 };
 
                 quote! {
                     #description
-                    pub #name: #data_type,
+                    #data_type,
                 }
             })
             .collect::<Vec<_>>();
+        let struct_derives = self.code_injector.struct_derives();
         quote! {
+            #struct_derives
             pub struct Parameters {
-                #(#fields),*
+                #(#fields)*
             }
         }
     }
@@ -109,13 +114,16 @@ mod test {
 
     use proptest::prelude::*;
 
-    use super::super::test::GEN_V1;
+    use super::super::test::gen_v1;
     use super::*;
-    use crate::ast::rpc_calls::{Exception, Param, Returns};
-    use crate::ast::types::{Comment, DataTypeParameter, Name};
+    use crate::aping_ast::rpc_calls::{Exception, Param, Returns};
+    use crate::aping_ast::types::{Comment, DataTypeParameter, Name};
+    use crate::gen_v1::injector::CodeInjectorV1;
 
     #[rstest::rstest]
-    fn test_generate_rpc_module_mandatory_parameter() {
+    fn test_generate_rpc_module_mandatory_parameter(
+        gen_v1: GenV1GeneratorStrategy<CodeInjectorV1>,
+    ) {
         // Setup
         let rpc_call = RpcCall {
             name: Name("createDeveloperAppKeys".to_string()),
@@ -146,18 +154,22 @@ mod test {
         };
 
         // Execute
-        let actual = GEN_V1.generate_rpc_call(&rpc_call);
+        let actual = gen_v1.generate_rpc_call(&rpc_call);
 
         // Assert
         let expected = quote! {
             #[doc = "Create 2 application keys for given user; one active and the other delayed"]
             pub mod create_developer_app_keys {
+                use super::*;
+
                 #[doc = "Generic exception that is thrown if this operation fails for any reason."]
                 pub type Exception = AccountApingException;
 
                 #[doc = "A map of application keys, one marked ACTIVE, and the other DELAYED"]
                 pub type ReturnType = Result<DeveloperApp, Exception>;
 
+                #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, TypedBuilder)]
+                #[serde(rename_all = "camelCase")]
                 pub struct Parameters {
                     #[doc = "A Display name for the application."]
                     pub app_name: String,
@@ -236,7 +248,7 @@ mod test {
             };
 
             // Execute
-            let actual = GEN_V1.generate_rpc_call(&rpc_call);
+            let actual = gen_v1().generate_rpc_call(&rpc_call);
             let actual = actual.to_string();
 
             // Assert

@@ -1,7 +1,8 @@
 use heck::ToPascalCase;
 
-use crate::ast::types::DataTypeParameter;
+use crate::aping_ast::types::DataTypeParameter;
 
+#[derive(Debug)]
 pub(crate) struct TypeResolverV1;
 
 impl TypeResolverV1 {
@@ -15,10 +16,13 @@ impl TypeResolverV1 {
             match input {
                 "string" => "String".to_string(),
                 "int" => "i32".to_string(),
-                "double" => "FixedNumber".to_string(),
+                "i32" => "i32".to_string(),
+                "i64" => "i64".to_string(),
+                "double" => "rust_decimal::Decimal".to_string(),
                 "dateTime" => "DateTime<Utc>".to_string(),
                 "boolean" => "bool".to_string(),
-                "float" => "FixedNumber".to_string(),
+                "bool" => "bool".to_string(),
+                "float" => "rust_decimal::Decimal".to_string(),
                 _ => input.to_pascal_case(),
             }
         }
@@ -27,9 +31,20 @@ impl TypeResolverV1 {
                 let value = transform_to_rust_types(&value);
                 syn::parse_str(&value).unwrap()
             }
-            TypePlural::Plural(value) => {
+            TypePlural::List(value) => {
                 let value = transform_to_rust_types(&value);
                 let value = format!("Vec<{}>", value);
+                syn::parse_str(&value).unwrap()
+            }
+            TypePlural::Set(value) => {
+                let value = transform_to_rust_types(&value);
+                let value = format!("Vec<{}>", value);
+                syn::parse_str(&value).unwrap()
+            }
+            TypePlural::Map { key, value } => {
+                let key = transform_to_rust_types(&key);
+                let value = transform_to_rust_types(&value);
+                let value = format!("std::collections::HashMap<{}, {}>", key, value);
                 syn::parse_str(&value).unwrap()
             }
         }
@@ -39,7 +54,18 @@ impl TypeResolverV1 {
         if item.contains("list(") {
             let item = item.replace("list(", "");
             let item = item.replace(')', "");
-            TypePlural::Plural(item)
+            TypePlural::List(item)
+        } else if item.contains("set(") {
+            let item = item.replace("set(", "");
+            let item = item.replace(')', "");
+            TypePlural::Set(item)
+        } else if item.contains("map(") {
+            let item = item.replace("map(", "");
+            let item = item.replace(')', "");
+            let mut item = item.split(',').map(|x| x.to_string());
+            let key = item.next().unwrap();
+            let value = item.next().unwrap();
+            TypePlural::Map { key, value }
         } else {
             TypePlural::Singular(item.to_string())
         }
@@ -48,7 +74,9 @@ impl TypeResolverV1 {
 
 enum TypePlural {
     Singular(String),
-    Plural(String),
+    List(String),
+    Set(String),
+    Map { key: String, value: String },
 }
 
 #[cfg(test)]

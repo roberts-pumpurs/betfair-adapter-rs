@@ -11,7 +11,7 @@ pub struct Operation {
     /// The name of the operation
     pub name: String,
     /// Version specifier of when the operation was introduced
-    pub since: String,
+    pub since: Option<String>,
     /// Potential children of the tag
     #[serde(rename = "$value")]
     pub values: Vec<OperationItem>,
@@ -202,8 +202,7 @@ mod tests {
         let op = from_str::<Operation>(xml).unwrap();
         let expected = Operation {
             name: "listEventTypes".to_string(),
-            since: "1.0.0".to_string(),
-
+            since: Some("1.0.0".to_string()),
             values: vec![
                 OperationItem::Description(Description {
                     value: Some("Returns a list of Event Types (i.e. Sports) associated with the markets selected by the MarketFilter.".to_string())
@@ -283,7 +282,7 @@ mod tests {
         let op = from_str::<Operation>(xml).unwrap();
         let expected = Operation {
             name: "getDeveloperAppKeys".to_string(),
-            since: "1.0.0".to_string(),
+            since: Some("1.0.0".to_string()),
             values: vec![
                 OperationItem::Description(Description {
                     value: Some("Get all application keys owned by the given developer/vendor".to_string())

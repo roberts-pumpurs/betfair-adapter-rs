@@ -12,30 +12,15 @@
 #![feature(async_fn_in_trait)]
 #![feature(return_position_impl_trait_in_trait)]
 
+mod aping_ast;
 pub mod gen_v1;
+mod generator;
 
-mod ast;
 use betfair_xml_parser::Interface;
+use generator::settings::GeneratorSettings;
+pub use generator::{output, settings, BetfairTypeGenerator};
 pub use proc_macro2::TokenStream;
 pub use rust_decimal;
-
-/// # The Betfair type generator
-/// This is the main entry point for the crate
-pub struct BetfairTypeGenerator;
-
-impl BetfairTypeGenerator {
-    /// # Generate the types for the Betfair API
-    /// Provide the strategy to use to generate the types and the Betfair API interface
-    pub fn generate(
-        &self,
-        strategy: impl GeneratorStrategy,
-        interface: impl Into<Interface>,
-    ) -> TokenStream {
-        let interface: Interface = interface.into();
-
-        strategy.generate(interface)
-    }
-}
 
 /// The trait that is used to generate the types for the Betfair API
 pub trait GeneratorStrategy {
@@ -44,5 +29,8 @@ pub trait GeneratorStrategy {
     /// * `aping` - The Betfair API interface
     /// # Returns
     /// The generated types for the Betfair API that can be written to a file
-    fn generate(&self, aping: impl Into<Interface>) -> TokenStream;
+    fn generate_submodule(&self, aping: impl Into<Interface>) -> TokenStream;
+
+    /// Generate the top level documentation and types
+    fn generate_mod(&self, settings: &impl GeneratorSettings) -> TokenStream;
 }

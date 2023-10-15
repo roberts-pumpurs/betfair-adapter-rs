@@ -2,33 +2,45 @@
 
 mod data_types;
 mod documentation;
+mod injector;
 mod rpc_calls;
+mod top_level_preamble;
 mod type_resolver;
 
 use betfair_xml_parser::Interface;
+pub use injector::CodeInjector;
 use proc_macro2::TokenStream;
 use quote::quote;
 
 use self::type_resolver::TypeResolverV1;
-use crate::ast::Aping;
+use crate::aping_ast::Aping;
+use crate::settings::GeneratorSettings;
 use crate::GeneratorStrategy;
 
 /// The first version of BetfairTypeGen implementation
-pub struct GenV1 {
-    /// The type resolver
+#[derive(Debug)]
+pub struct GenV1GeneratorStrategy<T: CodeInjector> {
     pub(crate) type_resolver: TypeResolverV1,
+    pub(crate) code_injector: T,
 }
 
-impl GenV1 {
+impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
     /// # Instantiate a new `GenV1`
     /// This is the strategy that will be used to generate the code
-    pub const fn new() -> Self {
-        Self { type_resolver: TypeResolverV1::new() }
+    pub fn new(code_injector: T) -> Self {
+        Self { type_resolver: TypeResolverV1::new(), code_injector }
     }
 }
 
-impl GeneratorStrategy for GenV1 {
-    fn generate(&self, interface: impl Into<Interface>) -> TokenStream {
+impl GenV1GeneratorStrategy<injector::CodeInjectorV1> {
+    /// Creates a new `GenV1GeneratorStrategy` with the given `CodeInjectorV1`.
+    pub fn preconfigured() -> Self {
+        Self::new(injector::CodeInjectorV1::new())
+    }
+}
+
+impl<T: CodeInjector> GeneratorStrategy for GenV1GeneratorStrategy<T> {
+    fn generate_submodule(&self, interface: impl Into<Interface>) -> TokenStream {
         let interface = interface.into();
         let aping: Aping =
             interface.try_into().expect("Failed to convert the interface into the AST");
@@ -53,40 +65,64 @@ impl GeneratorStrategy for GenV1 {
                 #iter_rpc_call
             }
         });
-        let transport_layer = self.generate_transport_layer();
+
+        let preamble = self.code_injector.module_level_preamble();
 
         quote!(
             #top_level_docs
 
-            #transport_layer
+            use super::*;
+            #preamble
 
             #data_types
 
             #rpc_calls
         )
     }
+
+    // TODO: Implement the inside gen_1 generate_mod, proper preamble, and proper submodules
+    fn generate_mod(&self, settings: &impl GeneratorSettings) -> TokenStream {
+        let transport_layer = self.generate_transport_layer();
+
+        let mut top_level_preamble = quote! {
+            #transport_layer
+        };
+        if settings.account_aping() {
+            top_level_preamble = quote! {
+                #top_level_preamble
+                pub mod account_aping;
+            };
+        }
+        if settings.heartbeat_aping() {
+            top_level_preamble = quote! {
+                #top_level_preamble
+                pub mod heartbeat_aping;
+            };
+        }
+        if settings.sports_aping() {
+            top_level_preamble = quote! {
+                #top_level_preamble
+                pub mod sports_aping;
+            };
+        }
+        if settings.stream_api() {
+            top_level_preamble = quote! {
+                #top_level_preamble
+                pub mod stream_api;
+            };
+        }
+        top_level_preamble
+    }
 }
 
 #[cfg(test)]
 mod test {
 
-    use betfair_xml_parser::Interface;
-
+    use super::injector::CodeInjectorV1;
     use super::*;
-    use crate::GeneratorStrategy;
-
-    pub(crate) const GEN_V1: GenV1 = GenV1::new();
 
     #[rstest::fixture]
-    pub fn interface() -> Interface {
-        let interface: Interface = include_str!("../../assets/HeartbeatAPING.xml").into();
-        interface
-    }
-
-    #[rstest::rstest]
-    fn test_gen_v1(interface: Interface) {
-        let _generated_code = GEN_V1.generate(interface);
-
-        // TODO: assert the generated code
+    pub fn gen_v1() -> GenV1GeneratorStrategy<CodeInjectorV1> {
+        GenV1GeneratorStrategy::preconfigured()
     }
 }
