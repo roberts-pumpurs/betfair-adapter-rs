@@ -1,5 +1,0 @@
-[hooks]
-pre-push = "cargo make local-ci"
-
-[logging]
-verbose = true

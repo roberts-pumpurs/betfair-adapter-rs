@@ -21,9 +21,6 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 # Install cargo-make
 cargo install cargo-make
 
-# Setup the dependencies
-cargo make setup
-
 # Test the code
 cargo make test
 
