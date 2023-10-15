@@ -1,14 +1,12 @@
 # Betfari Adapter
 
-[![check](https://github.com/provencraft/betfair-adapter-rs/actions/workflows/check.yaml/badge.svg)](https://github.com/provencraft/betfair-adapter-rs/actions/workflows/check.yaml)
-[![docs](https://github.com/provencraft/betfair-adapter-rs/actions/workflows/doc.yaml/badge.svg)](https://github.com/provencraft/betfair-adapter-rs/actions/workflows/doc.yaml)
-[![msrv](https://github.com/provencraft/betfair-adapter-rs/actions/workflows/msrv.yaml/badge.svg)](https://github.com/provencraft/betfair-adapter-rs/actions/workflows/msrv.yaml)
-[![test](https://github.com/provencraft/betfair-adapter-rs/actions/workflows/test.yaml/badge.svg)](https://github.com/provencraft/betfair-adapter-rs/actions/workflows/test.yaml)
-[![unused-deps](https://github.com/provencraft/betfair-adapter-rs/actions/workflows/unused-deps.yaml/badge.svg)](https://github.com/provencraft/betfair-adapter-rs/actions/workflows/unused-deps.yaml)
-[![deny](https://github.com/provencraft/betfair-adapter-rs/actions/workflows/deny.yaml/badge.svg)](https://github.com/provencraft/betfair-adapter-rs/actions/workflows/deny.yaml)
-[![audit](https://github.com/provencraft/betfair-adapter-rs/actions/workflows/audit.yaml/badge.svg)](https://github.com/provencraft/betfair-adapter-rs/actions/workflows/audit.yaml)
-
-Developed and maintianed by Provencraft.
+[![check](https://github.com/roberts-ivanovs/betfair-adapter-rs/actions/workflows/check.yaml/badge.svg)](https://github.com/roberts-ivanovs/betfair-adapter-rs/actions/workflows/check.yaml)
+[![docs](https://github.com/roberts-ivanovs/betfair-adapter-rs/actions/workflows/doc.yaml/badge.svg)](https://github.com/roberts-ivanovs/betfair-adapter-rs/actions/workflows/doc.yaml)
+[![msrv](https://github.com/roberts-ivanovs/betfair-adapter-rs/actions/workflows/msrv.yaml/badge.svg)](https://github.com/roberts-ivanovs/betfair-adapter-rs/actions/workflows/msrv.yaml)
+[![test](https://github.com/roberts-ivanovs/betfair-adapter-rs/actions/workflows/test.yaml/badge.svg)](https://github.com/roberts-ivanovs/betfair-adapter-rs/actions/workflows/test.yaml)
+[![unused-deps](https://github.com/roberts-ivanovs/betfair-adapter-rs/actions/workflows/unused-deps.yaml/badge.svg)](https://github.com/roberts-ivanovs/betfair-adapter-rs/actions/workflows/unused-deps.yaml)
+[![deny](https://github.com/roberts-ivanovs/betfair-adapter-rs/actions/workflows/deny.yaml/badge.svg)](https://github.com/roberts-ivanovs/betfair-adapter-rs/actions/workflows/deny.yaml)
+[![audit](https://github.com/roberts-ivanovs/betfair-adapter-rs/actions/workflows/audit.yaml/badge.svg)](https://github.com/roberts-ivanovs/betfair-adapter-rs/actions/workflows/audit.yaml)
 
 https://docs.developer.betfair.com/display/1smk3cen4v3lu3yomq5qye0ni/Sample+Code
 
