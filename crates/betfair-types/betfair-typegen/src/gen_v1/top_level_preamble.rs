@@ -21,6 +21,8 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
             pub trait BetfairRpcRequest {
                 type Res;
                 type Error;
+
+                fn method() -> &'static str;
             }
         }
     }

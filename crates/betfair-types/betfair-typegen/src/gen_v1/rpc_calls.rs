@@ -1,4 +1,4 @@
-use proc_macro2::TokenStream;
+use proc_macro2::{TokenStream, Span, Ident};
 use quote::quote;
 
 use super::injector::CodeInjector;
@@ -28,11 +28,17 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
 
     fn generate_call_traits(&self, data_type: &RpcCall) -> TokenStream {
         let description = data_type.description.as_slice().object_comment();
+        let name = data_type.name.0.as_str();
+        // let name = Ident::new(&data_type.name.0, Span::call_site());
         quote! {
             #description
             impl BetfairRpcRequest for Parameters {
                 type Res = ReturnType;
                 type Error = Exception;
+
+                fn method() -> &'static str {
+                    #name
+                }
             }
         }
     }

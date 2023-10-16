@@ -1,35 +1,46 @@
+pub mod auth;
+mod error;
+pub mod urls;
+
+use std::collections::HashMap;
+use std::marker::PhantomData;
+
+pub use betfair_types;
 use betfair_types::types::{BetfairRpcRequest, TransportLayer};
+pub use error::ApiError;
 use reqwest::Client;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-pub struct BetfairRpcProvider {
+pub struct Authenticated;
+pub struct Unauthenticated;
+
+#[derive(Debug)]
+pub struct BetfairRpcProvider<T> {
     client: Client,
+    rest_base: urls::RestBase,
+    keep_alive: urls::KeepAlive,
+    cert_login: urls::CertLogin,
+    auth_token: redact::Secret<String>,
+    _type: PhantomData<T>,
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum ApiError {
-    #[error(transparent)]
-    SportsApingException(#[from] betfair_types::types::sports_aping::ApingException),
-    #[error(transparent)]
-    AccountApingException(#[from] betfair_types::types::account_aping::AccountApingException),
-    HeartbeatApingException(#[from] betfair_types::types::heartbeat_aping::ApingException),
-    #[error(transparent)]
-    ReqwestError(#[from] reqwest::Error),
-    #[error(transparent)]
-    SerdeError(#[from] serde_json::Error),
-}
-
-impl<T> TransportLayer<T> for BetfairRpcProvider
+impl<T> TransportLayer<T> for BetfairRpcProvider<Authenticated>
 where
-    T: BetfairRpcRequest + Serialize + std::marker::Send + 'static,
+    T: BetfairRpcRequest + Serialize + std::marker::Send + 'static + std::fmt::Debug,
     T::Res: DeserializeOwned + 'static,
-    T::Error: DeserializeOwned + 'static + Into<ApiError>,
+    T::Error: DeserializeOwned + 'static + Into<ApiError> + std::fmt::Debug,
 {
     type Error = ApiError;
 
+    #[tracing::instrument(skip(self), err)]
     async fn send_request(&self, request: T) -> Result<T::Res, Self::Error> {
-        let res = self.client.post("example.com").json(&request);
+        let endpoint = self.rest_base.0.join(T::method())?;
+        let res = self
+            .client
+            .post(endpoint.as_str())
+            .header("X-Authentication", self.auth_token.expose_secret().as_str())
+            .json(&request);
         let res = res.send().await?;
         let res = res.text().await?;
         let res = serde_json::from_str(&res).map_err(|_e| {
@@ -42,29 +53,3 @@ where
         Ok(res)
     }
 }
-
-impl std::fmt::Display for ApiError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ApiError::SportsApingException(e) => write!(f, "{}", e),
-            ApiError::AccountApingException(e) => write!(f, "{}", e),
-            ApiError::HeartbeatApingException(e) => write!(f, "{}", e),
-            ApiError::ReqwestError(e) => write!(f, "{}", e),
-            ApiError::SerdeError(e) => write!(f, "{}", e),
-        }
-    }
-}
-
-// async fn asd(client: &BetfairRpcProvider) {
-//     let res = client.send_request(betfair_types::types::sports_aping::replace_orders::Parameters {
-//         market_id: todo!(),
-//         instructions: todo!(),
-//         customer_ref: todo!(),
-//         market_version: todo!(),
-//         r_async: todo!(),
-//     }).await;
-//     match res {
-//         Ok(res) => todo!(),
-//         Err(e) => todo!(),
-//     }
-// }
