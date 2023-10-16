@@ -89,7 +89,7 @@ impl Aping {
                         .value
                         .clone()
                         .map(|x| vec![Comment::new(x)])
-                        .unwrap_or(vec![]);
+                        .unwrap_or_default();
                     ValidEnumValue {
                         id: x.id.clone().unwrap_or_else(|| x.name.clone()),
                         name: Name(x.name.clone()),
@@ -408,7 +408,7 @@ mod prism_impls {
                     betfair_xml_parser::operation::ParametersItems::Request(x) => Some(x.clone()),
                     _ => None,
                 })
-                .flat_map(|x| x.values.unwrap_or(vec![]))
+                .flat_map(|x| x.values.unwrap_or_default())
                 .map(|x| {
                     let doc_comments = (&x).lense();
 
@@ -445,7 +445,7 @@ mod prism_impls {
                     betfair_xml_parser::operation::ParametersItems::Request(x) => Some(x.clone()),
                     _ => None,
                 })
-                .flat_map(|x| x.values.unwrap_or(vec![]))
+                .flat_map(|x| x.values.unwrap_or_default())
                 .filter_map(|x| {
                     let doc_comment = (&x).lense();
 
@@ -470,7 +470,7 @@ mod prism_impls {
                                     .value
                                     .as_ref()
                                     .map(|x| vec![Comment::new(x.clone())])
-                                    .unwrap_or(vec![]);
+                                    .unwrap_or_default();
 
                                 let value = data_type::ValidEnumValue {
                                     id: i.id.unwrap_or(i.name.clone()),

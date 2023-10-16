@@ -29,14 +29,10 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
     fn generate_call_traits(&self, data_type: &RpcCall) -> TokenStream {
         let description = data_type.description.as_slice().object_comment();
         quote! {
-            impl<Any> BetfairRpcCall<Parameters, ReturnType> for Any
-            where
-                Self: TransportLayer<Parameters, ReturnType>,
-            {
-                #description
-                fn call(&self, request: Parameters) -> ReturnType {
-                    self.send_request(request)
-                }
+            #description
+            impl BetfairRpcRequest for Parameters {
+                type Res = ReturnType;
+                type Error = Exception;
             }
         }
     }
@@ -52,14 +48,10 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                 pub type Exception = #err_data_type;
 
                 #description
-                pub type ReturnType = Result<#ok_type, Exception>;
+                pub type ReturnType = #ok_type;
             }
         } else {
-            let return_type = self.type_resolver.resolve_type(&data_type.returns.data_type);
-            quote! {
-                #description
-                pub type ReturnType = #return_type;
-            }
+            unimplemented!("this scenario does not exist!")
         }
     }
 

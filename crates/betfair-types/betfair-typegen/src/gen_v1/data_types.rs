@@ -149,11 +149,26 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
         );
 
         let struct_derives = self.code_injector.struct_derives();
+        let is_error_type = struct_value.name.0.ends_with("Exception");
+        let append = if is_error_type {
+            quote! {
+                impl std::error::Error for #name {}
+                impl std::fmt::Display for #name {
+                    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(f, "{:?}", self)
+                    }
+                }
+            }
+        } else {
+            quote! {}
+        };
+
         quote! {
             #struct_derives
             pub struct #name {
                 #fields
             }
+            #append
         }
     }
 
