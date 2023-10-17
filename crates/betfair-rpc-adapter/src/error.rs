@@ -25,3 +25,72 @@ impl std::fmt::Display for ApiError {
         }
     }
 }
+
+pub trait ApingException {
+    fn invalid_app_key(&self) -> bool;
+    fn invalid_session(&self) -> bool;
+}
+
+impl ApingException for betfair_types::types::sports_aping::ApingException {
+    fn invalid_app_key(&self) -> bool {
+        self.error_code.map_or(false, |x| {
+            matches!(
+                x,
+                betfair_types::types::sports_aping::ErrorCode::NoAppKey |
+                    betfair_types::types::sports_aping::ErrorCode::InvalidAppKey
+            )
+        })
+    }
+
+    fn invalid_session(&self) -> bool {
+        self.error_code.map_or(false, |x| {
+            matches!(
+                x,
+                betfair_types::types::sports_aping::ErrorCode::InvalidSessionInformation |
+                    betfair_types::types::sports_aping::ErrorCode::NoSession
+            )
+        })
+    }
+}
+impl ApingException for betfair_types::types::heartbeat_aping::ApingException {
+    fn invalid_app_key(&self) -> bool {
+        self.error_code.map_or(false, |x| {
+            matches!(
+                x,
+                betfair_types::types::heartbeat_aping::ErrorCode::NoAppKey |
+                    betfair_types::types::heartbeat_aping::ErrorCode::InvalidAppKey
+            )
+        })
+    }
+
+    fn invalid_session(&self) -> bool {
+        self.error_code.map_or(false, |x| {
+            matches!(
+                x,
+                betfair_types::types::heartbeat_aping::ErrorCode::InvalidSessionInformation |
+                    betfair_types::types::heartbeat_aping::ErrorCode::NoSession
+            )
+        })
+    }
+}
+impl ApingException for betfair_types::types::account_aping::AccountApingException {
+    fn invalid_app_key(&self) -> bool {
+        self.error_code.map_or(false, |x| {
+            matches!(
+                x,
+                betfair_types::types::account_aping::ErrorCode::NoAppKey |
+                    betfair_types::types::account_aping::ErrorCode::InvalidAppKey
+            )
+        })
+    }
+
+    fn invalid_session(&self) -> bool {
+        self.error_code.map_or(false, |x| {
+            matches!(
+                x,
+                betfair_types::types::account_aping::ErrorCode::InvalidSessionInformation |
+                    betfair_types::types::account_aping::ErrorCode::NoSession
+            )
+        })
+    }
+}

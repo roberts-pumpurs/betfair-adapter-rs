@@ -1,4 +1,4 @@
-use proc_macro2::{TokenStream, Span, Ident};
+use proc_macro2::TokenStream;
 use quote::quote;
 
 use super::injector::CodeInjector;

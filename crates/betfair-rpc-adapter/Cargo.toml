@@ -16,3 +16,5 @@ tracing.workspace = true
 betfair-types.workspace = true
 eyre.workspace = true
 url.workspace = true
+futures-concurrency.workspace = true
+futures.workspace = true

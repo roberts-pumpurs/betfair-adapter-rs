@@ -27,6 +27,8 @@ redact = { version = "0.1", features = ["serde"] }
 
 # Async
 tokio = { version = "1.0", features = ["full", "tracing"] }
+futures-concurrency = "7.4"
+futures = "0.3"
 
 # Parsing
 serde-xml-rs = "0.6"

@@ -4,20 +4,17 @@ use std::marker::PhantomData;
 use hyper::header;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use tokio::sync::RwLock;
 
 use crate::{ApiError, Authenticated, BetfairRpcProvider, Unauthenticated};
 
-#[derive(Debug)]
-pub struct ApplicationKey(redact::Secret<String>);
+pub const AUTH_HEADER: &str = "X-Authentication";
 
-#[derive(Debug)]
-pub struct Username(redact::Secret<String>);
-
-#[derive(Debug)]
-pub struct Password(redact::Secret<String>);
-
-#[derive(Debug)]
-pub struct Identity(redact::Secret<reqwest::Identity>);
+impl Default for BetfairRpcProvider<Unauthenticated> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl BetfairRpcProvider<Unauthenticated> {
     pub fn new_with_urls(
@@ -31,7 +28,8 @@ impl BetfairRpcProvider<Unauthenticated> {
             rest_base,
             keep_alive,
             cert_login,
-            auth_token: redact::Secret::new("".to_string()),
+            auth_token: RwLock::new(redact::Secret::new("".to_string())),
+            secret_provider: crate::secret::SecretProvider,
         }
     }
 
@@ -43,53 +41,47 @@ impl BetfairRpcProvider<Unauthenticated> {
         )
     }
 
-    pub async fn authenticate(
-        mut self,
-        application_key: ApplicationKey,
-        username: Username,
-        password: Password,
-        identity: Identity,
-    ) -> Result<BetfairRpcProvider<Authenticated>, ApiError> {
-        self.cert_log_in(application_key, username, password, identity).await?;
+    pub async fn authenticate(self) -> Result<BetfairRpcProvider<Authenticated>, ApiError> {
+        self.cert_log_in().await?;
 
-        Ok(BetfairRpcProvider::<Authenticated>::new_with_client(
-            self.client,
-            self.rest_base,
-            self.keep_alive,
-            self.cert_login,
-            self.auth_token,
-        ))
+        Ok(unsafe { std::mem::transmute(self) })
     }
 }
 
 impl BetfairRpcProvider<Authenticated> {
-    pub(crate) fn new_with_client(
-        client: Client,
-        rest_base: crate::urls::RestBase,
-        keep_alive: crate::urls::KeepAlive,
-        cert_login: crate::urls::CertLogin,
-        auth_token: redact::Secret<String>,
-    ) -> Self {
-        Self { client, _type: PhantomData, rest_base, keep_alive, cert_login, auth_token }
+    #[tracing::instrument(skip(self), err)]
+    pub async fn keep_alive(&self) -> Result<(), ApiError> {
+        let auth_token = self.auth_token.read().await;
+        let _res = self
+            .client
+            .get(self.keep_alive.0.as_str())
+            .header(AUTH_HEADER, auth_token.expose_secret().as_str())
+            .send()
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn update_auth_token(&self) -> Result<(), ApiError> {
+        self.cert_log_in().await?;
+        Ok(())
     }
 }
 
 impl<T> BetfairRpcProvider<T> {
-    pub(crate) async fn cert_log_in(
-        &mut self,
-        application_key: ApplicationKey,
-        username: Username,
-        password: Password,
-        identity: Identity,
-    ) -> Result<(), ApiError> {
+    #[tracing::instrument(skip(self), err)]
+    async fn cert_log_in(&self) -> Result<(), ApiError> {
         const KEEP_ALIVE_INTERVAL: std::time::Duration = std::time::Duration::from_secs(15);
 
         // Use this to get the session token
         let temp_client = reqwest::Client::builder()
             .use_rustls_tls()
-            .identity(identity.0.expose_secret().clone())
+            .identity(self.secret_provider.identity().0.expose_secret().clone())
             .default_headers(header_tuple_to_map([
-                ("X-Application".to_string(), application_key.0.expose_secret().to_string()),
+                (
+                    "X-Application".to_string(),
+                    self.secret_provider.application_key().0.expose_secret().to_string(),
+                ),
                 ("Content-Type".to_string(), "application/x-www-form-urlencoded".to_string()),
             ]))
             .http2_keep_alive_interval(KEEP_ALIVE_INTERVAL)
@@ -99,15 +91,16 @@ impl<T> BetfairRpcProvider<T> {
         let login_response = temp_client
             .post(self.cert_login.0.as_str())
             .form(&[
-                ("username", username.0.expose_secret().to_owned()),
-                ("password", password.0.expose_secret().to_owned()),
+                ("username", self.secret_provider.username().0.expose_secret().to_owned()),
+                ("password", self.secret_provider.password().0.expose_secret().to_owned()),
             ])
             .send()
             .await?
             .json::<SessionTokenInfo>()
             .await?;
 
-        self.auth_token = login_response.session_token.clone();
+        let mut w = self.auth_token.write().await;
+        *w = login_response.session_token.clone();
 
         Ok(())
     }
@@ -119,30 +112,6 @@ pub struct SessionTokenInfo {
     #[serde(serialize_with = "redact::expose_secret")]
     session_token: redact::Secret<String>,
     login_status: String,
-}
-
-impl ApplicationKey {
-    pub fn new(application_key: String) -> Self {
-        Self(redact::Secret::new(application_key))
-    }
-}
-
-impl Username {
-    pub fn new(username: String) -> Self {
-        Self(redact::Secret::new(username))
-    }
-}
-
-impl Password {
-    pub fn new(password: String) -> Self {
-        Self(redact::Secret::new(password))
-    }
-}
-
-impl Identity {
-    pub fn new(identity: reqwest::Identity) -> Self {
-        Self(redact::Secret::new(identity))
-    }
 }
 
 fn header_tuple_to_map<const SIZE: usize>(
