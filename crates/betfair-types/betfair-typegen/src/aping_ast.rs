@@ -148,7 +148,7 @@ impl Aping {
                     .collect::<Vec<_>>();
                 StructField {
                     name: Name(x.name.clone()),
-                    mandatory: x.mandatory.unwrap_or(true),
+                    mandatory: x.mandatory.unwrap_or(false),
                     data_type: x.r#type.into(),
                     description,
                 }
@@ -415,7 +415,7 @@ mod prism_impls {
                     Param {
                         name: Name(x.name.clone()),
                         data_type: x.r#type.clone().into(),
-                        mandatory: x.mandatory.unwrap_or(true),
+                        mandatory: x.mandatory.unwrap_or(false),
                         description: doc_comments,
                     }
                 })
@@ -500,7 +500,7 @@ mod prism_impls {
 
 #[cfg(test)]
 mod tests {
-
+    use pretty_assertions::{assert_eq, assert_ne};
     use super::*;
 
     #[rstest::fixture]
@@ -791,6 +791,57 @@ mod tests {
             DataType {
                 description: vec![Comment::new("Application subscription details".to_string())],
                 name: Name("AccountSubscription".to_string()),
+                variant: DataTypeVariant::StructValue(struct_value),
+            },
+        );
+
+        // Action
+        aping.insert_data_type(&input);
+
+        // Assert
+        assert_eq!(aping.data_types, expected);
+    }
+
+    #[rstest::rstest]
+    fn parse_data_type_2(mut aping: Aping) {
+        // Setup
+        let input = r#"
+    <dataType name="CancelInstruction">
+        <description>Instruction to fully or partially cancel an order (only applies to LIMIT orders)</description>
+        <parameter mandatory="true" name="betId" type="string">
+            <description/>
+        </parameter>
+        <parameter name="sizeReduction" type="Size">
+            <description>If supplied then this is a partial cancel</description>
+        </parameter>
+    </dataType>"#;
+        let input = serde_xml_rs::from_str(input).unwrap();
+        let mut expected = HashMap::new();
+        let struct_value = StructValue {
+            name: Name("CancelInstruction".to_string()),
+            fields: vec![
+                StructField {
+                    name: Name("betId".to_string()),
+                    data_type: "string".to_string().into(),
+                    description: vec![],
+                    mandatory: true,
+                },
+                StructField {
+                    name: Name("sizeReduction".to_string()),
+                    data_type: "Size".to_string().into(),
+                    description: vec![Comment::new("If supplied then this is a partial cancel".to_string())],
+                    mandatory: false,
+                },
+            ],
+        };
+        expected.insert(
+            Name("CancelInstruction".to_string()),
+            DataType {
+                description: vec![Comment::new(
+                    "Instruction to fully or partially cancel an order (only applies to LIMIT orders)"
+                        .to_string(),
+                )],
+                name: Name("CancelInstruction".to_string()),
                 variant: DataTypeVariant::StructValue(struct_value),
             },
         );

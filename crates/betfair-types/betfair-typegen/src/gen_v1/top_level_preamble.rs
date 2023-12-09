@@ -10,14 +10,6 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
             use std::future::Future;
             use serde::{Serialize, de::DeserializeOwned};
 
-            pub trait TransportLayer<T> where
-                T: BetfairRpcRequest + Serialize + std::marker::Send + 'static,
-                T::Res: DeserializeOwned + 'static
-            {
-                type Error;
-                fn send_request(&self, request: T) -> impl Future<Output = Result<T::Res, Self::Error>> + Send + '_;
-            }
-
             pub trait BetfairRpcRequest {
                 type Res;
                 type Error;

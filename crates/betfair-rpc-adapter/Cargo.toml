@@ -18,3 +18,11 @@ eyre.workspace = true
 url.workspace = true
 futures-concurrency.workspace = true
 futures.workspace = true
+chrono.workspace = true
+http.workspace = true
+
+[dev-dependencies]
+tracing-subscriber.workspace = true
+rstest.workspace = true
+test-log.workspace = true
+wiremock.workspace = true
