@@ -1971,7 +1971,7 @@
         <parameter mandatory="true" type="ExecutionReportStatus" name="status">
             <description/>
         </parameter>
-        <parameter type="string" name="errorCode">
+        <parameter type="ExecutionReportErrorCode" name="errorCode">
             <description/>
         </parameter>
         <parameter type="MarketId" name="marketId">
@@ -2062,7 +2062,7 @@
         <parameter mandatory="true" name="status" type="string">
             <description>whether the command succeeded or failed</description>
         </parameter>
-        <parameter name="errorCode" type="string">
+        <parameter name="errorCode" type="ExecutionReportErrorCode">
             <description>cause of failure, or null if command succeeds</description>
         </parameter>
         <parameter mandatory="false" name="orderStatus" type="OrderStatus">
@@ -2113,7 +2113,7 @@
         <parameter mandatory="true" type="ExecutionReportStatus" name="status">
             <description/>
         </parameter>
-        <parameter type="string" name="errorCode">
+        <parameter type="string" name="ExecutionReportErrorCode">
             <description/>
         </parameter>
         <parameter type="MarketId" name="marketId">
@@ -2147,7 +2147,7 @@
         <parameter mandatory="true" type="ExecutionReportStatus" name="status">
             <description/>
         </parameter>
-        <parameter type="string" name="errorCode">
+        <parameter type="ExecutionReportErrorCode" name="errorCode">
             <description/>
         </parameter>
         <parameter type="MarketId" name="marketId">
@@ -2163,7 +2163,7 @@
         <parameter mandatory="true" name="status" type="string">
             <description>whether the command succeeded or failed</description>
         </parameter>
-        <parameter name="errorCode" type="string">
+        <parameter name="errorCode" type="ExecutionReportErrorCode">
             <description>cause of failure, or null if command succeeds</description>
         </parameter>
         <parameter name="cancelInstructionReport" type="CancelInstructionReport">
@@ -2179,7 +2179,7 @@
         <parameter mandatory="true" name="status" type="string">
             <description>whether the command succeeded or failed</description>
         </parameter>
-        <parameter name="errorCode" type="string">
+        <parameter name="errorCode" type="ExecutionReportErrorCode">
             <description>cause of failure, or null if command succeeds</description>
         </parameter>
         <parameter type="CancelInstruction" name="instruction">
@@ -2213,7 +2213,7 @@
         <parameter mandatory="true" type="ExecutionReportStatus" name="status">
             <description/>
         </parameter>
-        <parameter type="string" name="errorCode">
+        <parameter type="ExecutionReportErrorCode" name="errorCode">
             <description/>
         </parameter>
         <parameter type="MarketId" name="marketId">
@@ -2229,7 +2229,7 @@
         <parameter mandatory="true" name="status" type="string">
             <description>whether the command succeeded or failed</description>
         </parameter>
-        <parameter name="errorCode" type="string">
+        <parameter name="errorCode" type="ExecutionReportErrorCode">
             <description>cause of failure, or null if command succeeds</description>
         </parameter>
         <parameter mandatory="true" name="instruction" type="UpdateInstruction">
