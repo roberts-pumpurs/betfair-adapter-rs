@@ -726,7 +726,7 @@
         <parameter name="cancellationDateTime" type="dateTime" mandatory="false">
             <description>Subscription Cancelled date</description>
         </parameter>
-        <parameter name="subscriptionStatus" type="string" mandatory="false">
+        <parameter name="subscriptionStatus" type="SubscriptionStatus" mandatory="false">
             <description>Subscription status</description>
         </parameter>
         <parameter name="clientReference" type="string" mandatory="false">
@@ -759,7 +759,7 @@
         <parameter name="cancellationDateTime" type="dateTime" mandatory="false">
             <description>Subscription Cancelled date</description>
         </parameter>
-        <parameter name="subscriptionStatus" type="string" mandatory="false">
+        <parameter name="subscriptionStatus" type="SubscriptionStatus" mandatory="false">
             <description>Subscription status</description>
         </parameter>
         <parameter name="clientReference" type="string" mandatory="false">
@@ -801,7 +801,7 @@
         <parameter name="cancellationDateTime" type="dateTime" mandatory="false">
             <description>Subscription Cancelled date</description>
         </parameter>
-        <parameter name="subscriptionStatus" type="string" mandatory="false">
+        <parameter name="subscriptionStatus" type="SubscriptionStatus" mandatory="false">
             <description>Subscription status</description>
         </parameter>
     </dataType>

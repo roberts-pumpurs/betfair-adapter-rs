@@ -1968,7 +1968,7 @@
                 Echo of the customerRef if passed.
             </description>
         </parameter>
-        <parameter mandatory="true" type="string" name="status">
+        <parameter mandatory="true" type="ExecutionReportStatus" name="status">
             <description/>
         </parameter>
         <parameter type="string" name="errorCode">
@@ -2095,7 +2095,7 @@
 
     <dataType name="CancelInstruction">
         <description>Instruction to fully or partially cancel an order (only applies to LIMIT orders)</description>
-        <parameter mandatory="true" name="betId" type="string">
+        <parameter mandatory="true" name="betId" type="BetId">
             <description/>
         </parameter>
         <parameter name="sizeReduction" type="Size">
@@ -2110,7 +2110,7 @@
                 Echo of the customerRef if passed.
             </description>
         </parameter>
-        <parameter mandatory="true" type="string" name="status">
+        <parameter mandatory="true" type="ExecutionReportStatus" name="status">
             <description/>
         </parameter>
         <parameter type="string" name="errorCode">
@@ -2129,7 +2129,7 @@
             cancelled
             and a new order placed at the new price for the remaining stake.
         </description>
-        <parameter mandatory="true" name="betId" type="string">
+        <parameter mandatory="true" name="betId" type="BetId">
             <description/>
         </parameter>
         <parameter mandatory="true" name="newPrice" type="Price">
@@ -2144,7 +2144,7 @@
                 Echo of the customerRef if passed.
             </description>
         </parameter>
-        <parameter mandatory="true" type="string" name="status">
+        <parameter mandatory="true" type="ExecutionReportStatus" name="status">
             <description/>
         </parameter>
         <parameter type="string" name="errorCode">
@@ -2195,7 +2195,7 @@
 
     <dataType name="UpdateInstruction">
         <description>Instruction to update LIMIT bet's persistence of an order that do not affect exposure</description>
-        <parameter mandatory="true" name="betId" type="string">
+        <parameter mandatory="true" name="betId" type="BetId">
             <description/>
         </parameter>
         <parameter mandatory="true" name="newPersistenceType" type="PersistenceType">
@@ -2210,7 +2210,7 @@
                 Echo of the customerRef if passed.
             </description>
         </parameter>
-        <parameter mandatory="true" type="string" name="status">
+        <parameter mandatory="true" type="ExecutionReportStatus" name="status">
             <description/>
         </parameter>
         <parameter type="string" name="errorCode">
