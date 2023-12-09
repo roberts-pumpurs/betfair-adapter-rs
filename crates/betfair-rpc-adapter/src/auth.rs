@@ -44,24 +44,13 @@ impl BetfairRpcProvider<Unauthenticated> {
     pub async fn authenticate(self) -> Result<BetfairRpcProvider<Authenticated>, ApiError> {
         self.cert_log_in().await?;
 
-        Ok(unsafe { std::mem::transmute(self) })
+        let instance: BetfairRpcProvider<Authenticated> = unsafe { std::mem::transmute(self) };
+
+        Ok(instance)
     }
 }
 
 impl BetfairRpcProvider<Authenticated> {
-    #[tracing::instrument(skip(self), err)]
-    pub async fn keep_alive(&self) -> Result<(), ApiError> {
-        let auth_token = self.auth_token.read().await;
-        let _res = self
-            .client
-            .get(self.keep_alive.0.as_str())
-            .header(AUTH_HEADER, auth_token.expose_secret().as_str())
-            .send()
-            .await?;
-
-        Ok(())
-    }
-
     pub async fn update_auth_token(&self) -> Result<(), ApiError> {
         self.cert_log_in().await?;
         Ok(())
@@ -102,6 +91,18 @@ impl<T> BetfairRpcProvider<T> {
         let mut w = self.auth_token.write().await;
         *w = login_response.session_token.clone();
 
+        // TODO keep this loop running in the background and close on error
+        let handle = tokio::spawn(async {
+            loop {
+                tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+                if let Err(e) = keep_alive().await {
+                    tracing::error!("Error keeping alive: {:?}", e);
+                    break
+                }
+            }
+        });
+        // TODO we need to abort the handle when we drop the client. Maybe we can use JoinSet and push the handle in there
+
         Ok(())
     }
 }
@@ -130,4 +131,17 @@ pub fn default_client(app_key: String) -> eyre::Result<reqwest::Client> {
         ("Accept-Encoding".to_string(), "gzip, deflate".to_string()),
     ]);
     Ok(reqwest::Client::builder().default_headers(headers).build()?)
+}
+
+pub async fn keep_alive() -> Result<(), ApiError> {
+    // TODO get everything from args
+    let auth_token = self.auth_token.read().await;
+    let _res = self
+        .client
+        .get(self.keep_alive.0.as_str())
+        .header(AUTH_HEADER, auth_token.expose_secret().as_str())
+        .send()
+        .await?;
+
+    Ok(())
 }
