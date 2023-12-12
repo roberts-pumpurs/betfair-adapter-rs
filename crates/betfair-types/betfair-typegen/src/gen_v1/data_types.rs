@@ -1,4 +1,4 @@
-use proc_macro2::TokenStream;
+use proc_macro2::{TokenStream, Ident, Span};
 use quote::quote;
 
 use super::injector::CodeInjector;
@@ -119,12 +119,14 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                     struct_field.name.ident_snake()
                 }
             };
+            let original_name = struct_field.name.0.as_str();
             let data_type = gen.type_resolver.resolve_type(&struct_field.data_type);
             let struct_parameter_derives = gen.code_injector.struct_parameter_derives();
             if struct_field.mandatory {
                 quote! {
                     #description
                     #struct_parameter_derives
+                    #[serde(rename = #original_name)]
                     pub #name: #data_type,
                 }
             } else {
@@ -132,6 +134,7 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                     #description
                     #struct_parameter_derives
                     #[serde(skip_serializing_if = "Option::is_none")]
+                    #[serde(rename = #original_name)]
                     #[builder(default, setter(strip_option))]
                     pub #name: Option<#data_type>,
                 }

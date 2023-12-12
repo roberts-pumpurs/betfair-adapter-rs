@@ -1071,7 +1071,7 @@
 
     <dataType name="MarketCatalogue">
         <description>Information about a market</description>
-        <parameter mandatory="true" name="marketId" type="string">
+        <parameter mandatory="true" name="marketId" type="MarketId">
             <description>The unique identifier for the market</description>
         </parameter>
         <parameter mandatory="true" name="marketName" type="string">
@@ -1562,7 +1562,7 @@
         <parameter name="turnInPlayEnabled" type="bool" mandatory="true">
             <description>canTurnInPlay</description>
         </parameter>
-        <parameter name="marketType" type="string" mandatory="true">
+        <parameter name="marketType" type="MarketType" mandatory="true">
             <description>market base type</description>
         </parameter>
         <parameter name="regulator" type="string" mandatory="true">
@@ -1891,7 +1891,7 @@
                 places)" etc) translated into the requested locale. Available at MARKET groupBy or lower.
             </description>
         </parameter>
-        <parameter name="marketType" type="string">
+        <parameter name="marketType" type="MarketType">
             <description>The market type
             </description>
         </parameter>
@@ -2345,7 +2345,7 @@
                 Profit and loss for the market if this selection is the loser. Only returned for multi-winner odds markets.
             </description>
         </parameter>
-        <parameter name="ifPlace" type="double">
+        <parameter name="iPlace" type="double">
             <description>
                 Profit and loss for the market if this selection is placed. Only returned for EACH_WAY markets.
             </description>

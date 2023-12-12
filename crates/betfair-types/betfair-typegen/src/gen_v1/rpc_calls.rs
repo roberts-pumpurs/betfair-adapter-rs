@@ -80,6 +80,7 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                 let data_type = if !field.mandatory {
                     quote! {
                         #[serde(skip_serializing_if = "Option::is_none")]
+                        #[builder(default, setter(strip_option))]
                         #struct_parameter_derives
                         pub #name: Option<#data_type>
                     }

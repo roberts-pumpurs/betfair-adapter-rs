@@ -35,8 +35,6 @@ async fn cancel_bets_unsuccessful() {
         ]
     });
 
-    tracing::info!("{}", rpc_path::<cancel_orders::Parameters>());
-    tracing::info!("{:?}", path(rpc_path::<cancel_orders::Parameters>()));
     Mock::given(method("POST"))
         .and(path(rpc_path::<cancel_orders::Parameters>()))
         .and(header("Accept", "application/json"))
