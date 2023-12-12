@@ -11,6 +11,8 @@ pub enum ApiError {
     SerdeError(#[from] serde_json::Error),
     #[error(transparent)]
     UrlParseError(#[from] url::ParseError),
+    #[error(transparent)]
+    EyreError(#[from] eyre::ErrReport),
 }
 
 impl std::fmt::Display for ApiError {
@@ -22,6 +24,7 @@ impl std::fmt::Display for ApiError {
             ApiError::ReqwestError(e) => write!(f, "{}", e),
             ApiError::SerdeError(e) => write!(f, "{}", e),
             ApiError::UrlParseError(e) => write!(f, "{}", e),
+            ApiError::EyreError(e) => write!(f, "{}", e),
         }
     }
 }

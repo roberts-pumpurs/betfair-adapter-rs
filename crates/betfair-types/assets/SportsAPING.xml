@@ -2059,7 +2059,7 @@
 
     <dataType name="PlaceInstructionReport">
         <description>Response to a PlaceInstruction</description>
-        <parameter mandatory="true" name="status" type="string">
+        <parameter mandatory="true" name="status" type="InstructionReportStatus">
             <description>whether the command succeeded or failed</description>
         </parameter>
         <parameter name="errorCode" type="ExecutionReportErrorCode">
@@ -2113,7 +2113,7 @@
         <parameter mandatory="true" type="ExecutionReportStatus" name="status">
             <description/>
         </parameter>
-        <parameter type="string" name="ExecutionReportErrorCode">
+        <parameter type="ExecutionReportErrorCode" name="errorCode">
             <description/>
         </parameter>
         <parameter type="MarketId" name="marketId">
@@ -2160,7 +2160,7 @@
 
     <dataType name="ReplaceInstructionReport">
         <description/>
-        <parameter mandatory="true" name="status" type="string">
+        <parameter mandatory="true" name="status" type="ExecutionReportStatus">
             <description>whether the command succeeded or failed</description>
         </parameter>
         <parameter name="errorCode" type="ExecutionReportErrorCode">
@@ -2176,10 +2176,10 @@
 
     <dataType name="CancelInstructionReport">
         <description/>
-        <parameter mandatory="true" name="status" type="string">
+        <parameter mandatory="true" name="status" type="InstructionReportStatus">
             <description>whether the command succeeded or failed</description>
         </parameter>
-        <parameter name="errorCode" type="ExecutionReportErrorCode">
+        <parameter name="errorCode" type="InstructionReportErrorCode">
             <description>cause of failure, or null if command succeeds</description>
         </parameter>
         <parameter type="CancelInstruction" name="instruction">
@@ -2188,7 +2188,7 @@
         <parameter mandatory="true" name="sizeCancelled" type="Size">
             <description/>
         </parameter>
-        <parameter mandatory="true" name="cancelledDate" type="dateTime">
+        <parameter name="cancelledDate" type="dateTime">
             <description/>
         </parameter>
     </dataType>

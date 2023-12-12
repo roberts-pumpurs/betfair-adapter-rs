@@ -1,31 +1,23 @@
-#[derive(Debug)]
-pub struct SecretProvider;
+use std::borrow::Cow;
 
-impl SecretProvider {
-    pub fn application_key(&self) -> &ApplicationKey {
-        todo!()
-    }
-    pub fn username(&self) -> &Username {
-        todo!()
-    }
-    pub fn password(&self) -> &Password {
-        todo!()
-    }
-    pub fn identity(&self) -> &Identity {
-        todo!()
-    }
+#[derive(Debug)]
+pub struct SecretProvider<'a> {
+    pub application_key: Cow<'a, ApplicationKey>,
+    pub username: Cow<'a, Username>,
+    pub password: Cow<'a, Password>,
+    pub identity: Cow<'a, Identity>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ApplicationKey(pub(crate) redact::Secret<String>);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Username(pub(crate) redact::Secret<String>);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Password(pub(crate) redact::Secret<String>);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Identity(pub(crate) redact::Secret<reqwest::Identity>);
 
 impl ApplicationKey {

@@ -6,67 +6,64 @@ pub mod urls;
 use std::marker::PhantomData;
 
 pub use betfair_types;
-use betfair_types::types::{BetfairRpcRequest, TransportLayer};
+pub use betfair_types::rust_decimal;
+use betfair_types::types::BetfairRpcRequest;
 pub use error::ApiError;
 use error::ApingException;
 use reqwest::Client;
+pub use secret::{ApplicationKey, Identity, Password, SecretProvider, Username};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use tokio::sync::RwLock;
+use tokio::sync::{OnceCell, RwLock};
 
 pub struct Authenticated;
 pub struct Unauthenticated;
 
 #[derive(Debug)]
-pub struct BetfairRpcProvider<T> {
+pub struct BetfairRpcProvider<'a, T> {
     client: Client,
-    rest_base: urls::RestBase,
-    keep_alive: urls::KeepAlive,
-    cert_login: urls::CertLogin,
-    auth_token: RwLock<redact::Secret<String>>,
-    secret_provider: secret::SecretProvider,
+    rest_base: urls::BetfairUrl<'a, urls::RestBase>,
+    keep_alive: urls::BetfairUrl<'a, urls::KeepAlive>,
+    cert_login: urls::BetfairUrl<'a, urls::CertLogin>,
+    auth_token: redact::Secret<String>,
+    secret_provider: secret::SecretProvider<'a>,
     _type: PhantomData<T>,
 }
 
-impl<T> TransportLayer<T> for BetfairRpcProvider<Authenticated>
-where
-    T: BetfairRpcRequest + Serialize + std::marker::Send + 'static + std::fmt::Debug,
-    T::Res: DeserializeOwned + std::marker::Send,
-    T::Error: DeserializeOwned + Into<ApiError> + std::fmt::Debug + error::ApingException,
-{
-    type Error = ApiError;
-
-    #[tracing::instrument(skip(self), err)]
-    async fn send_request(&self, request: T) -> Result<T::Res, Self::Error> {
-        let endpoint = self.rest_base.0.join(T::method())?;
-        let auth_token = self.auth_token.read().await;
+impl<'a> BetfairRpcProvider<'a, Authenticated> {
+    #[tracing::instrument(skip_all, ret, err, fields(req = ?request))]
+    pub async fn send_request<T>(&self, request: T) -> Result<T::Res, ApiError>
+    where
+        T: BetfairRpcRequest + serde::Serialize + std::fmt::Debug,
+        T::Res: serde::de::DeserializeOwned + std::fmt::Debug,
+        T::Error: serde::de::DeserializeOwned,
+        ApiError: From<<T as BetfairRpcRequest>::Error>,
+    {
+        let endpoint = self.rest_base.clone().join(T::method())?;
+        tracing::info!(endpoint = ?endpoint.to_string(), "Sending request");
         let res = self
             .client
             .post(endpoint.as_str())
-            .header(auth::AUTH_HEADER, auth_token.expose_secret().as_str())
+            .header(auth::AUTH_HEADER, self.auth_token.expose_secret().as_str())
             .json(&request);
+
         let res = res.send().await?;
-        let res = res.text().await?;
-        let res = serde_json::from_str(&res).map_err(|_e| {
-            serde_json::from_str::<T::Error>(&res)
-                .map::<(bool, bool, ApiError), _>(|x| {
-                    (x.invalid_app_key(), x.invalid_session(), x.into())
-                })
-                .map_err(ApiError::SerdeError)
-        });
+        let full = res.bytes().await?;
+        let res = serde_json::from_slice::<T::Res>(&full);
+
         match res {
-            Err(Ok((invalid_app, invalid_session, err_res))) => {
-                // TODO we need to extract the error type and see if it's a session token error. If
-                // it is, we want to completely re-login into the app TODO:    it
-                // can be attempted by calling the login method again and updating
-                // the token.
-                if invalid_app || invalid_session {
-                    self.update_auth_token().await?;
-                }
-                return Err(err_res)
+            Ok(res) => return Ok(res),
+            Err(_) => {
+                let res = serde_json::from_slice::<T::Error>(&full)
+                    .map_err(|e| eyre::eyre!(format!("Response not valid JSON: {:?} {e}", full)))?;
+                return Err(res.into())
             }
-            Ok(asd) => return Ok(asd),
-            Err(Err(err)) => return Err(err),
         };
     }
+}
+
+#[derive(serde::Deserialize)]
+enum Response<T, E> {
+    Ok(T),
+    Err(E),
 }

@@ -1,26 +1,58 @@
-#[derive(Debug)]
-pub struct RestBase(pub url::Url);
+use std::borrow::Cow;
 
 #[derive(Debug)]
-pub struct KeepAlive(pub url::Url);
+pub struct BetfairUrl<'a, T> {
+    url: Cow<'a, url::Url>,
+    _type: std::marker::PhantomData<T>,
+}
 
-#[derive(Debug)]
-pub struct CertLogin(pub url::Url);
+impl<'a, T> BetfairUrl<'a, T> {
+    pub fn new(url: Cow<'a, url::Url>) -> Self {
+        Self { url, _type: std::marker::PhantomData }
+    }
 
-impl Default for RestBase {
-    fn default() -> Self {
-        Self(url::Url::parse("https://api.betfair.com/exchange/betting/rest/v1.0").unwrap())
+    pub fn url(&self) -> &url::Url {
+        &self.url
     }
 }
 
-impl Default for KeepAlive {
-    fn default() -> Self {
-        Self(url::Url::parse("https://identitysso.betfair.com/api/keepAlive").unwrap())
+impl<'a, T> std::ops::Deref for BetfairUrl<'a, T> {
+    type Target = url::Url;
+
+    fn deref(&self) -> &Self::Target {
+        &self.url
     }
 }
 
-impl Default for CertLogin {
+#[derive(Debug)]
+pub struct RestBase;
+
+#[derive(Debug)]
+pub struct KeepAlive;
+
+#[derive(Debug)]
+pub struct CertLogin;
+
+impl Default for BetfairUrl<'static, RestBase> {
     fn default() -> Self {
-        Self(url::Url::parse("https://identitysso-cert.betfair.com/api/certlogin").unwrap())
+        Self::new(Cow::Owned(
+            url::Url::parse("https://api.betfair.com/exchange/betting/rest/v1.0").unwrap(),
+        ))
+    }
+}
+
+impl Default for BetfairUrl<'static, KeepAlive> {
+    fn default() -> Self {
+        Self::new(Cow::Owned(
+            url::Url::parse("https://identitysso.betfair.com/api/keepAlive").unwrap(),
+        ))
+    }
+}
+
+impl Default for BetfairUrl<'static, CertLogin> {
+    fn default() -> Self {
+        Self::new(Cow::Owned(
+            url::Url::parse("https://identitysso-cert.betfair.com/api/certlogin").unwrap(),
+        ))
     }
 }

@@ -13,7 +13,9 @@ betfair-xml-parser = { path = "crates/betfair-types/betfair-xml-parser" }
 betfair-typegen = { path = "crates/betfair-types/betfair-typegen" }
 
 # Utils
-rust_decimal = "1.29"
+rust_decimal = "1"
+rust_decimal_macros = "1"
+
 chrono = { version = "0.4", default-features = false, features = [
   "serde",
   "clock",
@@ -22,6 +24,7 @@ chrono = { version = "0.4", default-features = false, features = [
 eyre = "0.6"
 thiserror = "1.0"
 heck = "0.4"
+nanoid = "0.4"
 typed-builder = "0.17"
 redact = { version = "0.1", features = ["serde"] }
 
@@ -45,16 +48,27 @@ reqwest = { version = "0.11", default-features = false, features = [
   "stream",
 ] }
 url = "2.2"
+http = "1"
 
 # Type gen
-quote = "1.0"
-proc-macro2 = "1.0"
-syn = "2.0"
+quote = "1"
+proc-macro2 = "1"
+syn = "2"
 
 # Testnig
 rstest = { version = "0.18" }
-proptest = "1.0.0"
-
+proptest = "1"
+wiremock = "0.5"
+test-log = { version = "0.2", features = ["trace"], default-features = false }
+pretty_assertions = "1.4"
 
 # Tracing
 tracing = { version = "0.1" }
+tracing-subscriber = { version = "0.3", features = [
+  "env-filter",
+  "fmt",
+  "tracing-log",
+  "json",
+  "valuable",
+  "tracing",
+] }

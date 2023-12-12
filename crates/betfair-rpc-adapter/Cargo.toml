@@ -26,3 +26,6 @@ tracing-subscriber.workspace = true
 rstest.workspace = true
 test-log.workspace = true
 wiremock.workspace = true
+rust_decimal_macros.workspace = true
+rust_decimal.workspace = true
+pretty_assertions.workspace = true
