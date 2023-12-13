@@ -11,7 +11,7 @@ use test_log::test;
 use wiremock::matchers::{header, method, path};
 use wiremock::{Mock, ResponseTemplate};
 
-use crate::utils::{rpc_path, Server, APP_KEY, REST_URL, SESSION_TOKEN};
+use crate::utils::{rpc_path, Server, APP_KEY, SESSION_TOKEN};
 
 #[rstest]
 #[test(tokio::test)]

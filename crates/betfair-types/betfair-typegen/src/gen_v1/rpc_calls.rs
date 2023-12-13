@@ -56,7 +56,11 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                 pub type ReturnType = #ok_type;
             }
         } else {
-            unimplemented!("this scenario does not exist!")
+            let ok_type = self.type_resolver.resolve_type(&data_type.returns.data_type);
+            quote! {
+                #description
+                pub type ReturnType = #ok_type;
+            }
         }
     }
 
@@ -76,17 +80,20 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                         field.name.ident_snake()
                     }
                 };
+                let original_name = field.name.0.as_str();
                 let data_type = self.type_resolver.resolve_type(&field.data_type);
                 let data_type = if !field.mandatory {
                     quote! {
                         #[serde(skip_serializing_if = "Option::is_none")]
                         #[builder(default, setter(strip_option))]
+                        #[serde(rename = #original_name)]
                         #struct_parameter_derives
                         pub #name: Option<#data_type>
                     }
                 } else {
                     quote! {
                         #struct_parameter_derives
+                        #[serde(rename = #original_name)]
                         pub #name: #data_type
                     }
                 };
@@ -109,7 +116,7 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
 
 #[cfg(test)]
 mod test {
-    use pretty_assertions::{assert_eq, assert_ne};
+    use pretty_assertions::assert_eq;
     use proptest::prelude::*;
 
     use super::super::test::gen_v1;
@@ -170,6 +177,7 @@ mod test {
                 #[serde(rename_all = "camelCase")]
                 pub struct Parameters {
                     #[doc = "A Display name for the application."]
+                    #[serde (rename = "appName")]
                     pub app_name: String,
                 }
 
@@ -178,7 +186,7 @@ mod test {
                     type Res = ReturnType;
                     type Error = Exception;
                     fn method() -> &'static str {
-                        "createDeveloperAppKeys"
+                        "createDeveloperAppKeys/"
                     }
                 }
             }
@@ -239,6 +247,8 @@ mod test {
                 pub struct Parameters {
                     #[doc = "A Display name for the application."]
                     #[serde (skip_serializing_if = "Option::is_none")]
+                    #[builder (default , setter (strip_option))]
+                    #[serde (rename = "appName")]
                     pub app_name: Option<String>,
                 }
 
@@ -247,7 +257,7 @@ mod test {
                     type Res = ReturnType;
                     type Error = Exception;
                     fn method() -> &'static str {
-                        "createDeveloperAppKeys"
+                        "createDeveloperAppKeys/"
                     }
                 }
             }
@@ -322,10 +332,10 @@ mod test {
             match exception {
                 Some(_) => {
                     let expected_exception = quote! { pub type Exception = AccountApingException; };
-                    prop_assert!(actual.contains(&expected_exception.to_string()));
+                    prop_assert!(actual.contains(&expected_exception.to_string()), "actual: {}", actual);
                     let expected_return_type =
-                        quote! { pub type ReturnType = Result<DeveloperApp, Exception>; };
-                    prop_assert!(actual.contains(&expected_return_type.to_string()));
+                        quote! { pub type ReturnType = DeveloperApp; };
+                    prop_assert!(actual.contains(&expected_return_type.to_string()), "actual: {}", actual);
                 }
                 None => {
                     let expected_exception = quote! { pub type Exception };

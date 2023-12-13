@@ -1,4 +1,4 @@
-use proc_macro2::{TokenStream, Ident, Span};
+use proc_macro2::TokenStream;
 use quote::quote;
 
 use super::injector::CodeInjector;
@@ -190,6 +190,8 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
 #[cfg(test)]
 mod test {
 
+    use pretty_assertions::assert_eq;
+
     use super::super::test::gen_v1;
     use super::*;
     use crate::aping_ast::types::{Comment, DataTypeParameter, Name};
@@ -233,6 +235,7 @@ mod test {
                 #[doc = "Restrict markets by any text associated with the market such as the Name, Event, Competition, etc. You can include a wildcard (*) character as long as it is not the first character."]
                 #[doc = "Comment 2."]
                 #[serde(skip_serializing_if="Option::is_none")]
+                #[serde (rename = "textQuery")]
                 #[builder(default, setter(strip_option))]
                 pub text_query: Option<String>,
             }

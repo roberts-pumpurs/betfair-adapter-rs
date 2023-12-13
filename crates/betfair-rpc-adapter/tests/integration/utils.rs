@@ -1,6 +1,4 @@
 use std::borrow::Cow;
-use std::net::SocketAddr;
-use std::sync::Arc;
 
 use betfair_rpc_adapter::urls::BetfairUrl;
 use betfair_rpc_adapter::{
@@ -8,10 +6,7 @@ use betfair_rpc_adapter::{
     Username,
 };
 use betfair_types::types::BetfairRpcRequest;
-use chrono::{DateTime, Utc};
 use serde_json::json;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::{TcpListener, TcpStream};
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -80,15 +75,9 @@ impl Server {
 
         tracing::info!("{}", base_uri.join(REST_URL).unwrap().to_string());
         let provider = BetfairRpcProvider::new_with_urls(
-            BetfairUrl::new(Cow::Owned(
-                base_uri.join(REST_URL).unwrap()
-            )),
-            BetfairUrl::new(Cow::Owned(
-                base_uri.join(KEEP_ALIVE_URL).unwrap()
-            )),
-            BetfairUrl::new(Cow::Owned(
-                base_uri.join(LOGIN_URL).unwrap()
-            )),
+            BetfairUrl::new(Cow::Owned(base_uri.join(REST_URL).unwrap())),
+            BetfairUrl::new(Cow::Owned(base_uri.join(KEEP_ALIVE_URL).unwrap())),
+            BetfairUrl::new(Cow::Owned(base_uri.join(LOGIN_URL).unwrap())),
             secrets_provider,
         );
         provider

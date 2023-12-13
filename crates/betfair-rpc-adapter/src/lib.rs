@@ -9,12 +9,8 @@ pub use betfair_types;
 pub use betfair_types::rust_decimal;
 use betfair_types::types::BetfairRpcRequest;
 pub use error::ApiError;
-use error::ApingException;
 use reqwest::Client;
 pub use secret::{ApplicationKey, Identity, Password, SecretProvider, Username};
-use serde::de::DeserializeOwned;
-use serde::Serialize;
-use tokio::sync::{OnceCell, RwLock};
 
 pub struct Authenticated;
 pub struct Unauthenticated;
@@ -60,10 +56,4 @@ impl<'a> BetfairRpcProvider<'a, Authenticated> {
             }
         };
     }
-}
-
-#[derive(serde::Deserialize)]
-enum Response<T, E> {
-    Ok(T),
-    Err(E),
 }

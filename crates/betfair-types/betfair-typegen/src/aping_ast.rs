@@ -500,7 +500,8 @@ mod prism_impls {
 
 #[cfg(test)]
 mod tests {
-    use pretty_assertions::{assert_eq, assert_ne};
+    use pretty_assertions::assert_eq;
+
     use super::*;
 
     #[rstest::fixture]
@@ -829,7 +830,9 @@ mod tests {
                 StructField {
                     name: Name("sizeReduction".to_string()),
                     data_type: "Size".to_string().into(),
-                    description: vec![Comment::new("If supplied then this is a partial cancel".to_string())],
+                    description: vec![Comment::new(
+                        "If supplied then this is a partial cancel".to_string(),
+                    )],
                     mandatory: false,
                 },
             ],

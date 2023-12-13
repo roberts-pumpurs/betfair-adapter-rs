@@ -1,16 +1,17 @@
 use betfair_types::types::sports_aping::{
-    cancel_orders, BetId, CancelInstruction, CancelInstructionReport, ExecutionReportErrorCode,
-    ExecutionReportStatus, InstructionReportErrorCode, InstructionReportStatus, MarketId, Size, CancelExecutionReport,
+    cancel_orders, BetId, CancelExecutionReport, CancelInstruction, CancelInstructionReport,
+    ExecutionReportErrorCode, ExecutionReportStatus, InstructionReportErrorCode,
+    InstructionReportStatus, MarketId, Size,
 };
-use betfair_types::types::BetfairRpcRequest;
+use pretty_assertions::assert_eq;
 use rstest::rstest;
 use rust_decimal_macros::dec;
 use serde_json::json;
 use test_log::test;
 use wiremock::matchers::{header, method, path};
 use wiremock::{Mock, ResponseTemplate};
-use pretty_assertions::assert_eq;
-use crate::utils::{Server, APP_KEY, REST_URL, SESSION_TOKEN, rpc_path};
+
+use crate::utils::{rpc_path, Server, APP_KEY, SESSION_TOKEN};
 
 #[rstest]
 #[test(tokio::test)]
@@ -66,8 +67,7 @@ async fn cancel_bets_unsuccessful() {
     let expected = cancel_orders::ReturnType {
         customer_ref: Some("0oxfjBrq8K2TZg2Ytqjo1".to_string()),
         error_code: Some(ExecutionReportErrorCode::BetActionError),
-        instruction_reports: Some(vec![
-            CancelInstructionReport {
+        instruction_reports: Some(vec![CancelInstructionReport {
             status: InstructionReportStatus::Failure,
             instruction: Some(CancelInstruction {
                 bet_id: BetId("298537625817".to_string()),
@@ -76,8 +76,7 @@ async fn cancel_bets_unsuccessful() {
             cancelled_date: None,
             error_code: Some(InstructionReportErrorCode::BetTakenOrLapsed),
             size_cancelled: Size(dec!(0.0)),
-        }
-        ]),
+        }]),
         market_id: Some(MarketId("1.210878100".to_string())),
         status: ExecutionReportStatus::Failure,
     };
@@ -108,5 +107,5 @@ fn test_deserialize2() {
             }
         ]
     });
-    let result: CancelExecutionReport = serde_json::from_value(data).unwrap();
+    let _result: CancelExecutionReport = serde_json::from_value(data).unwrap();
 }

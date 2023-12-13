@@ -1,10 +1,8 @@
-use std::collections::HashMap;
 use std::marker::PhantomData;
 
 use hyper::header;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use tokio::sync::{OnceCell, RwLock};
 
 use crate::{ApiError, Authenticated, BetfairRpcProvider, Unauthenticated};
 
