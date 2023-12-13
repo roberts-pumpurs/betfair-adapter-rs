@@ -23,10 +23,10 @@ impl BetfairTypeGenerator {
         settings: impl GeneratorSettings,
     ) -> GeneratedOutput {
         const SERVICES: [(&str, &str); 4] = [
-            ("account_aping", include_str!("../../../assets/AccountAPING.xml")),
-            ("heartbeat_aping", include_str!("../../../assets/HeartbeatAPING.xml")),
-            ("sports_aping", include_str!("../../../assets/SportsAPING.xml")),
-            ("stream_api", include_str!("../../../assets/ESASwaggerSchema.json")),
+            ("account_aping", include_str!("../../assets/AccountAPING.xml")),
+            ("heartbeat_aping", include_str!("../../assets/HeartbeatAPING.xml")),
+            ("sports_aping", include_str!("../../assets/SportsAPING.xml")),
+            ("stream_api", include_str!("../../assets/ESASwaggerSchema.json")),
         ];
 
         fn parse_aping(

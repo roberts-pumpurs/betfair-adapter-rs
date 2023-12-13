@@ -2,15 +2,13 @@
 resolver = "2"
 members = [
   "crates/*",
-  "crates/betfair-types/betfair-xml-parser",
-  "crates/betfair-types/betfair-typegen",
 ]
 
 [workspace.dependencies]
 # Our crates
 betfair-types = { path = "crates/betfair-types" }
-betfair-xml-parser = { path = "crates/betfair-types/betfair-xml-parser" }
-betfair-typegen = { path = "crates/betfair-types/betfair-typegen" }
+betfair-xml-parser = { path = "crates/betfair-xml-parser" }
+betfair-typegen = { path = "crates/betfair-typegen" }
 
 # Utils
 rust_decimal = "1"
