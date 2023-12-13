@@ -23,10 +23,19 @@ impl BetfairTypeGenerator {
         settings: impl GeneratorSettings,
     ) -> GeneratedOutput {
         const SERVICES: [(&str, &str); 4] = [
-            ("account_aping", include_str!("../../assets/AccountAPING.xml")),
-            ("heartbeat_aping", include_str!("../../assets/HeartbeatAPING.xml")),
+            (
+                "account_aping",
+                include_str!("../../assets/AccountAPING.xml"),
+            ),
+            (
+                "heartbeat_aping",
+                include_str!("../../assets/HeartbeatAPING.xml"),
+            ),
             ("sports_aping", include_str!("../../assets/SportsAPING.xml")),
-            ("stream_api", include_str!("../../assets/ESASwaggerSchema.json")),
+            (
+                "stream_api",
+                include_str!("../../assets/ESASwaggerSchema.json"),
+            ),
         ];
 
         fn parse_aping(
@@ -37,7 +46,9 @@ impl BetfairTypeGenerator {
             let (module_name, interface): (&str, Interface) =
                 (SERVICES[idx].0, SERVICES[idx].1.into());
             let submodule_output = strategy.generate_submodule(interface);
-            output.submodules_mut().push((module_name.to_string(), submodule_output));
+            output
+                .submodules_mut()
+                .push((module_name.to_string(), submodule_output));
         }
 
         let mut output = GeneratedOutput::new();

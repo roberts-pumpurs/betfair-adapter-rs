@@ -47,7 +47,9 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
         if let Some(exception) = &data_type.exception {
             let err_data_type = self.type_resolver.resolve_type(&exception.data_type);
             let error_docs = exception.description.as_slice().object_comment();
-            let ok_type = self.type_resolver.resolve_type(&data_type.returns.data_type);
+            let ok_type = self
+                .type_resolver
+                .resolve_type(&data_type.returns.data_type);
             quote! {
                 #error_docs
                 pub type Exception = #err_data_type;
@@ -56,7 +58,9 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                 pub type ReturnType = #ok_type;
             }
         } else {
-            let ok_type = self.type_resolver.resolve_type(&data_type.returns.data_type);
+            let ok_type = self
+                .type_resolver
+                .resolve_type(&data_type.returns.data_type);
             quote! {
                 #description
                 pub type ReturnType = #ok_type;
@@ -135,7 +139,9 @@ mod test {
             params: vec![Param {
                 name: Name("appName".to_string()),
                 data_type: DataTypeParameter::new("string".to_string()),
-                description: vec![Comment::new("A Display name for the application.".to_string())],
+                description: vec![Comment::new(
+                    "A Display name for the application.".to_string(),
+                )],
                 mandatory: true,
             }],
             returns: Returns {
@@ -204,7 +210,9 @@ mod test {
             params: vec![Param {
                 name: Name("appName".to_string()),
                 data_type: DataTypeParameter::new("string".to_string()),
-                description: vec![Comment::new("A Display name for the application.".to_string())],
+                description: vec![Comment::new(
+                    "A Display name for the application.".to_string(),
+                )],
                 mandatory: false,
             }],
             returns: Returns {

@@ -8,7 +8,10 @@ pub struct GeneratedOutput {
 
 impl GeneratedOutput {
     pub(crate) fn new() -> Self {
-        Self { root: quote::quote! {}, submodules: vec![] }
+        Self {
+            root: quote::quote! {},
+            submodules: vec![],
+        }
     }
 
     /// # Write the generated output to a file
@@ -20,7 +23,11 @@ impl GeneratedOutput {
 
         // format the generated code
         let mut cmd = std::process::Command::new("rustfmt");
-        cmd.arg("--emit").arg("files").arg(root_name).spawn().unwrap();
+        cmd.arg("--emit")
+            .arg("files")
+            .arg(root_name)
+            .spawn()
+            .unwrap();
 
         for (module_name, submodule) in &self.submodules {
             // Write out the submodule
@@ -28,7 +35,11 @@ impl GeneratedOutput {
             std::fs::write(&submodule_file, submodule.to_string().as_bytes()).unwrap();
 
             let mut cmd = std::process::Command::new("rustfmt");
-            cmd.arg("--emit").arg("files").arg(submodule_file).spawn().unwrap();
+            cmd.arg("--emit")
+                .arg("files")
+                .arg(submodule_file)
+                .spawn()
+                .unwrap();
         }
         Ok(())
     }

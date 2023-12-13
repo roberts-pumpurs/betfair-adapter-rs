@@ -97,7 +97,10 @@ impl Aping {
                     }
                 })
                 .collect::<Vec<_>>();
-            DataTypeVariant::EnumValue(EnumValue { name: Name(sdt.name.clone()), valid_values })
+            DataTypeVariant::EnumValue(EnumValue {
+                name: Name(sdt.name.clone()),
+                valid_values,
+            })
         } else {
             // Parse as a type alias
             DataTypeVariant::TypeAlias(TypeAlias {
@@ -154,7 +157,10 @@ impl Aping {
                 }
             })
             .collect::<Vec<_>>();
-        let data_type_variant = StructValue { name: Name(data_type.name.clone()), fields };
+        let data_type_variant = StructValue {
+            name: Name(data_type.name.clone()),
+            fields,
+        };
 
         let data_type = data_type::DataType {
             name: Name(data_type.name.clone()),
@@ -245,8 +251,12 @@ impl Aping {
                     })
                     .flatten()
                     .map(|v| {
-                        let description =
-                            v.description.value.iter().map(|x| Comment::new(x.clone())).collect();
+                        let description = v
+                            .description
+                            .value
+                            .iter()
+                            .map(|x| Comment::new(x.clone()))
+                            .collect();
 
                         ValidEnumValue {
                             id: format!(
@@ -298,7 +308,8 @@ impl Aping {
             }),
             description: doc_comment,
         };
-        self.data_types.insert(wrapper_data_type.name.clone(), wrapper_data_type);
+        self.data_types
+            .insert(wrapper_data_type.name.clone(), wrapper_data_type);
     }
 
     pub(crate) fn name(&self) -> &Name {
@@ -892,7 +903,9 @@ mod tests {
             params: vec![Param {
                 name: Name("appName".to_string()),
                 data_type: "string".to_string().into(),
-                description: vec![Comment::new("A Display name for the application.".to_string())],
+                description: vec![Comment::new(
+                    "A Display name for the application.".to_string(),
+                )],
                 mandatory: true,
             }],
             returns: Returns {

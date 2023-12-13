@@ -8,7 +8,10 @@ pub struct BetfairUrl<'a, T> {
 
 impl<'a, T> BetfairUrl<'a, T> {
     pub fn new(url: Cow<'a, url::Url>) -> Self {
-        Self { url, _type: std::marker::PhantomData }
+        Self {
+            url,
+            _type: std::marker::PhantomData,
+        }
     }
 
     pub fn url(&self) -> &url::Url {

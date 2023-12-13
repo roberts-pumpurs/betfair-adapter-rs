@@ -166,7 +166,10 @@ mod tests {
         let params = from_str::<Parameters>(xml).unwrap();
         assert_eq!(params.values.len(), 3);
         assert!(matches!(params.values[0], ParametersItems::Request(_)));
-        assert!(matches!(params.values[1], ParametersItems::SimpleResponse(_)));
+        assert!(matches!(
+            params.values[1],
+            ParametersItems::SimpleResponse(_)
+        ));
         assert!(matches!(params.values[2], ParametersItems::Exceptions(_)));
     }
 

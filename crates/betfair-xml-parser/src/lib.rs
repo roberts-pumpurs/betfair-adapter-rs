@@ -220,7 +220,10 @@ mod tests {
         assert!(matches!(interface.items[0], InterfaceItems::Description(_)));
         assert!(matches!(interface.items[1], InterfaceItems::Operation(_)));
         assert!(matches!(interface.items[2], InterfaceItems::DataType(_)));
-        assert!(matches!(interface.items[3], InterfaceItems::ExceptionType(_)));
+        assert!(matches!(
+            interface.items[3],
+            InterfaceItems::ExceptionType(_)
+        ));
         assert!(matches!(interface.items[4], InterfaceItems::SimpleType(_)));
     }
 }

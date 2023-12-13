@@ -26,7 +26,12 @@ impl SimpleGeneratorSettings {
         sports_aping: bool,
         stream_api: bool,
     ) -> Self {
-        Self { account_aping, heartbeat_aping, sports_aping, stream_api }
+        Self {
+            account_aping,
+            heartbeat_aping,
+            sports_aping,
+            stream_api,
+        }
     }
 
     /// Create a new instance of the SimpleGeneratorSettings struct with only the AccountAPING

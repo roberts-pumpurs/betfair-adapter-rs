@@ -28,7 +28,10 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
     /// # Instantiate a new `GenV1`
     /// This is the strategy that will be used to generate the code
     pub fn new(code_injector: T) -> Self {
-        Self { type_resolver: TypeResolverV1::new(), code_injector }
+        Self {
+            type_resolver: TypeResolverV1::new(),
+            code_injector,
+        }
     }
 }
 
@@ -42,29 +45,36 @@ impl GenV1GeneratorStrategy<injector::CodeInjectorV1> {
 impl<T: CodeInjector> GeneratorStrategy for GenV1GeneratorStrategy<T> {
     fn generate_submodule(&self, interface: impl Into<Interface>) -> TokenStream {
         let interface = interface.into();
-        let aping: Aping =
-            interface.try_into().expect("Failed to convert the interface into the AST");
+        let aping: Aping = interface
+            .try_into()
+            .expect("Failed to convert the interface into the AST");
 
         let aping = aping;
         let top_level_docs = self.generate_top_level_docs(&aping);
-        let data_types = aping.data_types().iter().fold(quote! {}, |acc, (_name, data)| {
-            let iter_data_type = self.generate_data_type(data);
+        let data_types = aping
+            .data_types()
+            .iter()
+            .fold(quote! {}, |acc, (_name, data)| {
+                let iter_data_type = self.generate_data_type(data);
 
-            quote! {
-                #acc
+                quote! {
+                    #acc
 
-                #iter_data_type
-            }
-        });
-        let rpc_calls = aping.rpc_calls().iter().fold(quote! {}, |acc, (_name, data)| {
-            let iter_rpc_call = self.generate_rpc_call(data);
+                    #iter_data_type
+                }
+            });
+        let rpc_calls = aping
+            .rpc_calls()
+            .iter()
+            .fold(quote! {}, |acc, (_name, data)| {
+                let iter_rpc_call = self.generate_rpc_call(data);
 
-            quote! {
-                #acc
+                quote! {
+                    #acc
 
-                #iter_rpc_call
-            }
-        });
+                    #iter_rpc_call
+                }
+            });
 
         let preamble = self.code_injector.module_level_preamble();
 

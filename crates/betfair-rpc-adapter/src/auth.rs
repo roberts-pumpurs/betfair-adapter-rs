@@ -1,12 +1,11 @@
 use std::marker::PhantomData;
 
 use hyper::header;
+use redact::Secret;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use crate::{ApiError, Authenticated, BetfairRpcProvider, Unauthenticated};
-
-pub const AUTH_HEADER: &str = "X-Authentication";
 
 impl<'a> BetfairRpcProvider<'a, Unauthenticated> {
     pub fn new_with_urls(
@@ -61,7 +60,11 @@ impl<'a, T> BetfairRpcProvider<'a, T> {
         headers.insert(
             "X-Application",
             header::HeaderValue::from_str(
-                self.secret_provider.application_key.0.expose_secret().as_str(),
+                self.secret_provider
+                    .application_key
+                    .0
+                    .expose_secret()
+                    .as_str(),
             )
             .unwrap(),
         );
@@ -89,22 +92,10 @@ impl<'a, T> BetfairRpcProvider<'a, T> {
             .json::<SessionTokenInfo>()
             .await?;
 
-        self.auth_token = login_response.session_token;
-        self.client =
-            default_client(self.secret_provider.application_key.0.expose_secret().clone())?;
-
-        // TODO keep this loop running in the background and close on error
-        // let handle = tokio::spawn(async {
-        //     loop {
-        //         tokio::time::sleep(std::time::Duration::from_secs(60)).await;
-        //         if let Err(e) = keep_alive().await {
-        //             tracing::error!("Error keeping alive: {:?}", e);
-        //             break
-        //         }
-        //     }
-        // });
-        // TODO we need to abort the handle when we drop the client. Maybe we can use JoinSet and
-        // push the handle in there
+        self.client = default_client(
+            &self.secret_provider.application_key.0,
+            &login_response.session_token,
+        )?;
 
         Ok(())
     }
@@ -118,24 +109,32 @@ pub struct SessionTokenInfo {
     login_status: String,
 }
 
-pub fn default_client(app_key: String) -> eyre::Result<reqwest::Client> {
+pub fn default_client(
+    app_key: &Secret<String>,
+    session_token: &Secret<String>,
+) -> eyre::Result<reqwest::Client> {
     let mut headers = header::HeaderMap::new();
-    headers.insert("X-Application", header::HeaderValue::from_str(app_key.as_str()).unwrap());
-    headers.insert("Accept", header::HeaderValue::from_static("application/json"));
-    headers.insert("Accept-Encoding", header::HeaderValue::from_static("gzip, deflate"));
-    headers.insert("Content-Type", header::HeaderValue::from_static("application/json"));
-    Ok(reqwest::Client::builder().default_headers(headers).build()?)
+    headers.insert(
+        "X-Application",
+        header::HeaderValue::from_str(app_key.expose_secret().as_str())?,
+    );
+    headers.insert(
+        "Accept",
+        header::HeaderValue::from_static("application/json"),
+    );
+    headers.insert(
+        "Accept-Encoding",
+        header::HeaderValue::from_static("gzip, deflate"),
+    );
+    headers.insert(
+        "Content-Type",
+        header::HeaderValue::from_static("application/json"),
+    );
+    headers.insert(
+        "X-Authentication",
+        header::HeaderValue::from_str(session_token.expose_secret().as_str())?,
+    );
+    Ok(reqwest::Client::builder()
+        .default_headers(headers)
+        .build()?)
 }
-
-// pub async fn keep_alive() -> Result<(), ApiError> {
-//     // TODO get everything from args
-//     let auth_token = self.auth_token.read().await;
-//     let _res = self
-//         .client
-//         .get(self.keep_alive.0.as_str())
-//         .header(AUTH_HEADER, auth_token.expose_secret().as_str())
-//         .send()
-//         .await?;
-
-//     Ok(())
-// }

@@ -100,15 +100,16 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
             gen: &GenV1GeneratorStrategy<T>,
             struct_field: &StructField,
         ) -> TokenStream {
-            let description = struct_field.description.iter().map(|x| x.object_comment()).fold(
-                quote! {},
-                |acc, i| {
+            let description = struct_field
+                .description
+                .iter()
+                .map(|x| x.object_comment())
+                .fold(quote! {}, |acc, i| {
                     quote! {
                         #acc
                         #i
                     }
-                },
-            );
+                });
 
             let name = {
                 if struct_field.name.0.as_str() == "type" {
@@ -141,15 +142,16 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
             }
         }
         let name = struct_value.name.ident_pascal();
-        let fields = struct_value.fields.iter().map(|x| generate_struct_field(self, x)).fold(
-            quote! {},
-            |acc, i| {
+        let fields = struct_value
+            .fields
+            .iter()
+            .map(|x| generate_struct_field(self, x))
+            .fold(quote! {}, |acc, i| {
                 quote! {
                     #acc
                     #i
                 }
-            },
-        );
+            });
 
         let struct_derives = self.code_injector.struct_derives();
         let is_error_type = struct_value.name.0.ends_with("Exception");

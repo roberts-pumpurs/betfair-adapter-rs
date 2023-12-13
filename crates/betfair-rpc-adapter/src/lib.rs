@@ -36,15 +36,16 @@ impl<'a> BetfairRpcProvider<'a, Authenticated> {
         ApiError: From<<T as BetfairRpcRequest>::Error>,
     {
         let endpoint = self.rest_base.clone().join(T::method())?;
-        tracing::info!(endpoint = ?endpoint.to_string(), "Sending request");
-        let res = self
+        tracing::debug!(endpoint = ?endpoint.to_string(), "Sending request");
+        let full = self
             .client
             .post(endpoint.as_str())
-            .header(auth::AUTH_HEADER, self.auth_token.expose_secret().as_str())
-            .json(&request);
+            .json(&request)
+            .send()
+            .await?
+            .bytes()
+            .await?;
 
-        let res = res.send().await?;
-        let full = res.bytes().await?;
         let res = serde_json::from_slice::<T::Res>(&full);
 
         match res {

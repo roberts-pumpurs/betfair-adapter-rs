@@ -124,6 +124,9 @@ mod tests {
                 value: Some("This exception is thrown when an operation fails".to_string()),
             })
         );
-        assert!(matches!(exception.values[1], ExceptionTypeItems::Parameter(_)));
+        assert!(matches!(
+            exception.values[1],
+            ExceptionTypeItems::Parameter(_)
+        ));
     }
 }

@@ -40,21 +40,25 @@ pub(crate) trait CommentParse {
 
 impl CommentParse for &[Comment] {
     fn module_comment(&self) -> TokenStream {
-        self.iter().map(|x| x.module_comment()).fold(quote! {}, |acc, i| {
-            quote! {
-                #acc
-                #i
-            }
-        })
+        self.iter()
+            .map(|x| x.module_comment())
+            .fold(quote! {}, |acc, i| {
+                quote! {
+                    #acc
+                    #i
+                }
+            })
     }
 
     fn object_comment(&self) -> TokenStream {
-        self.iter().map(|x| x.object_comment()).fold(quote! {}, |acc, i| {
-            quote! {
-                #acc
-                #i
-            }
-        })
+        self.iter()
+            .map(|x| x.object_comment())
+            .fold(quote! {}, |acc, i| {
+                quote! {
+                    #acc
+                    #i
+                }
+            })
     }
 }
 

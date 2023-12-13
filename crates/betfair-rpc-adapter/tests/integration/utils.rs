@@ -58,7 +58,10 @@ impl Server {
             .mount(&mock_server)
             .await;
 
-        Self { bf_api_mock_server: mock_server, mock_settings }
+        Self {
+            bf_api_mock_server: mock_server,
+            mock_settings,
+        }
     }
 
     /// Create a betfair client with the mock server as the base url
