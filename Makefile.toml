@@ -17,13 +17,13 @@ dependencies = [
     "deny",
 ]
 
-[tasks.format]
+[tasks.fmt]
 workspace = false
 command = "cargo"
 args = ["fmt", "--all", "--", "--emit=files"]
-dependencies = ["format-clippy"]
+dependencies = ["fmt-clippy"]
 
-[tasks.format-clippy]
+[tasks.fmt-clippy]
 workspace = false
 install_crate = "clippy"
 command = "cargo"

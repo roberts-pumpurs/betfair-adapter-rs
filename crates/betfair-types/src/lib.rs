@@ -1,5 +1,7 @@
 //! # Betfair Types library
 
+#![allow(clippy::all)]
+
 pub use rust_decimal;
 
 pub mod types {

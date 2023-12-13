@@ -1,5 +1,6 @@
 pub mod auth;
 mod error;
+pub mod keep_alive;
 mod secret;
 pub mod urls;
 
@@ -21,7 +22,6 @@ pub struct BetfairRpcProvider<'a, T> {
     rest_base: urls::BetfairUrl<'a, urls::RestBase>,
     keep_alive: urls::BetfairUrl<'a, urls::KeepAlive>,
     cert_login: urls::BetfairUrl<'a, urls::CertLogin>,
-    auth_token: redact::Secret<String>,
     secret_provider: secret::SecretProvider<'a>,
     _type: PhantomData<T>,
 }
@@ -56,5 +56,27 @@ impl<'a> BetfairRpcProvider<'a, Authenticated> {
                 return Err(res.into())
             }
         };
+    }
+
+    /// You can use Keep Alive to extend the session timeout period. The minimum session time is
+    /// currently 20 minutes (Italian Exchange). On the international (.com) Exchange the current
+    /// session time is 24 hours. Therefore, you should request Keep Alive within this time to
+    /// prevent session expiry. If you don't call Keep Alive within the specified timeout period,
+    /// the session will expire. Session times aren't determined or extended based on API activity.
+    #[tracing::instrument(skip_all, ret, err)]
+    pub async fn keep_alive(&self) -> Result<(), ApiError> {
+        let res = self
+            .client
+            .get(self.keep_alive.url().clone())
+            .send()
+            .await?
+            .error_for_status()?
+            .json::<keep_alive::KeepAliveResponse>()
+            .await?;
+
+        if let Some(error) = res.error {
+            return Err(ApiError::KeepAliveError(error))
+        }
+        Ok(())
     }
 }

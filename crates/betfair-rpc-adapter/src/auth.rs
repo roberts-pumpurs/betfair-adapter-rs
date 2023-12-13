@@ -5,7 +5,9 @@ use redact::Secret;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-use crate::{ApiError, Authenticated, BetfairRpcProvider, Unauthenticated};
+use crate::{
+    ApiError, ApplicationKey, Authenticated, BetfairRpcProvider, Identity, Unauthenticated,
+};
 
 impl<'a> BetfairRpcProvider<'a, Unauthenticated> {
     pub fn new_with_urls(
@@ -20,7 +22,6 @@ impl<'a> BetfairRpcProvider<'a, Unauthenticated> {
             rest_base,
             keep_alive,
             cert_login,
-            auth_token: redact::Secret::new("".to_string()),
             secret_provider,
         }
     }
@@ -51,35 +52,13 @@ impl<'a> BetfairRpcProvider<'a, Authenticated> {
 }
 
 impl<'a, T> BetfairRpcProvider<'a, T> {
-    #[tracing::instrument(skip(self), err)]
+    // #[tracing::instrument(skip(self), err)]
     async fn cert_log_in(&mut self) -> Result<(), ApiError> {
-        const KEEP_ALIVE_INTERVAL: std::time::Duration = std::time::Duration::from_secs(15);
-
         // Use this to get the session token
-        let mut headers = header::HeaderMap::new();
-        headers.insert(
-            "X-Application",
-            header::HeaderValue::from_str(
-                self.secret_provider
-                    .application_key
-                    .0
-                    .expose_secret()
-                    .as_str(),
-            )
-            .unwrap(),
-        );
-        headers.insert(
-            "Content-Type",
-            header::HeaderValue::from_static("application/x-www-form-urlencoded"),
-        );
-
-        let temp_client = reqwest::Client::builder()
-            .use_rustls_tls()
-            .identity(self.secret_provider.identity.0.expose_secret().clone())
-            .default_headers(headers)
-            .http2_keep_alive_interval(KEEP_ALIVE_INTERVAL)
-            .http2_keep_alive_while_idle(true)
-            .build()?;
+        let temp_client = login_client(
+            &self.secret_provider.application_key,
+            &self.secret_provider.identity,
+        )?;
 
         let login_response = temp_client
             .post(self.cert_login.as_str())
@@ -135,6 +114,28 @@ pub fn default_client(
         header::HeaderValue::from_str(session_token.expose_secret().as_str())?,
     );
     Ok(reqwest::Client::builder()
+        .use_rustls_tls()
         .default_headers(headers)
         .build()?)
+}
+
+fn login_client(application_key: &ApplicationKey, identity: &Identity) -> Result<Client, ApiError> {
+    const KEEP_ALIVE_INTERVAL: std::time::Duration = std::time::Duration::from_secs(15);
+    let mut headers = header::HeaderMap::new();
+    headers.insert(
+        "X-Application",
+        header::HeaderValue::from_str(application_key.0.expose_secret().as_str()).unwrap(),
+    );
+    headers.insert(
+        "Content-Type",
+        header::HeaderValue::from_static("application/x-www-form-urlencoded"),
+    );
+    let temp_client = reqwest::Client::builder()
+        .use_rustls_tls()
+        .identity(identity.0.expose_secret().clone())
+        .default_headers(headers)
+        .http2_keep_alive_interval(KEEP_ALIVE_INTERVAL)
+        .http2_keep_alive_while_idle(true)
+        .build()?;
+    Ok(temp_client)
 }
