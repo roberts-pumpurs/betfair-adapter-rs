@@ -19,6 +19,7 @@ futures-concurrency.workspace = true
 futures.workspace = true
 chrono.workspace = true
 http.workspace = true
+typed-builder.workspace = true
 
 [dev-dependencies]
 tracing-subscriber.workspace = true

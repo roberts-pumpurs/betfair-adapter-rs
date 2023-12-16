@@ -131,11 +131,21 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                     pub #name: #data_type,
                 }
             } else {
+                let extra = if struct_field.data_type.as_str().eq("double") ||
+                    struct_field.data_type.as_str().eq("float")
+                {
+                    quote! {
+                        #[serde(deserialize_with = "super::deserialize_decimal_option", default)]
+                    }
+                } else {
+                    quote! {}
+                };
                 quote! {
                     #description
                     #struct_parameter_derives
                     #[serde(skip_serializing_if = "Option::is_none")]
                     #[serde(rename = #original_name)]
+                    #extra
                     #[builder(default, setter(strip_option))]
                     pub #name: Option<#data_type>,
                 }

@@ -1,5 +1,3 @@
-use crate::keep_alive::ErrorValues;
-
 #[derive(Debug, thiserror::Error)]
 pub enum ApiError {
     #[error(transparent)]
@@ -17,5 +15,9 @@ pub enum ApiError {
     #[error(transparent)]
     EyreError(#[from] eyre::ErrReport),
     #[error("Keep alive error: {0:?}")]
-    KeepAliveError(ErrorValues),
+    KeepAliveError(betfair_types::keep_alive::ErrorValues),
+    #[error("Bot login error: {0:?}")]
+    BotLoginError(betfair_types::bot_login::LoginError),
+    #[error("Logout error: {0:?}")]
+    LogoutError(betfair_types::logout::ErrorValues),
 }

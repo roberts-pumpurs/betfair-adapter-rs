@@ -59,6 +59,7 @@ proptest = "1"
 wiremock = "0.5"
 test-log = { version = "0.2", features = ["trace"], default-features = false }
 pretty_assertions = "1.4"
+json-rpc-types = "1.3"
 
 # Tracing
 tracing = { version = "0.1" }

@@ -1,26 +1,26 @@
-use betfair_adapter::traits::IBetfairAdapter;
-use betfair_adapter::types::competition::Competition;
-use betfair_adapter::types::event::Event;
-use betfair_adapter::types::event_type::EventType;
-use betfair_adapter::types::market_catalogue::MarketCatalogue;
-use betfair_adapter::types::market_catalogue_runner::MarketCatalogueRunner;
-use betfair_adapter::types::market_id::MarketId;
-use betfair_adapter::types::selection_id::SelectionId;
-use rstest::rstest;
-use rust_decimal_macros::dec;
+use betfair_types::types::sports_aping::MarketCatalogue;
 use serde_json::json;
-use test_log::test;
-use wiremock::matchers::{header, method, path};
-use wiremock::{Mock, ResponseTemplate};
 
-use crate::utils::{server, Server, Transform, APP_KEY, REST_URL, SESSION_TOKEN};
+#[test]
+fn parse_fixture_error() {
+    use betfair_types::types::sports_aping::list_market_catalogue;
+    use json_rpc_types::Response;
+    let data = std::fs::read_to_string("./tests/resources/list_market_catalogue.json").unwrap();
+    serde_json::from_str::<Response<list_market_catalogue::ReturnType, serde_json::Value>>(&data)
+        .unwrap();
+}
+#[test]
+fn parse_fixture_success() {
+    use betfair_types::types::sports_aping::list_market_catalogue;
+    use json_rpc_types::Response;
+    let data =
+        std::fs::read_to_string("./tests/resources/list_market_catalogue_no_ero.json").unwrap();
+    serde_json::from_str::<Response<list_market_catalogue::ReturnType, serde_json::Value>>(&data)
+        .unwrap();
+}
 
-#[rstest]
-#[test(tokio::test)]
-async fn single_market_catalogue(#[future] server: Server) {
-    let server = server.await;
-
-    // Setup
+#[test]
+fn test_deserialize() {
     let response = json!([
         {
             "marketId": "1.206502771",
@@ -76,48 +76,6 @@ async fn single_market_catalogue(#[future] server: Server) {
             }
         }
     ]);
-
-    Mock::given(method("POST"))
-        .and(path(format!("{REST_URL:}/listMarketCatalogue/")))
-        .and(header("Accept", "application/json"))
-        .and(header("X-Authentication", SESSION_TOKEN))
-        .and(header("X-Application", APP_KEY))
-        .respond_with(ResponseTemplate::new(200).set_body_json(response.clone()))
-        .expect(1)
-        .named("single market book call")
-        .mount(&server.bf_api_mock_server)
-        .await;
-
-    // Action
-    let client = server.client().await;
-    let result = client.single_market_catalogue(MarketId("1.23456789".to_string())).await.unwrap();
-
-    // Assert
-    let expected = MarketCatalogue {
-        market_id: MarketId("1.206502771".to_string()),
-        total_matched: dec!(0.0).into(),
-        market_start_time: "2022-11-15T17:00:00.000Z".transform(),
-        event: Some(Event {
-            country_code: Some("GB".to_string()),
-            id: "31908334".to_string(),
-            name: "Atomeromu Szekszard Women v Olympiakos Piraeus BC ".to_string(),
-            open_date: "2022-11-15T17:00:00.000Z".transform(),
-        }),
-        event_type: Some(EventType { id: "1123123".to_string(), name: "Basketball".to_string() }),
-        competition: Some(Competition {
-            id: "8347200".to_string(),
-            name: "Euroleague Women".to_string(),
-        }),
-        runners: vec![
-            MarketCatalogueRunner {
-                name: "Atomeromu Szekszard Women".to_string(),
-                selection_id: SelectionId::new(12062411),
-            },
-            MarketCatalogueRunner {
-                name: "Olympiakos Piraeus BC".to_string(),
-                selection_id: SelectionId::new(50310375),
-            },
-        ],
-    };
-    assert_eq!(result, expected);
+    let result = serde_json::from_value::<Vec<MarketCatalogue>>(response).unwrap();
+    assert_eq!(result.len(), 1);
 }

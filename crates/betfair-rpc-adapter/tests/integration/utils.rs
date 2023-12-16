@@ -1,19 +1,21 @@
 use std::borrow::Cow;
 
-use betfair_rpc_adapter::urls::BetfairUrl;
+use betfair_rpc_adapter::urls::{BetfairUrl, RestBase, RetrieveUrl};
 use betfair_rpc_adapter::{
-    ApplicationKey, BetfairRpcProvider, Identity, Password, SecretProvider, Unauthenticated,
-    Username,
+    ApplicationKey, BetfairConfigBuilder, BetfairRpcProvider, Identity, Password, SecretProvider,
+    Unauthenticated, Username,
 };
 use betfair_types::types::BetfairRpcRequest;
 use serde_json::json;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-pub const USERNAME: &str = "swoop-worker";
-pub const PASSWORD: &str = "swoop-pass";
+pub const USERNAME: &str = "usrn";
+pub const PASSWORD: &str = "pasw";
 pub const APP_KEY: &str = "qa{n}pCPTV]EYTLGVO";
+pub const LOGOUT: &str = "/login/";
 pub const LOGIN_URL: &str = "/login/";
+pub const BOT_LOGIN_URL: &str = "/cert-login/";
 pub const KEEP_ALIVE_URL: &str = "/keep-alive/";
 pub const REST_URL: &str = "/rpc/v1/";
 pub const STREAM_URL: &str = "/stream/";
@@ -52,7 +54,7 @@ impl Server {
             }
         );
         Mock::given(method("POST"))
-            .and(path(LOGIN_URL))
+            .and(path(BOT_LOGIN_URL))
             .respond_with(ResponseTemplate::new(200).set_body_json(login_response))
             .named("Login")
             .mount(&mock_server)
@@ -76,14 +78,61 @@ impl Server {
         };
         let base_uri: url::Url = self.bf_api_mock_server.uri().parse().unwrap();
 
-        tracing::info!("{}", base_uri.join(REST_URL).unwrap().to_string());
-        let provider = BetfairRpcProvider::new_with_urls(
-            BetfairUrl::new(Cow::Owned(base_uri.join(REST_URL).unwrap())),
-            BetfairUrl::new(Cow::Owned(base_uri.join(KEEP_ALIVE_URL).unwrap())),
-            BetfairUrl::new(Cow::Owned(base_uri.join(LOGIN_URL).unwrap())),
+        let config = BetfairConfigBuilder {
+            rest: RestUrl(BetfairUrl::new(Cow::Owned(
+                base_uri.join(REST_URL).unwrap(),
+            ))),
+            keep_alive: KeepAliveUrl(BetfairUrl::new(Cow::Owned(
+                base_uri.join(KEEP_ALIVE_URL).unwrap(),
+            ))),
+            bot_login: BotLoginUrl(BetfairUrl::new(Cow::Owned(
+                base_uri.join(BOT_LOGIN_URL).unwrap(),
+            ))),
+            logout: LogoutUrl(BetfairUrl::new(Cow::Owned(base_uri.join(LOGOUT).unwrap()))),
+            login: LoginUrl(BetfairUrl::new(Cow::Owned(
+                base_uri.join(LOGIN_URL).unwrap(),
+            ))),
             secrets_provider,
-        );
-        provider
+        };
+
+        BetfairRpcProvider::new_with_config(config)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RestUrl(BetfairUrl<'static, betfair_rpc_adapter::urls::RestBase>);
+
+impl<'a> RetrieveUrl<'a, RestBase> for RestUrl {
+    fn url(&self) -> BetfairUrl<'a, RestBase> {
+        self.0.clone()
+    }
+}
+#[derive(Debug, Clone)]
+pub struct KeepAliveUrl(BetfairUrl<'static, betfair_rpc_adapter::urls::KeepAlive>);
+impl RetrieveUrl<'static, betfair_rpc_adapter::urls::KeepAlive> for KeepAliveUrl {
+    fn url(&self) -> BetfairUrl<'static, betfair_rpc_adapter::urls::KeepAlive> {
+        self.0.clone()
+    }
+}
+#[derive(Debug, Clone)]
+pub struct LoginUrl(BetfairUrl<'static, betfair_rpc_adapter::urls::InteractiveLogin>);
+impl RetrieveUrl<'static, betfair_rpc_adapter::urls::InteractiveLogin> for LoginUrl {
+    fn url(&self) -> BetfairUrl<'static, betfair_rpc_adapter::urls::InteractiveLogin> {
+        self.0.clone()
+    }
+}
+#[derive(Debug, Clone)]
+pub struct BotLoginUrl(BetfairUrl<'static, betfair_rpc_adapter::urls::BotLogin>);
+impl RetrieveUrl<'static, betfair_rpc_adapter::urls::BotLogin> for BotLoginUrl {
+    fn url(&self) -> BetfairUrl<'static, betfair_rpc_adapter::urls::BotLogin> {
+        self.0.clone()
+    }
+}
+#[derive(Debug, Clone)]
+pub struct LogoutUrl(BetfairUrl<'static, betfair_rpc_adapter::urls::Logout>);
+impl RetrieveUrl<'static, betfair_rpc_adapter::urls::Logout> for LogoutUrl {
+    fn url(&self) -> BetfairUrl<'static, betfair_rpc_adapter::urls::Logout> {
+        self.0.clone()
     }
 }
 

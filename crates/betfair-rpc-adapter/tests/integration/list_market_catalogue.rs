@@ -7,14 +7,13 @@ use pretty_assertions::assert_eq;
 use rstest::rstest;
 use rust_decimal_macros::dec;
 use serde_json::json;
-use test_log::test;
 use wiremock::matchers::{header, method, path};
 use wiremock::{Mock, ResponseTemplate};
 
 use crate::utils::{rpc_path, Server, APP_KEY, SESSION_TOKEN};
 
 #[rstest]
-#[test(tokio::test)]
+#[test_log::test(tokio::test)]
 async fn list_market_catalogue() {
     let server = Server::new().await;
 
@@ -156,7 +155,7 @@ async fn list_market_catalogue() {
             },
         ]),
         description: Some(MarketDescription {
-            persistence_enabled: true,
+            persistence_enabled: Some(true),
             bsp_market: false,
             market_time: "2022-11-15T17:00:00.000Z".parse().unwrap(),
             suspend_time: "2022-11-15T17:00:00.000Z".parse().unwrap(),
@@ -164,9 +163,9 @@ async fn list_market_catalogue() {
             betting_type: "ODDS".to_string(),
             turn_in_play_enabled: true,
             market_type: MarketType("MATCH_ODDS".to_string()),
-            regulator: "MALTA LOTTERIES AND GAMBLING AUTHORITY".to_string(),
-            market_base_rate: dec!(2.0),
-            discount_allowed: false,
+            regulator: Some("MALTA LOTTERIES AND GAMBLING AUTHORITY".to_string()),
+            market_base_rate: Some(dec!(2.0)),
+            discount_allowed: Some(false),
             wallet: Some("UK wallet".to_string(),),
             rules: Some(
                 "<br><br>MARKET INFORMATION</b><br><br>For further information please see <a href=http://content.betfair.com/aboutus/content.asp?sWhichKey=Rules%20and%20Regulations#undefined.do style=color:0163ad; text-decoration: underline; target=_blank>Rules & Regs</a>.<br><br>Who will win this match? This market includes overtime. At the start of play all unmatched bets will be cancelled and the market <b>turned in-play</b>. Please note that this market will not be actively managed, therefore it is the responsibility of all users to manage their in-play positions. Dead Heat rules apply.<br><br>Customers should be aware that:<b><br><br><li>Transmissions described as “live” by some broadcasters may actually be delayed and that all in-play matches are not necessarily televised.</li><br><li>The extent of any such delay may vary, depending on the set-up through which they are receiving pictures or data.</li><br></b><br>"
@@ -182,65 +181,4 @@ async fn list_market_catalogue() {
         market_name: "Moneyline".to_string(),
     };
     assert_eq!(result, vec![market]);
-}
-
-#[tokio::test]
-async fn test_deserialize() {
-    let response = json!([
-        {
-            "marketId": "1.206502771",
-            "marketName": "Moneyline",
-            "marketStartTime": "2022-11-15T17:00:00.000Z",
-            "description": {
-                "persistenceEnabled": true,
-                "bspMarket": false,
-                "marketTime": "2022-11-15T17:00:00.000Z",
-                "suspendTime": "2022-11-15T17:00:00.000Z",
-                "bettingType": "ODDS",
-                "turnInPlayEnabled": true,
-                "marketType": "MATCH_ODDS",
-                "regulator": "MALTA LOTTERIES AND GAMBLING AUTHORITY",
-                "marketBaseRate": 2.0,
-                "discountAllowed": false,
-                "wallet": "UK wallet",
-                "rules": "<br><br>MARKET INFORMATION</b><br><br>For further information please see <a href=http://content.betfair.com/aboutus/content.asp?sWhichKey=Rules%20and%20Regulations#undefined.do style=color:0163ad; text-decoration: underline; target=_blank>Rules & Regs</a>.<br><br>Who will win this match? This market includes overtime. At the start of play all unmatched bets will be cancelled and the market <b>turned in-play</b>. Please note that this market will not be actively managed, therefore it is the responsibility of all users to manage their in-play positions. Dead Heat rules apply.<br><br>Customers should be aware that:<b><br><br><li>Transmissions described as “live” by some broadcasters may actually be delayed and that all in-play matches are not necessarily televised.</li><br><li>The extent of any such delay may vary, depending on the set-up through which they are receiving pictures or data.</li><br></b><br>",
-                "rulesHasDate": false,
-                "priceLadderDescription": {
-                    "type": "CLASSIC"
-                }
-            },
-            "totalMatched": 0.0,
-            "runners": [
-                {
-                    "selectionId": 12062411,
-                    "runnerName": "Atomeromu Szekszard Women",
-                    "handicap": 0.0,
-                    "sortPriority": 1
-                },
-                {
-                    "selectionId": 50310375,
-                    "runnerName": "Olympiakos Piraeus BC",
-                    "handicap": 0.0,
-                    "sortPriority": 2
-                }
-            ],
-            "competition": {
-                "id": "8347200",
-                "name": "Euroleague Women"
-            },
-            "eventType": {
-                "id": "1123123",
-                "name": "Basketball"
-            },
-            "event": {
-                "id": "31908334",
-                "name": "Atomeromu Szekszard Women v Olympiakos Piraeus BC ",
-                "countryCode": "GB",
-                "timezone": "GMT",
-                "openDate": "2022-11-15T17:00:00.000Z"
-            }
-        }
-    ]);
-    let result: Vec<MarketCatalogue> = serde_json::from_value(response).unwrap();
-    assert_eq!(result.len(), 1);
 }

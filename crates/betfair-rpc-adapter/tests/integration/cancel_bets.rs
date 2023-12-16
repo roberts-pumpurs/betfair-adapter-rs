@@ -1,20 +1,18 @@
 use betfair_types::types::sports_aping::{
-    cancel_orders, BetId, CancelExecutionReport, CancelInstruction, CancelInstructionReport,
-    ExecutionReportErrorCode, ExecutionReportStatus, InstructionReportErrorCode,
-    InstructionReportStatus, MarketId, Size,
+    cancel_orders, BetId, CancelInstruction, CancelInstructionReport, ExecutionReportErrorCode,
+    ExecutionReportStatus, InstructionReportErrorCode, InstructionReportStatus, MarketId, Size,
 };
 use pretty_assertions::assert_eq;
 use rstest::rstest;
 use rust_decimal_macros::dec;
 use serde_json::json;
-use test_log::test;
 use wiremock::matchers::{header, method, path};
 use wiremock::{Mock, ResponseTemplate};
 
 use crate::utils::{rpc_path, Server, APP_KEY, SESSION_TOKEN};
 
 #[rstest]
-#[test(tokio::test)]
+#[test_log::test(tokio::test)]
 async fn cancel_bets_unsuccessful() {
     let server = Server::new().await;
 
@@ -81,31 +79,4 @@ async fn cancel_bets_unsuccessful() {
         status: ExecutionReportStatus::Failure,
     };
     assert_eq!(result, expected);
-}
-
-#[rstest]
-fn test_deserialize() {
-    let data = b"{\"customerRef\":\"0oxfjBrq8K2TZg2Ytqjo1\",\"errorCode\":\"BET_ACTION_ERROR\",\"marketId\":\"1.210878100\",\"status\":\"FAILURE\"}";
-    let result: Result<CancelExecutionReport, _> = serde_json::from_slice(data);
-    assert!(result.is_ok());
-}
-#[rstest]
-fn test_deserialize2() {
-    let data = json!({
-        "customerRef": "0oxfjBrq8K2TZg2Ytqjo1",
-        "status": "FAILURE",
-        "errorCode": "BET_ACTION_ERROR",
-        "marketId": "1.210878100",
-        "instructionReports": [
-            {
-                "status": "FAILURE",
-                "errorCode": "BET_TAKEN_OR_LAPSED",
-                "sizeCancelled": "0.0",
-                "instruction": {
-                    "betId": "298537625817",
-                }
-            }
-        ]
-    });
-    let _result: CancelExecutionReport = serde_json::from_value(data).unwrap();
 }

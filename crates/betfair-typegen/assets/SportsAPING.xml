@@ -1105,7 +1105,7 @@
 
     <dataType name="MarketBook">
         <description>The dynamic data in a market</description>
-        <parameter mandatory="true" name="marketId" type="string">
+        <parameter mandatory="true" name="marketId" type="MarketId">
             <description>The unique identifier for the market</description>
         </parameter>
 
@@ -1115,7 +1115,7 @@
                 to date data.
             </description>
         </parameter>
-        <parameter name="status" type="string">
+        <parameter name="status" type="MarketStatus">
             <description>The status of the market, for example ACTIVE, SUSPENDED, SETTLED, etc.</description>
         </parameter>
         <parameter name="betDelay" type="i32">
@@ -1201,10 +1201,10 @@
         <parameter mandatory="true" name="handicap" type="double">
             <description>The handicap</description>
         </parameter>
-        <parameter mandatory="true" name="status" type="string">
+        <parameter mandatory="true" name="status" type="RunnerStatus">
             <description>The status of the selection (i.e., ACTIVE, REMOVED, WINNER, LOSER)</description>
         </parameter>
-        <parameter mandatory="true" name="adjustmentFactor" type="double">
+        <parameter mandatory="false" name="adjustmentFactor" type="double">
             <description>The adjustment factor applied if the selection is removed</description>
         </parameter>
         <parameter name="lastPriceTraded" type="double">
@@ -1487,7 +1487,7 @@
                 This value is not meaningful for activity on LINE markets and is not guaranteed to be returned or maintained for these markets.
             </description>
         </parameter>
-        <parameter name="Size" type="Size" mandatory="true">
+        <parameter name="size" type="Size" mandatory="true">
             <description>Size matched at in this fragment, or at this price or avg price depending on rollup
             </description>
         </parameter>
@@ -1498,7 +1498,7 @@
 
     <dataType name="MarketState">
         <description>Market definition</description>
-        <parameter name="status" type="string" mandatory="true">
+        <parameter name="status" type="MarketStatus" mandatory="true">
             <description>marketStatus</description>
         </parameter>
         <parameter name="betDelay" type="i32" mandatory="true">
@@ -1541,7 +1541,7 @@
 
     <dataType name="MarketDescription">
         <description>Market definition</description>
-        <parameter name="persistenceEnabled" type="bool" mandatory="true">
+        <parameter name="persistenceEnabled" type="bool" mandatory="false">
             <description>persistenceMarket</description>
         </parameter>
         <parameter name="bspMarket" type="bool" mandatory="true">
@@ -1565,13 +1565,13 @@
         <parameter name="marketType" type="MarketType" mandatory="true">
             <description>market base type</description>
         </parameter>
-        <parameter name="regulator" type="string" mandatory="true">
+        <parameter name="regulator" type="string" mandatory="false">
             <description>the market regulator</description>
         </parameter>
-        <parameter name="marketBaseRate" type="double" mandatory="true">
+        <parameter name="marketBaseRate" type="double" mandatory="false">
             <description/>
         </parameter>
-        <parameter name="discountAllowed" type="bool" mandatory="true">
+        <parameter name="discountAllowed" type="bool" mandatory="false">
             <description/>
         </parameter>
         <parameter name="wallet" type="string">

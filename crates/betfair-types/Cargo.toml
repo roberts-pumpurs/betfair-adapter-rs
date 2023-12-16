@@ -9,6 +9,13 @@ serde.workspace = true
 chrono.workspace = true
 rust_decimal.workspace = true
 typed-builder.workspace = true
+redact.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
 
 [build-dependencies]
 betfair-typegen.workspace = true
+rstest.workspace = true
+
+[dev-dependencies]
+json-rpc-types.workspace = true
