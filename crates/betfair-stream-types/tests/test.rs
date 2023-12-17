@@ -17,7 +17,7 @@ fn fixture_streaming_market_definition() {
     use betfair_stream_types::*;
     let data =
         std::fs::read_to_string("./tests/resources/streaming_market_definition.json").unwrap();
-    let _res = serde_json::from_str::<MarketDefinition>(&data).unwrap();
+    let _res = serde_json::from_str::<market_change_message::MarketDefinition>(&data).unwrap();
 }
 
 #[test]

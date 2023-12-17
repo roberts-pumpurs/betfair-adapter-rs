@@ -1,11 +1,9 @@
 use serde::{Deserialize, Serialize};
+use typed_builder::TypedBuilder;
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MarketSubscriptionMessage {
-    /// The operation type
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub op: Option<String>,
     /// Client generated unique id to link request with response (like json rpc)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<i32>,
@@ -26,28 +24,91 @@ pub struct MarketSubscriptionMessage {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub initial_clk: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub market_filter: Option<Box<super::MarketFilter>>,
+    pub market_filter: Option<Box<MarketFilter>>,
     /// Conflate Milliseconds - the conflation rate (looped back on initial image after validation:
     /// bounds are 0 to 120000)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub conflate_ms: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub market_data_filter: Option<Box<super::MarketDataFilter>>,
+    pub market_data_filter: Option<Box<MarketDataFilter>>,
 }
 
-impl MarketSubscriptionMessage {
-    #[allow(dead_code)]
-    pub fn new() -> MarketSubscriptionMessage {
-        MarketSubscriptionMessage {
-            op: None,
-            id: None,
-            segmentation_enabled: None,
-            clk: None,
-            heartbeat_ms: None,
-            initial_clk: None,
-            market_filter: None,
-            conflate_ms: None,
-            market_data_filter: None,
-        }
+#[derive(
+    TypedBuilder, Clone, Debug, PartialEq, PartialOrd, Eq, Default, Serialize, Deserialize,
+)]
+#[serde(rename_all = "camelCase")]
+pub struct MarketDataFilter {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default, setter(strip_option))]
+    pub ladder_levels: Option<i32>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default, setter(strip_option))]
+    pub fields: Option<Vec<Fields>>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum Fields {
+    ExBestOffersDisp,
+    ExBestOffers,
+    ExAllOffers,
+    ExTraded,
+    ExTradedVol,
+    ExLtp,
+    ExMarketDef,
+    SpTraded,
+    SpProjected,
+}
+
+impl Default for Fields {
+    fn default() -> Fields {
+        Self::ExBestOffersDisp
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize, TypedBuilder)]
+#[serde(rename_all = "camelCase")]
+pub struct MarketFilter {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default, setter(strip_option))]
+    pub country_codes: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default, setter(strip_option))]
+    pub betting_types: Option<Vec<StreamMarketFilterBettingType>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default, setter(strip_option))]
+    pub turn_in_play_enabled: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default, setter(strip_option))]
+    pub market_types: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default, setter(strip_option))]
+    pub venues: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default, setter(strip_option))]
+    pub market_ids: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default, setter(strip_option))]
+    pub event_type_ids: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default, setter(strip_option))]
+    pub event_ids: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default, setter(strip_option))]
+    pub bsp_market: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default, setter(strip_option))]
+    pub race_types: Option<Vec<String>>,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum StreamMarketFilterBettingType {
+    #[default]
+    Odds,
+    Line,
+    Range,
+    AsianHandicapDoubleLine,
+    AsianHandicapSingleLine,
 }

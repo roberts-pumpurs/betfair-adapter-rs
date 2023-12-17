@@ -1,13 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use super::{ErrorCode, StatusCode};
-
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StatusMessage {
-    /// The operation type
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub op: Option<String>,
     /// Client generated unique id to link request with response (like json rpc)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<i32>,
@@ -32,18 +27,36 @@ pub struct StatusMessage {
     pub status_code: Option<StatusCode>,
 }
 
-impl StatusMessage {
-    #[allow(dead_code)]
-    pub fn new() -> StatusMessage {
-        StatusMessage {
-            op: None,
-            id: None,
-            connections_available: None,
-            error_message: None,
-            error_code: None,
-            connection_id: None,
-            connection_closed: None,
-            status_code: None,
-        }
-    }
+/// The type of error in case of a failure
+#[derive(
+    Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ErrorCode {
+    #[default]
+    NoAppKey,
+    InvalidAppKey,
+    NoSession,
+    InvalidSessionInformation,
+    NotAuthorized,
+    InvalidInput,
+    InvalidClock,
+    UnexpectedError,
+    Timeout,
+    SubscriptionLimitExceeded,
+    InvalidRequest,
+    ConnectionFailed,
+    MaxConnectionLimitExceeded,
+    TooManyRequests,
+}
+
+/// The status of the last request
+#[derive(
+    Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum StatusCode {
+    #[default]
+    Success,
+    Failure,
 }
