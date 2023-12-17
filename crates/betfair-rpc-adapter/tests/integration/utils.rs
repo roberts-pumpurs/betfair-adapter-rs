@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use betfair_rpc_adapter::urls::{BetfairUrl, RestBase, RetrieveUrl};
+use betfair_rpc_adapter::jurisdictions::CustomUrl;
 use betfair_rpc_adapter::{
     ApplicationKey, BetfairConfigBuilder, BetfairRpcProvider, Identity, Password, SecretProvider,
     Unauthenticated, Username,
@@ -79,60 +79,15 @@ impl Server {
         let base_uri: url::Url = self.bf_api_mock_server.uri().parse().unwrap();
 
         let config = BetfairConfigBuilder {
-            rest: RestUrl(BetfairUrl::new(Cow::Owned(
-                base_uri.join(REST_URL).unwrap(),
-            ))),
-            keep_alive: KeepAliveUrl(BetfairUrl::new(Cow::Owned(
-                base_uri.join(KEEP_ALIVE_URL).unwrap(),
-            ))),
-            bot_login: BotLoginUrl(BetfairUrl::new(Cow::Owned(
-                base_uri.join(BOT_LOGIN_URL).unwrap(),
-            ))),
-            logout: LogoutUrl(BetfairUrl::new(Cow::Owned(base_uri.join(LOGOUT).unwrap()))),
-            login: LoginUrl(BetfairUrl::new(Cow::Owned(
-                base_uri.join(LOGIN_URL).unwrap(),
-            ))),
+            rest: CustomUrl::new(base_uri.join(REST_URL).unwrap()),
+            keep_alive: CustomUrl::new(base_uri.join(KEEP_ALIVE_URL).unwrap()),
+            bot_login: CustomUrl::new(base_uri.join(BOT_LOGIN_URL).unwrap()),
+            logout: CustomUrl::new(base_uri.join(LOGOUT).unwrap()),
+            login: CustomUrl::new(base_uri.join(LOGIN_URL).unwrap()),
             secrets_provider,
         };
 
         BetfairRpcProvider::new_with_config(config)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct RestUrl(BetfairUrl<'static, betfair_rpc_adapter::urls::RestBase>);
-
-impl<'a> RetrieveUrl<'a, RestBase> for RestUrl {
-    fn url(&self) -> BetfairUrl<'a, RestBase> {
-        self.0.clone()
-    }
-}
-#[derive(Debug, Clone)]
-pub struct KeepAliveUrl(BetfairUrl<'static, betfair_rpc_adapter::urls::KeepAlive>);
-impl RetrieveUrl<'static, betfair_rpc_adapter::urls::KeepAlive> for KeepAliveUrl {
-    fn url(&self) -> BetfairUrl<'static, betfair_rpc_adapter::urls::KeepAlive> {
-        self.0.clone()
-    }
-}
-#[derive(Debug, Clone)]
-pub struct LoginUrl(BetfairUrl<'static, betfair_rpc_adapter::urls::InteractiveLogin>);
-impl RetrieveUrl<'static, betfair_rpc_adapter::urls::InteractiveLogin> for LoginUrl {
-    fn url(&self) -> BetfairUrl<'static, betfair_rpc_adapter::urls::InteractiveLogin> {
-        self.0.clone()
-    }
-}
-#[derive(Debug, Clone)]
-pub struct BotLoginUrl(BetfairUrl<'static, betfair_rpc_adapter::urls::BotLogin>);
-impl RetrieveUrl<'static, betfair_rpc_adapter::urls::BotLogin> for BotLoginUrl {
-    fn url(&self) -> BetfairUrl<'static, betfair_rpc_adapter::urls::BotLogin> {
-        self.0.clone()
-    }
-}
-#[derive(Debug, Clone)]
-pub struct LogoutUrl(BetfairUrl<'static, betfair_rpc_adapter::urls::Logout>);
-impl RetrieveUrl<'static, betfair_rpc_adapter::urls::Logout> for LogoutUrl {
-    fn url(&self) -> BetfairUrl<'static, betfair_rpc_adapter::urls::Logout> {
-        self.0.clone()
     }
 }
 

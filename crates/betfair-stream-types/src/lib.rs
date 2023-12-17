@@ -38,7 +38,9 @@ pub enum ResponseMessage {
 }
 
 /// Change Type - set to indicate the type of change - if null this is a delta)
-#[derive(Clone, Copy, Default,Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Ct {
     #[default]
@@ -49,7 +51,9 @@ pub enum Ct {
 
 /// Segment Type - if the change is split into multiple segments, this denotes the beginning and end
 /// of a change, and segments in between. Will be null if data is not segmented
-#[derive(Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum SegmentType {
     #[default]

@@ -1,13 +1,50 @@
+use std::marker::PhantomData;
+
 use betfair_types::bot_login::BotLoginResponse;
 use hyper::header;
 use redact::Secret;
 use reqwest::Client;
 
 use crate::{
-    ApiError, ApplicationKey, Authenticated, BetfairRpcProvider, Identity, Unauthenticated,
+    new_global_config, secret, urls, ApiError, ApplicationKey, Authenticated, BetfairConfigBuilder,
+    BetfairRpcProvider, Identity, Unauthenticated,
 };
 
 impl<'a> BetfairRpcProvider<'a, Unauthenticated> {
+    pub fn new(secret_provider: secret::SecretProvider<'a>) -> Self {
+        let config = new_global_config(secret_provider);
+        Self::new_with_config(config)
+    }
+
+    pub fn new_with_config(
+        config: BetfairConfigBuilder<
+            'a,
+            impl urls::RetrieveUrl<'a, urls::RestBase> + core::fmt::Debug,
+            impl urls::RetrieveUrl<'a, urls::KeepAlive> + core::fmt::Debug,
+            impl urls::RetrieveUrl<'a, urls::BotLogin> + core::fmt::Debug,
+            impl urls::RetrieveUrl<'a, urls::Logout> + core::fmt::Debug,
+            impl urls::RetrieveUrl<'a, urls::InteractiveLogin> + core::fmt::Debug,
+        >,
+    ) -> Self {
+        let rest_base = config.rest.url();
+        let keep_alive = config.keep_alive.url();
+        let bot_login = config.bot_login.url();
+        let login = config.login.url();
+        let logout = config.logout.url();
+        let secret_provider = config.secrets_provider;
+
+        Self {
+            client: Client::new(),
+            _type: PhantomData,
+            rest_base,
+            keep_alive,
+            bot_login,
+            login,
+            logout,
+            secret_provider,
+        }
+    }
+
     pub async fn authenticate(mut self) -> Result<BetfairRpcProvider<'a, Authenticated>, ApiError> {
         self.bot_log_in().await?;
 
@@ -17,17 +54,10 @@ impl<'a> BetfairRpcProvider<'a, Unauthenticated> {
     }
 }
 
-impl<'a> BetfairRpcProvider<'a, Authenticated> {
-    pub async fn update_auth_token(&mut self) -> Result<(), ApiError> {
-        self.bot_log_in().await?;
-        Ok(())
-    }
-}
-
 impl<'a, T> BetfairRpcProvider<'a, T> {
     /// Also known as "non interactive login"
     #[tracing::instrument(skip(self), err)]
-    async fn bot_log_in(&mut self) -> Result<(), ApiError> {
+    pub(super) async fn bot_log_in(&mut self) -> Result<(), ApiError> {
         // Use this to get the session token
         let temp_client = login_client(
             &self.secret_provider.application_key,

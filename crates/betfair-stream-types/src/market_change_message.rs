@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{SegmentType, Ct, market_subscription_message::StreamMarketFilterBettingType};
+use crate::market_subscription_message::StreamMarketFilterBettingType;
+use crate::{Ct, SegmentType};
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

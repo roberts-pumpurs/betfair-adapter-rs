@@ -33,5 +33,5 @@ async fn keep_alive() {
     // Action
     let client = server.client().await;
     let client = client.authenticate().await.unwrap();
-    let _result = client.keep_alive().await.unwrap();
+    client.keep_alive().await.unwrap();
 }

@@ -47,13 +47,22 @@ pub mod jurisdictions {
     pub struct Sweden;
     #[derive(Debug)]
     pub struct Australia;
+
+    #[derive(Debug, Clone)]
+    pub struct CustomUrl<T>(pub super::BetfairUrl<'static, T>);
+
+    impl<T> CustomUrl<T> {
+        pub fn new(url: url::Url) -> Self {
+            Self(super::BetfairUrl::new(std::borrow::Cow::Owned(url)))
+        }
+    }
 }
 
 pub trait RetrieveUrl<'a, T> {
     fn url(&self) -> BetfairUrl<'a, T>;
 }
 
-pub mod rest_url {
+mod rest_url {
     use super::*;
 
     impl<'a> RetrieveUrl<'a, RestBase> for jurisdictions::Global {
@@ -79,9 +88,15 @@ pub mod rest_url {
             ))
         }
     }
+
+    impl<'a> RetrieveUrl<'a, RestBase> for jurisdictions::CustomUrl<RestBase> {
+        fn url(&self) -> BetfairUrl<'a, RestBase> {
+            self.0.clone()
+        }
+    }
 }
 
-pub mod keep_alive_url {
+mod keep_alive_url {
     use super::*;
 
     impl<'a> RetrieveUrl<'a, KeepAlive> for jurisdictions::Global {
@@ -131,9 +146,15 @@ pub mod keep_alive_url {
             ))
         }
     }
+
+    impl<'a> RetrieveUrl<'a, KeepAlive> for jurisdictions::CustomUrl<KeepAlive> {
+        fn url(&self) -> BetfairUrl<'a, KeepAlive> {
+            self.0.clone()
+        }
+    }
 }
 
-pub mod bot_login_url {
+mod bot_login_url {
     use super::*;
 
     impl<'a> RetrieveUrl<'a, BotLogin> for jurisdictions::Global {
@@ -175,9 +196,15 @@ pub mod bot_login_url {
             ))
         }
     }
+
+    impl<'a> RetrieveUrl<'a, BotLogin> for jurisdictions::CustomUrl<BotLogin> {
+        fn url(&self) -> BetfairUrl<'a, BotLogin> {
+            self.0.clone()
+        }
+    }
 }
 
-pub mod interactive_login_url {
+mod interactive_login_url {
     use super::*;
 
     impl<'a> RetrieveUrl<'a, InteractiveLogin> for jurisdictions::Global {
@@ -219,9 +246,15 @@ pub mod interactive_login_url {
             ))
         }
     }
+
+    impl<'a> RetrieveUrl<'a, InteractiveLogin> for jurisdictions::CustomUrl<InteractiveLogin> {
+        fn url(&self) -> BetfairUrl<'a, InteractiveLogin> {
+            self.0.clone()
+        }
+    }
 }
 
-pub mod logout_url {
+mod logout_url {
     use super::*;
 
     impl<'a> RetrieveUrl<'a, Logout> for jurisdictions::Global {
@@ -229,6 +262,11 @@ pub mod logout_url {
             BetfairUrl::new(Cow::Owned(
                 url::Url::parse("https://identitysso.betfair.com/api/logout").unwrap(),
             ))
+        }
+    }
+    impl<'a> RetrieveUrl<'a, Logout> for jurisdictions::CustomUrl<Logout> {
+        fn url(&self) -> BetfairUrl<'a, Logout> {
+            self.0.clone()
         }
     }
 }
