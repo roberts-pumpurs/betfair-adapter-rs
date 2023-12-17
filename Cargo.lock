@@ -183,6 +183,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "betfair-stream-types"
+version = "0.1.0"
+dependencies = [
+ "betfair-typegen",
+ "chrono",
+ "json-rpc-types",
+ "redact",
+ "rstest",
+ "rust_decimal",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "typed-builder",
+]
+
+[[package]]
 name = "betfair-typegen"
 version = "0.1.0"
 dependencies = [
