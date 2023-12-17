@@ -9,15 +9,15 @@ where
     _type: std::marker::PhantomData<T>,
 }
 
-impl<'a, T> BetfairUrl<'a, T> {
-    pub fn new(url: Cow<'a, url::Url>) -> Self {
+impl<'a, T, K: std::clone::Clone> BetfairUrl<'a, T, K> {
+    pub fn new(url: Cow<'a, K>) -> Self {
         Self {
             url,
             _type: std::marker::PhantomData,
         }
     }
 
-    pub fn url(&self) -> &url::Url {
+    pub fn url(&self) -> &K {
         &self.url
     }
 }
@@ -55,17 +55,25 @@ pub mod jurisdictions {
     pub struct Australia;
 
     #[derive(Debug, Clone)]
-    pub struct CustomUrl<T>(pub super::BetfairUrl<'static, T>);
+    pub struct CustomUrl<T, K = url::Url>(pub super::BetfairUrl<'static, T, K>)
+    where
+        K: std::clone::Clone + 'static;
 
-    impl<T> CustomUrl<T> {
-        pub fn new(url: url::Url) -> Self {
+    impl<T, K> CustomUrl<T, K>
+    where
+        K: std::clone::Clone,
+    {
+        pub fn new(url: K) -> Self {
             Self(super::BetfairUrl::new(std::borrow::Cow::Owned(url)))
         }
     }
 }
 
-pub trait RetrieveUrl<'a, T> {
-    fn url(&self) -> BetfairUrl<'a, T>;
+pub trait RetrieveUrl<'a, T, K = url::Url>
+where
+    K: std::clone::Clone,
+{
+    fn url(&self) -> BetfairUrl<'a, T, K>;
 }
 
 mod rest_url {
@@ -280,15 +288,21 @@ mod logout_url {
 mod stream_url {
     use super::*;
 
-    impl<'a> RetrieveUrl<'a, Stream> for jurisdictions::Global {
-        fn url(&self) -> BetfairUrl<'a, Stream> {
-            BetfairUrl::new(Cow::Owned(
-                url::Url::parse("https://identitysso.betfair.com/api/logout").unwrap(),
-            ))
+    impl<'a> RetrieveUrl<'a, Stream, std::net::SocketAddr> for jurisdictions::Global {
+        fn url(&self) -> BetfairUrl<'a, Stream, std::net::SocketAddr> {
+            use std::net::ToSocketAddrs;
+            let addr = ("stream-api.betfair.com", 443)
+                .to_socket_addrs()
+                .unwrap()
+                .next()
+                .unwrap();
+            BetfairUrl::new(Cow::Owned(addr))
         }
     }
-    impl<'a> RetrieveUrl<'a, Stream> for jurisdictions::CustomUrl<Stream> {
-        fn url(&self) -> BetfairUrl<'a, Stream> {
+    impl<'a> RetrieveUrl<'a, Stream, std::net::SocketAddr>
+        for jurisdictions::CustomUrl<Stream, std::net::SocketAddr>
+    {
+        fn url(&self) -> BetfairUrl<'a, Stream, std::net::SocketAddr> {
             self.0.clone()
         }
     }

@@ -54,6 +54,8 @@ reqwest = { version = "0.11", default-features = false, features = [
 ] }
 url = "2.2"
 http = "1"
+rustls = "0.22"
+rustls-native-certs = "0.7"
 
 # Type gen
 quote = "1"

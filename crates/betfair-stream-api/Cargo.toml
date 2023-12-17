@@ -18,3 +18,5 @@ futures.workspace = true
 futures-util.workspace = true
 rand.workspace = true
 async-stream.workspace = true
+rustls.workspace = true
+rustls-native-certs.workspace = true

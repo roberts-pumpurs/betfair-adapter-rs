@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::net::SocketAddr;
 
 use betfair_adapter::{ApplicationKey, BetfairUrl, SessionToken};
 use betfair_stream_types::{authentication_message, RequestMessage, ResponseMessage};
@@ -7,36 +8,71 @@ use futures_util::Future;
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
 use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::net::TcpStream;
 use tokio_stream::StreamExt;
 use tokio_util::bytes;
 use tokio_util::codec::{Decoder, Encoder, FramedRead, FramedWrite};
 
 #[derive(Debug)]
 pub struct BetfairStreamAPI<'a> {
-    url: BetfairUrl<'a, betfair_adapter::Stream, (url::Url, u16)>,
+    url: BetfairUrl<'a, betfair_adapter::Stream, (url::Url, SocketAddr)>,
     application_key: Cow<'a, ApplicationKey>,
     session_token: Cow<'a, SessionToken>,
     state: StreamState,
-    rng: SmallRng,
 }
 
 impl<'a> BetfairStreamAPI<'a> {
     pub fn new(
-        url: BetfairUrl<'a, betfair_adapter::Stream, (url::Url, u16)>,
+        url: BetfairUrl<'a, betfair_adapter::Stream, (url::Url, SocketAddr)>,
         application_key: Cow<'a, ApplicationKey>,
         session_token: Cow<'a, SessionToken>,
     ) -> Self {
-        let rng = SmallRng::from_entropy();
         Self {
             url,
-            rng,
             application_key,
             session_token,
             state: StreamState::PreAuth,
         }
     }
 
-    pub async fn process<
+    pub async fn connect_tls(
+        &mut self,
+    ) -> Result<
+        (
+            impl Future<Output = Result<(), StreamError>>,
+            impl futures_util::Stream<Item = Result<ResponseMessage, StreamError>>,
+        ),
+        StreamError,
+    > {
+        let (url, socket) = self.url.url().clone();
+        let domain = url.domain().unwrap().to_string();
+        let domain = rustls::pki_types::ServerName::try_from(domain).unwrap();
+        let stream = TcpStream::connect(&socket).await?;
+        let connector = tls_connector();
+        let stream = connector.connect(domain, stream).await.unwrap();
+        let (read, write) = tokio::io::split(stream);
+        self.process(write, read, futures_util::stream::empty())
+            .await
+    }
+
+    pub async fn connect(
+        &mut self,
+    ) -> Result<
+        (
+            impl Future<Output = Result<(), StreamError>>,
+            impl futures_util::Stream<Item = Result<ResponseMessage, StreamError>>,
+        ),
+        StreamError,
+    > {
+        let (_url, socket) = self.url.url().clone();
+        let stream = TcpStream::connect(&socket).await?;
+
+        let (read, write) = stream.into_split();
+        self.process(write, read, futures_util::stream::empty())
+            .await
+    }
+
+    async fn process<
         I: AsyncWrite + std::fmt::Debug + Send + Unpin,
         O: AsyncRead + std::fmt::Debug + Send + Unpin,
     >(
@@ -53,6 +89,7 @@ impl<'a> BetfairStreamAPI<'a> {
         ),
         StreamError,
     > {
+        let mut rng = SmallRng::from_entropy();
         let mut writer = FramedWrite::new(input, StreamAPICodec);
         let mut reader = FramedRead::new(output, StreamAPICodec);
 
@@ -73,7 +110,7 @@ impl<'a> BetfairStreamAPI<'a> {
                     return Err(StreamError::UnexpectedResponse(format!("{:?}", data)))
                 }
                 StreamState::SendAuth { connection_id } => {
-                    let id = self.rng.gen();
+                    let id = rng.gen();
                     let authorization_message = RequestMessage::Authentication(
                         authentication_message::AuthenticationMessage {
                             id: Some(id),
@@ -190,4 +227,20 @@ pub enum StreamError {
     UnexpectedResponse(String),
     #[error("Connection ID not present")]
     ConnectionIdNotPresent,
+}
+
+fn tls_connector() -> tokio_rustls::TlsConnector {
+    use tokio_rustls::TlsConnector;
+    let mut roots = rustls::RootCertStore::empty();
+    rustls_native_certs::load_native_certs()
+        .expect("could not load platform certs")
+        .into_iter()
+        .for_each(|cert| {
+            roots.add(cert).unwrap();
+        });
+
+    let config = rustls::ClientConfig::builder()
+        .with_root_certificates(roots)
+        .with_no_client_auth();
+    TlsConnector::from(std::sync::Arc::new(config))
 }
