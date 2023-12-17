@@ -183,6 +183,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "betfair-stream-api"
+version = "0.1.0"
+
+[[package]]
 name = "betfair-stream-types"
 version = "0.1.0"
 dependencies = [
