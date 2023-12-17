@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
-use betfair_rpc_adapter::jurisdictions::CustomUrl;
-use betfair_rpc_adapter::{
+use betfair_adapter::jurisdictions::CustomUrl;
+use betfair_adapter::{
     ApplicationKey, BetfairConfigBuilder, BetfairRpcProvider, Identity, Password, SecretProvider,
     Unauthenticated, Username,
 };
