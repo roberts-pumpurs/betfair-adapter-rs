@@ -6,14 +6,16 @@ members = [
 
 [workspace.dependencies]
 # Our crates
+betfair-adapter = { path = "crates/betfair-adapter" }
 betfair-types = { path = "crates/betfair-types" }
+betfair-stream-types = { path = "crates/betfair-stream-types" }
 betfair-xml-parser = { path = "crates/betfair-xml-parser" }
 betfair-typegen = { path = "crates/betfair-typegen" }
 
 # Utils
 rust_decimal = "1"
 rust_decimal_macros = "1"
-
+rand = {version = "0.8", features = ["small_rng"]}
 chrono = { version = "0.4", default-features = false, features = [
   "serde",
   "clock",
@@ -23,13 +25,18 @@ eyre = "0.6"
 thiserror = "1.0"
 heck = "0.4"
 nanoid = "0.4"
-typed-builder = "0.17"
+typed-builder = "0.18"
 redact = { version = "0.1", features = ["serde"] }
 
 # Async
 tokio = { version = "1.0", features = ["full", "tracing"] }
+tokio-util = { version = "0.7", features = ["codec"] }
+tokio-stream = "0.1"
+tokio-rustls = "0.25"
 futures-concurrency = "7.4"
+futures-util = "0.3"
 futures = "0.3"
+async-stream = "0.3"
 
 # Parsing
 serde-xml-rs = "0.6"
@@ -37,7 +44,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
 # HTTP
-hyper = { version = "0.14", features = ["full"] }
+hyper = { version = "1", features = ["full"] }
 reqwest = { version = "0.11", default-features = false, features = [
   "json",
   "gzip",

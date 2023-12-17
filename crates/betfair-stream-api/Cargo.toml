@@ -3,6 +3,18 @@ name = "betfair-stream-api"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+betfair-stream-types.workspace = true
+betfair-adapter.workspace = true
+url.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+tokio-util.workspace = true
+tokio-rustls.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+futures.workspace = true
+futures-util.workspace = true
+rand.workspace = true
+async-stream.workspace = true

@@ -9,16 +9,19 @@ pub struct SecretProvider<'a> {
 }
 
 #[derive(Debug, Clone)]
-pub struct ApplicationKey(pub(crate) redact::Secret<String>);
+pub struct ApplicationKey(pub redact::Secret<String>);
 
 #[derive(Debug, Clone)]
-pub struct Username(pub(crate) redact::Secret<String>);
+pub struct SessionToken(pub redact::Secret<String>);
 
 #[derive(Debug, Clone)]
-pub struct Password(pub(crate) redact::Secret<String>);
+pub struct Username(pub redact::Secret<String>);
 
 #[derive(Debug, Clone)]
-pub struct Identity(pub(crate) redact::Secret<reqwest::Identity>);
+pub struct Password(pub redact::Secret<String>);
+
+#[derive(Debug, Clone)]
+pub struct Identity(pub redact::Secret<reqwest::Identity>);
 
 impl ApplicationKey {
     pub fn new(application_key: String) -> Self {

@@ -1,12 +1,11 @@
 use std::marker::PhantomData;
 
 use betfair_types::bot_login::BotLoginResponse;
-use hyper::header;
-use redact::Secret;
-use reqwest::Client;
+use reqwest::{header, Client};
 
+use crate::secret::{self, SessionToken};
 use crate::{
-    new_global_config, secret, urls, ApiError, ApplicationKey, Authenticated, BetfairConfigBuilder,
+    new_global_config, urls, ApiError, ApplicationKey, Authenticated, BetfairConfigBuilder,
     BetfairRpcProvider, Identity, Unauthenticated,
 };
 
@@ -77,8 +76,8 @@ impl<'a, T> BetfairRpcProvider<'a, T> {
         let login_response = login_response.0.map_err(ApiError::BotLoginError)?;
 
         self.client = default_client(
-            &self.secret_provider.application_key.0,
-            &login_response.session_token,
+            &self.secret_provider.application_key,
+            &SessionToken(login_response.session_token),
         )?;
 
         Ok(())
@@ -87,14 +86,14 @@ impl<'a, T> BetfairRpcProvider<'a, T> {
     // TODO implement interactive login
 }
 
-pub fn default_client(
-    app_key: &Secret<String>,
-    session_token: &Secret<String>,
+fn default_client(
+    app_key: &ApplicationKey,
+    session_token: &SessionToken,
 ) -> eyre::Result<reqwest::Client> {
     let mut headers = header::HeaderMap::new();
     headers.insert(
         "X-Application",
-        header::HeaderValue::from_str(app_key.expose_secret().as_str())?,
+        header::HeaderValue::from_str(app_key.0.expose_secret().as_str())?,
     );
     headers.insert(
         "Accept",
@@ -110,7 +109,7 @@ pub fn default_client(
     );
     headers.insert(
         "X-Authentication",
-        header::HeaderValue::from_str(session_token.expose_secret().as_str())?,
+        header::HeaderValue::from_str(session_token.0.expose_secret().as_str())?,
     );
     Ok(reqwest::Client::builder()
         .use_rustls_tls()

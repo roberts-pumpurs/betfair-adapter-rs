@@ -1,8 +1,11 @@
 use std::borrow::Cow;
 
 #[derive(Debug, Clone)]
-pub struct BetfairUrl<'a, T> {
-    url: Cow<'a, url::Url>,
+pub struct BetfairUrl<'a, T, K = url::Url>
+where
+    K: std::clone::Clone,
+{
+    url: Cow<'a, K>,
     _type: std::marker::PhantomData<T>,
 }
 
@@ -33,6 +36,9 @@ pub struct InteractiveLogin;
 
 #[derive(Debug, Clone)]
 pub struct Logout;
+
+#[derive(Debug, Clone)]
+pub struct Stream;
 
 pub mod jurisdictions {
     #[derive(Debug)]
@@ -266,6 +272,23 @@ mod logout_url {
     }
     impl<'a> RetrieveUrl<'a, Logout> for jurisdictions::CustomUrl<Logout> {
         fn url(&self) -> BetfairUrl<'a, Logout> {
+            self.0.clone()
+        }
+    }
+}
+
+mod stream_url {
+    use super::*;
+
+    impl<'a> RetrieveUrl<'a, Stream> for jurisdictions::Global {
+        fn url(&self) -> BetfairUrl<'a, Stream> {
+            BetfairUrl::new(Cow::Owned(
+                url::Url::parse("https://identitysso.betfair.com/api/logout").unwrap(),
+            ))
+        }
+    }
+    impl<'a> RetrieveUrl<'a, Stream> for jurisdictions::CustomUrl<Stream> {
+        fn url(&self) -> BetfairUrl<'a, Stream> {
             self.0.clone()
         }
     }
