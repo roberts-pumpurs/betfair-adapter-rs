@@ -1,3 +1,6 @@
+use betfair_types::types::sports_aping::{
+    CountryCode, EventId, EventTypeId, MarketId, MarketType, Venue,
+};
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
@@ -72,7 +75,7 @@ impl Default for Fields {
 pub struct MarketFilter {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
-    pub country_codes: Option<Vec<String>>,
+    pub country_codes: Option<Vec<CountryCode>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
     pub betting_types: Option<Vec<StreamMarketFilterBettingType>>,
@@ -81,19 +84,19 @@ pub struct MarketFilter {
     pub turn_in_play_enabled: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
-    pub market_types: Option<Vec<String>>,
+    pub market_types: Option<Vec<MarketType>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
-    pub venues: Option<Vec<String>>,
+    pub venues: Option<Vec<Venue>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
-    pub market_ids: Option<Vec<String>>,
+    pub market_ids: Option<Vec<MarketId>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
-    pub event_type_ids: Option<Vec<String>>,
+    pub event_type_ids: Option<Vec<EventTypeId>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
-    pub event_ids: Option<Vec<String>>,
+    pub event_ids: Option<Vec<EventId>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
     pub bsp_market: Option<bool>,

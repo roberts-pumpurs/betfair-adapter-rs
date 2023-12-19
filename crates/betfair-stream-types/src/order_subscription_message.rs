@@ -1,3 +1,4 @@
+use betfair_types::customer_strategy_ref::CustomerStrategyRef;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -44,7 +45,7 @@ pub struct OrderFilter {
     /// Restricts to specified customerStrategyRefs; this will filter orders and
     /// StrategyMatchChanges accordingly (Note: overall postition is not filtered)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub customer_strategy_refs: Option<Vec<String>>,
+    pub customer_strategy_refs: Option<Vec<CustomerStrategyRef>>,
     /// Returns strategy positions (See: OrderRunnerChange.smc=Map<customerStrategyRef,
     /// StrategyMatchChange>) - these are sent in delta format as per overall position.
     /// Default=false

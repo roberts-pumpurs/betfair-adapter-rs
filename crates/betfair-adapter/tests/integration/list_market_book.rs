@@ -1,6 +1,8 @@
+use betfair_types::price::Price;
+use betfair_types::size::Size;
 use betfair_types::types::sports_aping::{
-    list_market_book, ExchangePrices, MarketBook, MarketId, Price, PriceData, PriceProjection,
-    PriceSize, Runner, RunnerStatus, SelectionId, Size,
+    list_market_book, ExchangePrices, MarketBook, MarketId, PriceData, PriceProjection, PriceSize,
+    Runner, RunnerStatus, SelectionId,
 };
 use pretty_assertions::assert_eq;
 use rstest::rstest;
@@ -163,21 +165,21 @@ async fn single_market_book() {
                 ex: Some(betfair_types::types::sports_aping::ExchangePrices {
                     available_to_back: Some(vec![
                         betfair_types::types::sports_aping::PriceSize {
-                            price: Price(dec!(1.19)),
-                            size: Size(dec!(57.52)),
+                            price: Price::new(dec!(1.19)).unwrap(),
+                            size: Size::new(dec!(57.52)),
                         },
                         betfair_types::types::sports_aping::PriceSize {
-                            price: Price(dec!(1.02)),
-                            size: Size(dec!(6.48)),
+                            price: Price::new(dec!(1.02)).unwrap(),
+                            size: Size::new(dec!(6.48)),
                         },
                         betfair_types::types::sports_aping::PriceSize {
-                            price: Price(dec!(1.01)),
-                            size: Size(dec!(21.14)),
+                            price: Price::new(dec!(1.01)).unwrap(),
+                            size: Size::new(dec!(21.14)),
                         },
                     ]),
                     available_to_lay: Some(vec![PriceSize {
-                        price: Price(dec!(1.43)),
-                        size: Size(dec!(31.11)),
+                        price: Price::new(dec!(1.43)).unwrap(),
+                        size: Size::new(dec!(31.11)),
                     }]),
                     traded_volume: Some(vec![]),
                 }),
@@ -197,21 +199,21 @@ async fn single_market_book() {
                 ex: Some(ExchangePrices {
                     available_to_back: Some(vec![
                         PriceSize {
-                            price: Price(dec!(3.75)),
-                            size: Size(dec!(5.21)),
+                            price: Price::new(dec!(3.75)).unwrap(),
+                            size: Size::new(dec!(5.21)),
                         },
                         PriceSize {
-                            price: Price(dec!(1.02)),
-                            size: Size(dec!(6.65)),
+                            price: Price::new(dec!(1.02)).unwrap(),
+                            size: Size::new(dec!(6.65)),
                         },
                         PriceSize {
-                            price: Price(dec!(1.01)),
-                            size: Size(dec!(21.14)),
+                            price: Price::new(dec!(1.01)).unwrap(),
+                            size: Size::new(dec!(21.14)),
                         },
                     ]),
                     available_to_lay: Some(vec![PriceSize {
-                        price: Price(dec!(4.8)),
-                        size: Size(dec!(4.37)),
+                        price: Price::new(dec!(4.8)).unwrap(),
+                        size: Size::new(dec!(4.37)),
                     }]),
                     traded_volume: Some(vec![]),
                 }),

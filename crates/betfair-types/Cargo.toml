@@ -8,6 +8,7 @@ license = "MIT/Apache-2.0"
 serde.workspace = true
 chrono.workspace = true
 rust_decimal.workspace = true
+rust_decimal_macros.workspace = true
 typed-builder.workspace = true
 redact.workspace = true
 serde_json.workspace = true
@@ -15,7 +16,7 @@ thiserror.workspace = true
 
 [build-dependencies]
 betfair-typegen.workspace = true
-rstest.workspace = true
 
 [dev-dependencies]
+rstest.workspace = true
 json-rpc-types.workspace = true

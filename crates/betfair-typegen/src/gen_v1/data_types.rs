@@ -21,7 +21,10 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                 self.generate_struct_value(x)
             }
             crate::aping_ast::data_type::DataTypeVariant::TypeAlias(x) => {
-                self.generate_type_alias(x)
+                match self.generate_type_alias(x) {
+                    Some(x) => x,
+                    None => return quote! {},
+                }
             }
         };
 
@@ -187,15 +190,26 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
         }
     }
 
-    fn generate_type_alias(&self, type_alias: &TypeAlias) -> TokenStream {
+    fn generate_type_alias(&self, type_alias: &TypeAlias) -> Option<TokenStream> {
         let name = type_alias.name.ident_pascal();
         let data_type = self.type_resolver.resolve_type(&type_alias.data_type);
         let type_alias_derives = self.code_injector.type_alias_derives();
 
-        quote! {
+        let types_to_skip = [
+            "Price",
+            "Size",
+            "CustomerOrderRef",
+            "CustomerRef",
+            "CustomerStrategyRef",
+        ];
+
+        if types_to_skip.contains(&type_alias.name.0.as_str()) {
+            return None
+        }
+        Some(quote! {
             #type_alias_derives
             pub struct #name (pub #data_type);
-        }
+        })
     }
 }
 

@@ -261,7 +261,7 @@
                         Groups matches with no strategy in an empty string bucket. Defaults to false if unspecified.
                     </description>
                 </parameter>
-                <parameter name="customerStrategyRefs" type="set(string)" mandatory="false">
+                <parameter name="customerStrategyRefs" type="set(CustomerStrategyRef)" mandatory="false">
                     <description>
                         If you ask for orders, restricts the results to orders matching any of the specified set of customer defined strategies.
                         Also filters which matches by strategy for runners are returned, if partitionMatchedByStrategyRef is true.
@@ -340,7 +340,7 @@
                         Groups matches with no strategy in an empty string bucket. Defaults to false if unspecified.
                     </description>
                 </parameter>
-                <parameter name="customerStrategyRefs" type="set(string)" mandatory="false">
+                <parameter name="customerStrategyRefs" type="set(CustomerStrategyRef)" mandatory="false">
                     <description>
                         If you ask for orders, restricts the results to orders matching any of the specified set of customer defined strategies.
                         Also filters which matches by strategy for runners are returned, if partitionMatchedByStrategyRef is true.
@@ -591,7 +591,7 @@
                 <parameter mandatory="true" name="instructions" type="list(PlaceInstruction)">
                     <description/>
                 </parameter>
-                <parameter name="customerRef" type="string">
+                <parameter name="customerRef" type="CustomerRef">
                     <description>
                         Optional parameter allowing the client to pass a unique string (up to 32 chars) that
                         is used to de-dupe mistaken re-submissions.
@@ -605,7 +605,7 @@
                         that their bet might arrive after the market has turned in play.
                     </description>
                 </parameter>
-                <parameter mandatory="false" name="customerStrategyRef" type="string">
+                <parameter mandatory="false" name="customerStrategyRef" type="CustomerStrategyRef">
                     <description>
                         An optional reference customers can use to specify which strategy has sent the order.
                         The reference will be returned on order change messages through the stream API. The string is
@@ -646,7 +646,7 @@
                         If not supplied all bets on the market (if market id is passed) are fully cancelled
                     </description>
                 </parameter>
-                <parameter name="customerRef" type="string">
+                <parameter name="customerRef" type="CustomerRef">
                     <description>
                         Optional parameter allowing the client to pass a unique string (upto 32 chars) that
                         is used to de-dupe mistaken re-submitions.
@@ -680,7 +680,7 @@
                 <parameter mandatory="true" name="instructions" type="list(ReplaceInstruction)">
                     <description/>
                 </parameter>
-                <parameter name="customerRef" type="string">
+                <parameter name="customerRef" type="CustomerRef">
                     <description>
                         Optional parameter allowing the client to pass a unique string (up to 32 chars) that
                         is used to de-dupe mistaken re-submissions.
@@ -722,7 +722,7 @@
                 <parameter mandatory="true" name="instructions" type="list(UpdateInstruction)">
                     <description/>
                 </parameter>
-                <parameter name="customerRef" type="string">
+                <parameter name="customerRef" type="CustomerRef">
                     <description>
                         Optional parameter allowing the client to pass a unique string (up to 32 chars) that
                         is used to de-dupe mistaken re-submissions.
@@ -1740,10 +1740,10 @@
         <parameter name="regulatorCode" type="string">
             <description>The regulator Code.</description>
         </parameter>
-        <parameter name="customerOrderRef" type="string">
+        <parameter name="customerOrderRef" type="CustomerOrderRef">
             <description>The order reference defined by the customer for this bet</description>
         </parameter>
-        <parameter name="customerStrategyRef" type="string">
+        <parameter name="customerStrategyRef" type="CustomerStrategyRef">
             <description>The strategy reference defined by the customer for this bet</description>
         </parameter>
     </dataType>
@@ -1846,11 +1846,11 @@
                 account currency
             </description>
         </parameter>
-        <parameter name="customerOrderRef" type="string">
+        <parameter name="customerOrderRef" type="CustomerOrderRef">
             <description>The order reference defined by the customer for the bet order
             </description>
         </parameter>
-        <parameter name="customerStrategyRef" type="string">
+        <parameter name="customerStrategyRef" type="CustomerStrategyRef">
             <description>The strategy reference defined by the customer for the bet order
             </description>
         </parameter>
@@ -1952,7 +1952,7 @@
         <parameter type="MarketOnCloseOrder" name="marketOnCloseOrder">
             <description/>
         </parameter>
-        <parameter mandatory="false" name="customerOrderRef" type="string">
+        <parameter mandatory="false" name="customerOrderRef" type="CustomerOrderRef">
             <description>
                 An optional reference the customer can set to identify instructions and it will be returned on order
                 change messages via the stream API. No validation will be done on uniqueness and the string is limited
@@ -1963,7 +1963,7 @@
 
     <dataType name="PlaceExecutionReport">
         <description/>
-        <parameter name="customerRef" type="string">
+        <parameter name="customerRef" type="CustomerRef">
             <description>
                 Echo of the customerRef if passed.
             </description>
@@ -2105,7 +2105,7 @@
 
     <dataType name="CancelExecutionReport">
         <description/>
-        <parameter name="customerRef" type="string">
+        <parameter name="customerRef" type="CustomerRef">
             <description>
                 Echo of the customerRef if passed.
             </description>
@@ -2139,7 +2139,7 @@
 
     <dataType name="ReplaceExecutionReport">
         <description/>
-        <parameter name="customerRef" type="string">
+        <parameter name="customerRef" type="CustomerRef">
             <description>
                 Echo of the customerRef if passed.
             </description>
@@ -2205,7 +2205,7 @@
 
     <dataType name="UpdateExecutionReport">
         <description/>
-        <parameter name="customerRef" type="string">
+        <parameter name="customerRef" type="CustomerRef">
             <description>
                 Echo of the customerRef if passed.
             </description>

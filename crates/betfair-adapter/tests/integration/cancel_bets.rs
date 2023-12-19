@@ -1,6 +1,8 @@
+use betfair_types::customer_ref::CustomerRef;
+use betfair_types::size::Size;
 use betfair_types::types::sports_aping::{
     cancel_orders, BetId, CancelInstruction, CancelInstructionReport, ExecutionReportErrorCode,
-    ExecutionReportStatus, InstructionReportErrorCode, InstructionReportStatus, MarketId, Size,
+    ExecutionReportStatus, InstructionReportErrorCode, InstructionReportStatus, MarketId,
 };
 use pretty_assertions::assert_eq;
 use rstest::rstest;
@@ -63,7 +65,7 @@ async fn cancel_bets_unsuccessful() {
 
     // Assert
     let expected = cancel_orders::ReturnType {
-        customer_ref: Some("0oxfjBrq8K2TZg2Ytqjo1".to_string()),
+        customer_ref: Some(CustomerRef::new("0oxfjBrq8K2TZg2Ytqjo1".to_string()).unwrap()),
         error_code: Some(ExecutionReportErrorCode::BetActionError),
         instruction_reports: Some(vec![CancelInstructionReport {
             status: InstructionReportStatus::Failure,
@@ -73,7 +75,7 @@ async fn cancel_bets_unsuccessful() {
             }),
             cancelled_date: None,
             error_code: Some(InstructionReportErrorCode::BetTakenOrLapsed),
-            size_cancelled: Size(dec!(0.0)),
+            size_cancelled: Size::from(dec!(0.0)),
         }]),
         market_id: Some(MarketId("1.210878100".to_string())),
         status: ExecutionReportStatus::Failure,

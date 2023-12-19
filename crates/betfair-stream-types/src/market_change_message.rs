@@ -1,3 +1,6 @@
+use betfair_types::price::Price;
+use betfair_types::size::Size;
+use betfair_types::types::sports_aping::MarketId;
 use serde::{Deserialize, Serialize};
 
 use crate::market_subscription_message::StreamMarketFilterBettingType;
@@ -65,7 +68,7 @@ pub struct MarketChange {
     pub market_definition: Option<Box<MarketDefinition>>,
     /// Market Id - the id of the market
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
+    pub id: Option<MarketId>,
 }
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
@@ -218,54 +221,54 @@ pub enum Type {
 pub struct RunnerChange {
     /// The total amount matched. This value is truncated at 2dp.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub tv: Option<rust_decimal::Decimal>,
+    pub tv: Option<Size>,
 
     /// Best Available To Back - LevelPriceVol triple delta of price changes, keyed by level (0 vol
     /// is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub batb: Option<Vec<Vec<rust_decimal::Decimal>>>,
+    pub batb: Option<Vec<Vec<Price>>>,
 
     /// Starting Price Back - PriceVol tuple delta of price changes (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub spb: Option<Vec<Vec<rust_decimal::Decimal>>>,
+    pub spb: Option<Vec<Vec<Price>>>,
 
     /// Best Display Available To Lay (includes virtual prices)- LevelPriceVol triple delta of
     /// price changes, keyed by level (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub bdatl: Option<Vec<Vec<rust_decimal::Decimal>>>,
+    pub bdatl: Option<Vec<Vec<Price>>>,
 
     /// Traded - PriceVol tuple delta of price changes (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub trd: Option<Vec<Vec<rust_decimal::Decimal>>>,
+    pub trd: Option<Vec<Vec<Price>>>,
 
     /// Starting Price Far - The far starting price (or null if un-changed)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub spf: Option<rust_decimal::Decimal>,
+    pub spf: Option<Price>,
 
     /// Last Traded Price - The last traded price (or null if un-changed)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ltp: Option<rust_decimal::Decimal>,
+    pub ltp: Option<Price>,
 
     /// Available To Back - PriceVol tuple delta of price changes (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub atb: Option<Vec<Vec<rust_decimal::Decimal>>>,
+    pub atb: Option<Vec<Vec<Price>>>,
 
     /// Starting Price Lay - PriceVol tuple delta of price changes (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub spl: Option<Vec<Vec<rust_decimal::Decimal>>>,
+    pub spl: Option<Vec<Vec<Price>>>,
 
     /// Starting Price Near - The far starting price (or null if un-changed)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub spn: Option<rust_decimal::Decimal>,
+    pub spn: Option<Price>,
 
     /// Available To Lay - PriceVol tuple delta of price changes (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub atl: Option<Vec<Vec<rust_decimal::Decimal>>>,
+    pub atl: Option<Vec<Vec<Price>>>,
 
     /// Best Available To Lay - LevelPriceVol triple delta of price changes, keyed by level (0 vol
     /// is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub batl: Option<Vec<Vec<rust_decimal::Decimal>>>,
+    pub batl: Option<Vec<Vec<Price>>>,
 
     /// Selection Id - the id of the runner (selection)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -278,7 +281,7 @@ pub struct RunnerChange {
     /// Best Display Available To Back (includes virtual prices)- LevelPriceVol triple delta of
     /// price changes, keyed by level (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub bdatb: Option<Vec<Vec<rust_decimal::Decimal>>>,
+    pub bdatb: Option<Vec<Vec<Price>>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]

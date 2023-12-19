@@ -1,3 +1,5 @@
+use betfair_types::price::Price;
+use betfair_types::size::Size;
 use serde::{Deserialize, Serialize};
 
 use super::{Ct, SegmentType};
@@ -57,7 +59,7 @@ pub struct OrderMarketChange {
     pub full_image: Option<bool>,
 }
 
-#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderRunnerChange {
     /// Matched Backs - matched amounts by distinct matched price on the Back side for this runner
@@ -84,14 +86,14 @@ pub struct OrderRunnerChange {
     pub full_image: Option<bool>,
 }
 
-#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Order {
     /// Side - the side of the order. For Line markets a 'B' bet refers to a SELL line and an 'L'
     /// bet refers to a BUY line.
     pub side: Side,
     /// Size Voided - the amount of the order that has been voided
-    pub sv: rust_decimal::Decimal,
+    pub sv: Size,
     /// Persistence Type - whether the order will persist at in play or not (L = LAPSE, P =
     /// PERSIST, MOC = Market On Close)
     pub pt: Pt,
@@ -104,13 +106,13 @@ pub struct Order {
     /// Price - the original placed price of the order. Line markets operate at even-money odds of
     /// 2.0. However, price for these markets refers to the line positions available as defined by
     /// the markets min-max range and interval steps
-    pub p: rust_decimal::Decimal,
+    pub p: Price,
     /// Size Cancelled - the amount of the order that has been cancelled
-    pub sc: rust_decimal::Decimal,
+    pub sc: Size,
     /// Regulator Code - the regulator of the order
     pub rc: String,
     /// Size - the original placed size of the order
-    pub s: rust_decimal::Decimal,
+    pub s: Size,
     /// Placed Date - the date the order was placed
     pub pd: i64,
     /// Regulator Auth Code - the auth code returned by the regulator
@@ -125,14 +127,14 @@ pub struct Order {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ld: Option<i64>,
     /// Size Lapsed - the amount of the order that has been lapsed
-    pub sl: rust_decimal::Decimal,
+    pub sl: Size,
     /// Average Price Matched - the average price the order was matched at (null if the order is
     /// not matched). This value is not meaningful for activity on Line markets and is not
     /// guaranteed to be returned or maintained for these markets.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub avp: Option<rust_decimal::Decimal>,
+    pub avp: Option<Price>,
     /// Size Matched - the amount of the order that has been matched
-    pub sm: rust_decimal::Decimal,
+    pub sm: Size,
     /// Order Reference - the customer's order reference for this order (empty string if one was
     /// not set)
     pub rfo: String,
@@ -147,7 +149,7 @@ pub struct Order {
     /// Status - the status of the order (E = EXECUTABLE, EC = EXECUTION_COMPLETE)
     pub status: StreamOrderStatus,
     /// Size Remaining - the amount of the order that is remaining unmatched
-    pub sr: rust_decimal::Decimal,
+    pub sr: Size,
 }
 
 /// Side - the side of the order. For Line markets a 'B' bet refers to a SELL line and an 'L' bet

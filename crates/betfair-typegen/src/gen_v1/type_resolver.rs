@@ -22,6 +22,13 @@ impl TypeResolverV1 {
                 "dateTime" => "DateTime<Utc>".to_string(),
                 "boolean" => "bool".to_string(),
                 "bool" => "bool".to_string(),
+                "CustomerRef" => "crate::customer_ref::CustomerRef".to_string(),
+                "CustomerStrategyRef" => {
+                    "crate::customer_strategy_ref::CustomerStrategyRef".to_string()
+                }
+                "CustomerOrderRef" => "crate::customer_order_ref::CustomerOrderRef".to_string(),
+                "Price" => "crate::price::Price".to_string(),
+                "Size" => "crate::size::Size".to_string(),
                 "float" => "rust_decimal::Decimal".to_string(),
                 _ => input.to_pascal_case(),
             }
