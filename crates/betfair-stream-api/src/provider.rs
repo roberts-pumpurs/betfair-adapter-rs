@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::pin::Pin;
 use std::sync::Arc;
 
 use betfair_adapter::betfair_types::customer_strategy_ref::CustomerStrategyRef;
@@ -10,11 +11,13 @@ use betfair_stream_types::request::RequestMessage;
 use betfair_stream_types::response::market_change_message::{MarketChange, MarketChangeMessage};
 use betfair_stream_types::response::order_change_message::{OrderChangeMessage, OrderMarketChange};
 use betfair_stream_types::response::ResponseMessage;
+use futures_concurrency::prelude::*;
 use futures_util::Future;
 
 use crate::raw_stream::RawStream;
 use crate::StreamError;
 
+#[derive(Debug)]
 pub struct StreamAPIProvider {
     command_sender: futures::channel::mpsc::UnboundedSender<RequestMessage>,
     market_tracker: MarketTracker,
@@ -22,15 +25,15 @@ pub struct StreamAPIProvider {
 }
 
 impl StreamAPIProvider {
+    #[tracing::instrument(skip(application_key, session_token, url), err)]
     pub async fn new<'a>(
         application_key: Cow<'a, ApplicationKey>,
         session_token: Cow<'a, SessionToken>,
-        url: BetfairUrl<'a, betfair_adapter::Stream, url::Url>,
+        url: BetfairUrl<'a, betfair_adapter::Stream>,
     ) -> Result<
         (
             Arc<std::sync::RwLock<Self>>,
-            Box<dyn Future<Output = Result<(), StreamError>>>,
-            Box<dyn Future<Output = ()>>,
+            Pin<Box<dyn Future<Output = Result<(), StreamError>> + Send>>,
         ),
         StreamError,
     > {
@@ -53,7 +56,8 @@ impl StreamAPIProvider {
                     .await
                     .unwrap();
                 let async_task_2 = process(api.clone(), read);
-                Ok((api, Box::new(async_task), Box::new(async_task_2)))
+                let async_task = Box::pin(async_task.race(async_task_2));
+                Ok((api, async_task))
             }
             (false, _, Some(socket_addr)) => {
                 let (async_task, read) = stream_wrapper
@@ -61,7 +65,8 @@ impl StreamAPIProvider {
                     .await
                     .unwrap();
                 let async_task_2 = process(api.clone(), read);
-                Ok((api, Box::new(async_task), Box::new(async_task_2)))
+                let async_task = Box::pin(async_task.race(async_task_2));
+                Ok((api, async_task))
             }
             _ => Err(StreamError::MisconfiguredStreamURL),
         }
@@ -114,6 +119,7 @@ impl StreamAPIProvider {
     }
 }
 
+#[derive(Debug)]
 struct MarketTracker {
     market_subscriptions:
         HashMap<MarketId, futures::channel::mpsc::UnboundedSender<MarketChangeMessage>>,
@@ -123,6 +129,7 @@ struct MarketTracker {
     latest_market_clk: Option<String>,
 }
 
+#[derive(Debug)]
 struct OrderTracker {
     order_subscriptions:
         HashMap<CustomerStrategyRef, futures::channel::mpsc::UnboundedSender<OrderChangeMessage>>,
@@ -135,7 +142,7 @@ struct OrderTracker {
 async fn process(
     api: Arc<std::sync::RwLock<StreamAPIProvider>>,
     read: impl futures_util::Stream<Item = Result<ResponseMessage, StreamError>>,
-) {
+) -> Result<(), StreamError> {
     use futures_util::{FutureExt, StreamExt};
     futures::pin_mut!(read);
     let mut read = read.fuse();
@@ -158,4 +165,5 @@ async fn process(
     }
 
     // TODO change internal state to disconnected
+    Ok(())
 }

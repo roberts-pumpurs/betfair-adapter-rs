@@ -288,21 +288,15 @@ mod logout_url {
 mod stream_url {
     use super::*;
 
-    impl<'a> RetrieveUrl<'a, Stream, std::net::SocketAddr> for jurisdictions::Global {
-        fn url(&self) -> BetfairUrl<'a, Stream, std::net::SocketAddr> {
-            use std::net::ToSocketAddrs;
-            let addr = ("stream-api.betfair.com", 443)
-                .to_socket_addrs()
-                .unwrap()
-                .next()
-                .unwrap();
-            BetfairUrl::new(Cow::Owned(addr))
+    impl<'a> RetrieveUrl<'a, Stream> for jurisdictions::Global {
+        fn url(&self) -> BetfairUrl<'a, Stream> {
+            BetfairUrl::new(Cow::Owned(
+                url::Url::parse("tcptls://stream-api.betfair.com:443").unwrap(),
+            ))
         }
     }
-    impl<'a> RetrieveUrl<'a, Stream, std::net::SocketAddr>
-        for jurisdictions::CustomUrl<Stream, std::net::SocketAddr>
-    {
-        fn url(&self) -> BetfairUrl<'a, Stream, std::net::SocketAddr> {
+    impl<'a> RetrieveUrl<'a, Stream> for jurisdictions::CustomUrl<Stream> {
+        fn url(&self) -> BetfairUrl<'a, Stream> {
             self.0.clone()
         }
     }

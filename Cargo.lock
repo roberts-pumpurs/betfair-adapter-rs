@@ -211,12 +211,16 @@ dependencies = [
  "async-stream",
  "betfair-adapter",
  "betfair-stream-types",
+ "chrono",
  "futures",
+ "futures-concurrency",
  "futures-util",
  "rand 0.8.5",
+ "rstest",
  "rustls 0.22.1",
  "rustls-native-certs",
  "serde_json",
+ "test-log",
  "thiserror",
  "tokio",
  "tokio-rustls 0.25.0",
@@ -224,6 +228,7 @@ dependencies = [
  "tokio-util",
  "tracing",
  "url",
+ "wiremock",
 ]
 
 [[package]]

@@ -1,8 +1,8 @@
 #[derive(Debug, thiserror::Error)]
 pub enum StreamError {
-    #[error(transparent)]
+    #[error("IO Error {0}")]
     IoError(#[from] std::io::Error),
-    #[error(transparent)]
+    #[error("JSON Error {0}")]
     JsonError(#[from] serde_json::Error),
     #[error("No data")]
     NoData,

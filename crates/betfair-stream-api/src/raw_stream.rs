@@ -71,9 +71,9 @@ impl<'a> RawStream<'a> {
         ),
         StreamError,
     > {
-        let stream = TcpStream::connect(&socket_addr).await?;
+        let stream = TcpStream::connect(&socket_addr).await.unwrap();
         let (read, write) = stream.into_split();
-        let (async_task, output) = self.process(write, read, incoming_commands).await?;
+        let (async_task, output) = self.process(write, read, incoming_commands).await.unwrap();
         Ok((async_task, output))
     }
 
@@ -94,14 +94,40 @@ impl<'a> RawStream<'a> {
         ),
         StreamError,
     > {
-        let mut rng = SmallRng::from_entropy();
-        let mut writer = FramedWrite::new(input, StreamAPICodec);
-        let mut reader = FramedRead::new(output, StreamAPICodec);
+        let mut writer = FramedWrite::new(input, StreamAPIClienCodec);
+        let mut reader = FramedRead::new(output, StreamAPIClienCodec);
 
+        self.handshake(&mut reader, &mut writer).await?;
+
+        let write_task = async move {
+            while let Some(command) = incoming_commands.next().await {
+                let _ = writer.send(command).await;
+            }
+            Ok(())
+        };
+        let read_task = async_stream::stream! {
+            while let Some(data) = reader.next().await {
+                yield data;
+            }
+        };
+
+        Ok((write_task, read_task))
+    }
+
+    async fn handshake<
+        I: AsyncWrite + std::fmt::Debug + Send + Unpin,
+        O: AsyncRead + std::fmt::Debug + Send + Unpin,
+    >(
+        &mut self,
+        reader: &mut FramedRead<O, StreamAPIClienCodec>,
+        writer: &mut FramedWrite<I, StreamAPIClienCodec>,
+    ) -> Result<(), StreamError> {
+        let mut rng = SmallRng::from_entropy();
         loop {
             match &mut self.state {
                 StreamState::PreAuth => {
-                    let data = next_msg(&mut reader).await?;
+                    let data = next_msg(reader).await?;
+                    let Some(data) = data else { continue };
                     if let ResponseMessage::Connection(connection_message) = data {
                         if let Some(connection_id) = connection_message.connection_id {
                             tracing::debug!(connection_id = ?connection_id, "Connection established");
@@ -129,7 +155,8 @@ impl<'a> RawStream<'a> {
                     };
                 }
                 StreamState::AwaitStatus { connection_id } => {
-                    let data = next_msg(&mut reader).await?;
+                    let data = next_msg(reader).await?;
+                    let Some(data) = data else { continue };
                     if let ResponseMessage::StatusMessage(ref status_message) = data {
                         if status_message.connection_id.as_ref() == Some(connection_id) {
                             tracing::debug!(connection_id = ?connection_id, "Authenticated");
@@ -145,29 +172,13 @@ impl<'a> RawStream<'a> {
                 StreamState::Authenticated { connection_id: _ } => break,
             }
         }
-        let write_task = async move {
-            while let Some(command) = incoming_commands.next().await {
-                let _ = writer.send(command).await;
-            }
-            Ok(())
-        };
-        let read_task = async_stream::stream! {
-            while let Some(data) = reader.next().await {
-                yield data;
-            }
-        };
-
-        Ok((write_task, read_task))
+        Ok(())
     }
 }
 async fn next_msg<O: AsyncRead + std::fmt::Debug + Send + Unpin>(
-    reader: &mut FramedRead<O, StreamAPICodec>,
-) -> Result<ResponseMessage, StreamError> {
-    let data = reader
-        .next()
-        .await
-        .transpose()?
-        .ok_or_else(|| StreamError::NoData)?;
+    reader: &mut FramedRead<O, StreamAPIClienCodec>,
+) -> Result<Option<ResponseMessage>, StreamError> {
+    let data = reader.next().await.transpose()?;
     Ok(data)
 }
 
@@ -179,9 +190,9 @@ pub enum StreamState {
     Authenticated { connection_id: String },
 }
 
-pub struct StreamAPICodec;
+pub struct StreamAPIClienCodec;
 
-impl Decoder for StreamAPICodec {
+impl Decoder for StreamAPIClienCodec {
     type Item = ResponseMessage;
     type Error = StreamError;
 
@@ -202,7 +213,7 @@ impl Decoder for StreamAPICodec {
     }
 }
 
-impl Encoder<RequestMessage> for StreamAPICodec {
+impl Encoder<RequestMessage> for StreamAPIClienCodec {
     type Error = StreamError;
 
     fn encode(
@@ -214,7 +225,7 @@ impl Encoder<RequestMessage> for StreamAPICodec {
         let json = serde_json::to_string(&item)?;
         // Write the JSON string to the buffer, followed by a newline
         dst.extend_from_slice(json.as_bytes());
-        dst.extend_from_slice(b"\n");
+        dst.extend_from_slice(b"\r\n");
         Ok(())
     }
 }
@@ -241,7 +252,7 @@ mod tests {
 
     #[tokio::test]
     async fn can_resolve_host_ipv4() {
-        let url = url::Url::parse("https://stream-api.betfair.com").unwrap();
+        let url = url::Url::parse("tcptls://stream-api.betfair.com:443").unwrap();
         let host = url.host_str().unwrap();
         let port = url
             .port()

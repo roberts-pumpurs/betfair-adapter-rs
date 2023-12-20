@@ -34,6 +34,11 @@ impl Username {
         Self(redact::Secret::new(username))
     }
 }
+impl SessionToken {
+    pub fn new(username: String) -> Self {
+        Self(redact::Secret::new(username))
+    }
+}
 
 impl Password {
     pub fn new(password: String) -> Self {
