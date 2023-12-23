@@ -1,32 +1,25 @@
 use betfair_adapter::{ApplicationKey, BetfairUrl, SessionToken};
 use betfair_stream_api::HeartbeatStrategy;
+use betfair_stream_server_mock::{StreamAPIBackend, SubSate, ClientState};
 
-use crate::utils::{ClientState, StreamAPIBackend, SubSate};
 
 #[rstest::rstest]
 #[timeout(std::time::Duration::from_secs(5))]
-#[test_log::test(tokio::test(flavor = "multi_thread", worker_threads = 1))]
+#[test_log::test(tokio::test)]
 async fn successful_handshake() {
     let mock = StreamAPIBackend::new().await;
     let url = mock.url.clone();
-    let duration = std::time::Duration::from_millis(100); // 1.8 seconds
 
     let h1 = tokio::spawn(async move {
         let (client, async_task) = betfair_stream_api::StreamAPIProvider::new(
             std::borrow::Cow::Owned(ApplicationKey::new("app_key".to_string())),
             std::borrow::Cow::Owned(SessionToken::new("app_key".to_string())),
             BetfairUrl::new(std::borrow::Cow::Owned(url.clone())),
-            HeartbeatStrategy::Interval(duration),
+            HeartbeatStrategy::None,
         )
         .await
         .unwrap();
         let _ = async_task.await;
-        {
-            let r = client.read().unwrap();
-            assert!(!r.command_sender.is_closed());
-            let a = &r.command_sender;
-            panic!("Should not reach here {a:#?}");
-        }
     });
 
     let connection = mock.process_next().await;
@@ -40,7 +33,7 @@ async fn successful_handshake() {
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
     assert!(!h1.is_finished());
     assert!(!h2.is_finished());
-    let conn_state = conn_state.read().await;
+    let conn_state = conn_state.lock().await;
     assert_eq!(
         *conn_state,
         ClientState::LoggedIn(SubSate {

@@ -3,9 +3,10 @@ use std::net::SocketAddr;
 
 use betfair_adapter::{ApplicationKey, SessionToken};
 use betfair_stream_types::request::{authentication_message, RequestMessage};
+use betfair_stream_types::response::connection_message::ConnectionMessage;
 use betfair_stream_types::response::ResponseMessage;
-use futures_util::{sink::SinkExt, pin_mut, StreamExt};
-use futures_util::Future;
+use futures_util::sink::SinkExt;
+use futures_util::{pin_mut, Future, StreamExt};
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
 use tokio::io::{AsyncRead, AsyncWrite};
@@ -60,7 +61,7 @@ impl<'a> RawStream<'a> {
     pub async fn connect_non_tls(
         &mut self,
         socket_addr: SocketAddr,
-        mut incoming_commands: impl futures_util::Stream<Item = RequestMessage>
+        incoming_commands: impl futures_util::Stream<Item = RequestMessage>
             + std::marker::Send
             + std::marker::Unpin,
     ) -> Result<
@@ -93,34 +94,25 @@ impl<'a> RawStream<'a> {
         ),
         StreamError,
     > {
-        let mut writer = FramedWrite::new(input, StreamAPIClienCodec);
-        let mut reader = FramedRead::new(output, StreamAPIClienCodec);
+        let mut writer = FramedWrite::new(input, StreamAPIClientCodec);
+        let mut reader = FramedRead::new(output, StreamAPIClientCodec);
 
         self.handshake(&mut reader, &mut writer).await?;
         // read commands and send them to the writer
         let write_task = async move {
-            // let h = tokio::spawn(async move {
-                loop {
-                    tracing::info!("Waiting for command");
-                    let command = incoming_commands.next().await;
-                    tracing::info!(command = ?command, "Sending command");
-                    match command {
-                        Some(command) => {
-                            let _ = writer.send(command).await;
-                        }
-                        None => break,
+            loop {
+                tracing::info!("Waiting for command");
+                let command = incoming_commands.next().await;
+                tracing::info!(command = ?command, "Sending command");
+                match command {
+                    Some(command) => {
+                        let _ = writer.send(command).await;
                     }
+                    None => break,
                 }
-                // let r = incoming_commands.1.try_recv();
-                // let is_closed = incoming_commands.0.is_closed();
-                // println!("Done sending commands {r:?} | {is_closed}", r = r, is_closed = is_closed);
-                panic!("Done sending commands");
-            // });
-            // while let Some(command) = incoming_commands.next().await {
-            //     let _ = writer.send(command).await;
-            // }
-            // h.await.unwrap();
-            Ok(())
+            }
+            tracing::error!("Done sending commands");
+            Err(StreamError::StreamProcessorMalfunction)
         };
 
         // read responses and yield them
@@ -130,16 +122,21 @@ impl<'a> RawStream<'a> {
             }
         };
 
-        Ok((write_task, read_task))
+        Ok((async move {
+            let res = write_task.await.unwrap();
+            tracing::error!("Write task finished");
+            res
+        }, read_task))
     }
 
+    #[tracing::instrument(level = "DEBUG", skip(self, reader, writer), ret, err)]
     async fn handshake<
         I: AsyncWrite + std::fmt::Debug + Send + Unpin,
         O: AsyncRead + std::fmt::Debug + Send + Unpin,
     >(
         &mut self,
-        reader: &mut FramedRead<O, StreamAPIClienCodec>,
-        writer: &mut FramedWrite<I, StreamAPIClienCodec>,
+        reader: &mut FramedRead<O, StreamAPIClientCodec>,
+        writer: &mut FramedWrite<I, StreamAPIClientCodec>,
     ) -> Result<(), StreamError> {
         let mut rng = SmallRng::from_entropy();
         loop {
@@ -188,17 +185,14 @@ impl<'a> RawStream<'a> {
                     tracing::error!("Unexpected response");
                     return Err(StreamError::UnexpectedResponse(format!("{:?}", data)))
                 }
-                StreamState::Authenticated { connection_id: _ } => break,
+                StreamState::Authenticated { connection_id } => {
+                    tracing::info!(connection_id =? connection_id, "Handshake complete");
+                    break;
+                }
             }
         }
         Ok(())
     }
-}
-async fn next_msg<O: AsyncRead + std::fmt::Debug + Send + Unpin>(
-    reader: &mut FramedRead<O, StreamAPIClienCodec>,
-) -> Result<Option<ResponseMessage>, StreamError> {
-    let data = reader.next().await.transpose()?;
-    Ok(data)
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -209,9 +203,9 @@ pub enum StreamState {
     Authenticated { connection_id: String },
 }
 
-pub struct StreamAPIClienCodec;
+pub struct StreamAPIClientCodec;
 
-impl Decoder for StreamAPIClienCodec {
+impl Decoder for StreamAPIClientCodec {
     type Item = ResponseMessage;
     type Error = StreamError;
 
@@ -232,7 +226,7 @@ impl Decoder for StreamAPIClienCodec {
     }
 }
 
-impl Encoder<RequestMessage> for StreamAPIClienCodec {
+impl Encoder<RequestMessage> for StreamAPIClientCodec {
     type Error = StreamError;
 
     fn encode(
@@ -265,8 +259,17 @@ fn tls_connector() -> tokio_rustls::TlsConnector {
     TlsConnector::from(std::sync::Arc::new(config))
 }
 
+async fn next_msg<O: AsyncRead + std::fmt::Debug + Send + Unpin>(
+    reader: &mut FramedRead<O, StreamAPIClientCodec>,
+) -> Result<Option<ResponseMessage>, StreamError> {
+    let data = reader.next().await.transpose()?;
+    Ok(data)
+}
+
 #[cfg(test)]
 mod tests {
+    use betfair_stream_server_mock::{StreamAPIBackend, ClientState, SubSate};
+
     use super::*;
 
     #[tokio::test]

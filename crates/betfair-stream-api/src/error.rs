@@ -12,4 +12,6 @@ pub enum StreamError {
     ConnectionIdNotPresent,
     #[error("Misconfigured stream URL")]
     MisconfiguredStreamURL,
+    #[error("Stream processor malfunctioned")]
+    StreamProcessorMalfunction,
 }

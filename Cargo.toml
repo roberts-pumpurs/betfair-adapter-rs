@@ -9,6 +9,7 @@ members = [
 betfair-adapter = { path = "crates/betfair-adapter" }
 betfair-types = { path = "crates/betfair-types" }
 betfair-stream-types = { path = "crates/betfair-stream-types" }
+betfair-stream-server-mock = { path = "crates/betfair-stream-server-mock" }
 betfair-xml-parser = { path = "crates/betfair-xml-parser" }
 betfair-typegen = { path = "crates/betfair-typegen" }
 

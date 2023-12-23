@@ -1,5 +1,5 @@
 [package]
-name = "betfair-stream-api"
+name = "betfair-stream-server-mock"
 version = "0.1.0"
 edition = "2021"
 
@@ -21,11 +21,10 @@ rand.workspace = true
 async-stream.workspace = true
 rustls.workspace = true
 rustls-native-certs.workspace = true
+eyre.workspace = true
 
 [dev-dependencies]
-eyre.workspace = true
 chrono.workspace = true
 wiremock.workspace = true
 rstest.workspace = true
 test-log.workspace = true
-betfair-stream-server-mock.workspace = true
