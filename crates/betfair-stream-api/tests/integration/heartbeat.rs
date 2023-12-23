@@ -1,6 +1,6 @@
 use betfair_adapter::{ApplicationKey, BetfairUrl, SessionToken};
 use betfair_stream_api::HeartbeatStrategy;
-use betfair_stream_server_mock::{StreamAPIBackend, ClientState, SubSate};
+use betfair_stream_server_mock::{ClientState, StreamAPIBackend, SubSate};
 
 #[rstest::rstest]
 #[timeout(std::time::Duration::from_secs(5))]

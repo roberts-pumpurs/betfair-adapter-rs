@@ -1,7 +1,6 @@
 use betfair_adapter::{ApplicationKey, BetfairUrl, SessionToken};
 use betfair_stream_api::HeartbeatStrategy;
-use betfair_stream_server_mock::{StreamAPIBackend, SubSate, ClientState};
-
+use betfair_stream_server_mock::{ClientState, StreamAPIBackend, SubSate};
 
 #[rstest::rstest]
 #[timeout(std::time::Duration::from_secs(5))]
@@ -11,7 +10,7 @@ async fn successful_handshake() {
     let url = mock.url.clone();
 
     let h1 = tokio::spawn(async move {
-        let (client, async_task) = betfair_stream_api::StreamAPIProvider::new(
+        let (_client, async_task) = betfair_stream_api::StreamAPIProvider::new(
             std::borrow::Cow::Owned(ApplicationKey::new("app_key".to_string())),
             std::borrow::Cow::Owned(SessionToken::new("app_key".to_string())),
             BetfairUrl::new(std::borrow::Cow::Owned(url.clone())),

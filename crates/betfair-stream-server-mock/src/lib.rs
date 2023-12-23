@@ -7,10 +7,10 @@ use betfair_stream_types::response::connection_message::ConnectionMessage;
 use betfair_stream_types::response::status_message::StatusMessage;
 use betfair_stream_types::response::ResponseMessage;
 use futures_util::{SinkExt, StreamExt};
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_util::bytes;
-use tokio_util::codec::{Decoder, Encoder, Framed, FramedParts, FramedRead};
+use tokio_util::codec::{Decoder, Encoder, Framed};
 use url::Url;
 
 pub struct StreamAPIBackend {
@@ -128,7 +128,6 @@ impl ClientStateW {
                     ClientState::LoggedIn(sub_state)
                 }
             };
-
 
             socket.flush().await.unwrap();
             let mut client_state = self.state.lock().await;

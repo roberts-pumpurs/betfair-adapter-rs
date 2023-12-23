@@ -3,10 +3,9 @@ use std::net::SocketAddr;
 
 use betfair_adapter::{ApplicationKey, SessionToken};
 use betfair_stream_types::request::{authentication_message, RequestMessage};
-use betfair_stream_types::response::connection_message::ConnectionMessage;
 use betfair_stream_types::response::ResponseMessage;
 use futures_util::sink::SinkExt;
-use futures_util::{pin_mut, Future, StreamExt};
+use futures_util::{Future, StreamExt};
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
 use tokio::io::{AsyncRead, AsyncWrite};
@@ -122,11 +121,14 @@ impl<'a> RawStream<'a> {
             }
         };
 
-        Ok((async move {
-            let res = write_task.await.unwrap();
-            tracing::error!("Write task finished");
-            res
-        }, read_task))
+        Ok((
+            async move {
+                let res = write_task.await.unwrap();
+                tracing::error!("Write task finished");
+                res
+            },
+            read_task,
+        ))
     }
 
     #[tracing::instrument(level = "DEBUG", skip(self, reader, writer), ret, err)]
@@ -268,7 +270,6 @@ async fn next_msg<O: AsyncRead + std::fmt::Debug + Send + Unpin>(
 
 #[cfg(test)]
 mod tests {
-    use betfair_stream_server_mock::{StreamAPIBackend, ClientState, SubSate};
 
     use super::*;
 

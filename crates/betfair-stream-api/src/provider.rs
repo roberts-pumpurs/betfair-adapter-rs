@@ -14,8 +14,7 @@ use betfair_stream_types::response::market_change_message::{MarketChange, Market
 use betfair_stream_types::response::order_change_message::{OrderChangeMessage, OrderMarketChange};
 use betfair_stream_types::response::ResponseMessage;
 use futures_concurrency::prelude::*;
-use futures_util::future::Either;
-use futures_util::Future;
+use futures_util::{Future, Stream};
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
 use tokio_stream::wrappers::ReceiverStream;
@@ -126,10 +125,10 @@ impl StreamAPIProvider {
 
     fn process_response_message(&mut self, msg: ResponseMessage) {
         match msg {
-            ResponseMessage::Connection(_) => {},
-            ResponseMessage::MarketChange(_) => {},
-            ResponseMessage::OrderChange(_) => {},
-            ResponseMessage::StatusMessage(_) => {},
+            ResponseMessage::Connection(_) => {}
+            ResponseMessage::MarketChange(_) => {}
+            ResponseMessage::OrderChange(_) => {}
+            ResponseMessage::StatusMessage(_) => {}
         }
     }
 
@@ -164,16 +163,21 @@ async fn process(
     read: impl futures_util::Stream<Item = Result<ResponseMessage, StreamError>>,
     hb: HeartbeatStrategy,
 ) -> Result<(), StreamError> {
-    use futures_util::{FutureExt, StreamExt};
+    let hb_loop = create_heartbeat_loop(hb, api.clone()).await;
+    let write_loop = create_write_loop(read, api.clone()).await;
+    hb_loop.race(write_loop).await;
 
+    Err(StreamError::StreamProcessorMalfunction)
+}
 
-    let api_c = api.clone();
-    let hb_loop = async move {
+async fn create_heartbeat_loop(
+    hb: HeartbeatStrategy,
+    api_c: Arc<tokio::sync::RwLock<StreamAPIProvider>>,
+) -> impl Future<Output = ()> {
+    async move {
         match hb {
-            HeartbeatStrategy::None => {
-                loop {
-                    tokio_stream::pending::<()>().next().await;
-                }
+            HeartbeatStrategy::None => loop {
+                std::future::pending::<()>().await;
             },
             HeartbeatStrategy::Interval(period) => {
                 let mut interval = tokio::time::interval(period);
@@ -186,10 +190,16 @@ async fn process(
                 }
             }
         };
-    };
+    }
+}
 
-    let api_c = api.clone();
-    let write_loop = async move {
+async fn create_write_loop(
+    read: impl Stream<Item = Result<ResponseMessage, StreamError>>,
+    api_c: Arc<tokio::sync::RwLock<StreamAPIProvider>>,
+) -> impl Future<Output = ()> {
+    use futures_util::StreamExt;
+
+    async move {
         tokio::pin!(read);
         while let Some(msg) = read.next().await {
             match msg {
@@ -204,9 +214,5 @@ async fn process(
                 }
             }
         }
-    };
-
-    hb_loop.race(write_loop).await;
-
-    Err(StreamError::StreamProcessorMalfunction)
+    }
 }

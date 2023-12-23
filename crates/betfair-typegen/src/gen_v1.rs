@@ -45,9 +45,7 @@ impl GenV1GeneratorStrategy<injector::CodeInjectorV1> {
 impl<T: CodeInjector> GeneratorStrategy for GenV1GeneratorStrategy<T> {
     fn generate_submodule(&self, interface: impl Into<Interface>) -> TokenStream {
         let interface = interface.into();
-        let aping: Aping = interface
-            .try_into()
-            .expect("Failed to convert the interface into the AST");
+        let aping: Aping = interface.into();
 
         let aping = aping;
         let top_level_docs = self.generate_top_level_docs(&aping);
