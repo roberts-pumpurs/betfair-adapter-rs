@@ -56,8 +56,9 @@ impl ClientStateW {
     pub async fn process(self) {
         let mut reader = BufReader::new(self.socket);
         loop {
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             let mut client_state = self.state.write().await;
-            match *client_state {
+            match &mut *client_state {
                 ClientState::Init(ConnState::Connected) => {
                     send(
                         &mut reader,
@@ -71,6 +72,9 @@ impl ClientStateW {
                 }
                 ClientState::Init(ConnState::WaitingForAuthInfo) => {
                     let msg = recv(&mut reader).await;
+                    let Some(msg) = msg else {
+                        continue
+                    };
                     let RequestMessage::Authentication(AuthenticationMessage {
                         id,
                         app_key: _,
@@ -93,16 +97,42 @@ impl ClientStateW {
                         }),
                     )
                     .await;
-                    *client_state = ClientState::LoggedIn(SubSate::WaitingForSub);
+                    *client_state = ClientState::LoggedIn(SubSate {
+                        keep_alive_counter: 0,
+                    });
                 }
-                ClientState::LoggedIn(SubSate::WaitingForSub) => {
-                    let _msg = recv(&mut reader).await;
-                    *client_state = ClientState::LoggedIn(SubSate::WaitingForSub);
+                ClientState::LoggedIn(ref mut state) => {
+                    tracing::info!("Waiting for message");
+                    let msg = recv(&mut reader).await;
+                    tracing::info!("Received message {msg:?}");
+                    let Some(msg) = msg else {
+                        continue
+                    };
+                    match msg {
+                        RequestMessage::Authentication(_) => todo!(),
+                        RequestMessage::Heartbeat(_hb) => {
+                            state.keep_alive_counter += 1;
+                            send(
+                                &mut reader,
+                                &ResponseMessage::StatusMessage(StatusMessage {
+                                    id: Some(1),
+                                    connection_closed: None,
+                                    connection_id: Some("123".to_string()),
+                                    connections_available: None,
+                                    error_code: None,
+                                    error_message: None,
+                                    status_code: None,
+                                }),
+                            )
+                            .await;
+                        }
+                        RequestMessage::MarketSubscription(_) => todo!(),
+                        RequestMessage::OrderSubscription(_) => todo!(),
+                    }
                 }
             }
 
             drop(client_state);
-            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         }
     }
 }
@@ -112,10 +142,12 @@ pub enum ConnState {
     Connected,
     WaitingForAuthInfo,
 }
+
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
-pub enum SubSate {
-    WaitingForSub,
+pub struct SubSate {
+    pub keep_alive_counter: u64,
 }
+
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum ClientState {
     Init(ConnState),
@@ -126,10 +158,14 @@ async fn send(reader: &mut BufReader<TcpStream>, message: &ResponseMessage) {
     let message = serde_json::to_string(message).unwrap() + "\r\n";
     reader.write_all(message.as_bytes()).await.unwrap();
 }
-async fn recv(reader: &mut BufReader<TcpStream>) -> RequestMessage {
+async fn recv(reader: &mut BufReader<TcpStream>) -> Option<RequestMessage> {
     let mut buf = String::new();
     reader.read_line(&mut buf).await.unwrap();
+    if buf.is_empty() {
+        return None
+    }
 
+    tracing::info!(buf = ?buf, "Received message");
     let buf = &buf[..buf.len() - 2];
-    serde_json::from_str::<RequestMessage>(buf).unwrap()
+    Some(serde_json::from_str::<RequestMessage>(buf).unwrap())
 }

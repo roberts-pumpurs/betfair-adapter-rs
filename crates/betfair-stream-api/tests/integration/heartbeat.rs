@@ -5,11 +5,11 @@ use crate::utils::{ClientState, StreamAPIBackend, SubSate};
 
 #[rstest::rstest]
 #[timeout(std::time::Duration::from_secs(5))]
-#[test_log::test(tokio::test(flavor = "multi_thread", worker_threads = 1))]
-async fn successful_handshake() {
+#[test_log::test(tokio::test)]
+async fn successful_heartbeat() {
     let mock = StreamAPIBackend::new().await;
     let url = mock.url.clone();
-    let duration = std::time::Duration::from_millis(100); // 1.8 seconds
+    let duration = std::time::Duration::from_millis(1800); // 1.8 seconds
 
     let h1 = tokio::spawn(async move {
         let (client, async_task) = betfair_stream_api::StreamAPIProvider::new(
@@ -20,7 +20,7 @@ async fn successful_handshake() {
         )
         .await
         .unwrap();
-        let _ = async_task.await;
+        async_task.await.unwrap();
         {
             let r = client.read().unwrap();
             assert!(!r.command_sender.is_closed());
@@ -37,14 +37,15 @@ async fn successful_handshake() {
     });
 
     // Sleep for 1 second to allow the connection to be established
-    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+
     assert!(!h1.is_finished());
     assert!(!h2.is_finished());
     let conn_state = conn_state.read().await;
     assert_eq!(
         *conn_state,
         ClientState::LoggedIn(SubSate {
-            keep_alive_counter: 0
+            keep_alive_counter: 1
         })
     );
 }

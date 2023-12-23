@@ -2,10 +2,12 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::time::Duration;
 
 use betfair_adapter::betfair_types::customer_strategy_ref::CustomerStrategyRef;
 use betfair_adapter::betfair_types::types::sports_aping::MarketId;
 use betfair_adapter::{ApplicationKey, BetfairUrl, SessionToken};
+use betfair_stream_types::request::heartbeat_message::HeartbeatMessage;
 use betfair_stream_types::request::market_subscription_message::MarketFilter;
 use betfair_stream_types::request::RequestMessage;
 use betfair_stream_types::response::market_change_message::{MarketChange, MarketChangeMessage};
@@ -13,15 +15,24 @@ use betfair_stream_types::response::order_change_message::{OrderChangeMessage, O
 use betfair_stream_types::response::ResponseMessage;
 use futures_concurrency::prelude::*;
 use futures_util::Future;
+use rand::rngs::SmallRng;
+use rand::{Rng, SeedableRng};
+use tokio_stream::wrappers::ReceiverStream;
 
 use crate::raw_stream::RawStream;
 use crate::StreamError;
 
 #[derive(Debug)]
 pub struct StreamAPIProvider {
-    command_sender: futures::channel::mpsc::UnboundedSender<RequestMessage>,
-    market_tracker: MarketTracker,
-    order_tracker: OrderTracker,
+    pub command_sender:  tokio::sync::mpsc::Sender<RequestMessage>,
+    pub rng: SmallRng,
+    pub market_tracker: MarketTracker,
+    pub order_tracker: OrderTracker,
+}
+
+#[derive(Debug)]
+pub enum HeartbeatStrategy {
+    Interval(Duration),
 }
 
 impl StreamAPIProvider {
@@ -30,6 +41,7 @@ impl StreamAPIProvider {
         application_key: Cow<'a, ApplicationKey>,
         session_token: Cow<'a, SessionToken>,
         url: BetfairUrl<'a, betfair_adapter::Stream>,
+        hb: HeartbeatStrategy,
     ) -> Result<
         (
             Arc<std::sync::RwLock<Self>>,
@@ -38,10 +50,11 @@ impl StreamAPIProvider {
         StreamError,
     > {
         let mut stream_wrapper = RawStream::new(application_key, session_token);
-        let (command_sender, command_reader) = futures::channel::mpsc::unbounded();
+        let (command_sender, command_reader) = tokio::sync::mpsc::channel(5);
         let api = Arc::new(std::sync::RwLock::new(Self::new_with_commands(
-            command_sender,
+            command_sender.clone(),
         )));
+
 
         let host = url.url().host_str().unwrap();
         let is_tls = url.url().scheme() == "https";
@@ -51,21 +64,21 @@ impl StreamAPIProvider {
 
         match (is_tls, domain, socket_addr) {
             (true, Some(domain), Some(socket_addr)) => {
-                let (async_task, read) = stream_wrapper
-                    .connect_tls(domain, socket_addr, command_reader)
+                let (write_to_wire, read) = stream_wrapper
+                    .connect_tls(domain, socket_addr, ReceiverStream::new(command_reader))
                     .await
                     .unwrap();
-                let async_task_2 = process(api.clone(), read);
-                let async_task = Box::pin(async_task.race(async_task_2));
+                let async_task_2 = process(api.clone(), read, hb);
+                let async_task = Box::pin(write_to_wire.race(async_task_2));
                 Ok((api, async_task))
             }
             (false, _, Some(socket_addr)) => {
-                let (async_task, read) = stream_wrapper
-                    .connect_non_tls(socket_addr, command_reader)
+                let (write_to_wire, read) = stream_wrapper
+                    .connect_non_tls(socket_addr, ReceiverStream::new(command_reader))
                     .await
                     .unwrap();
-                let async_task_2 = process(api.clone(), read);
-                let async_task = Box::pin(async_task.race(async_task_2));
+                let async_task_2 = process(api.clone(), read, hb);
+                let async_task = Box::pin(write_to_wire.race(async_task_2));
                 Ok((api, async_task))
             }
             _ => Err(StreamError::MisconfiguredStreamURL),
@@ -73,10 +86,11 @@ impl StreamAPIProvider {
     }
 
     fn new_with_commands(
-        command_sender: futures::channel::mpsc::UnboundedSender<RequestMessage>,
+        command_sender: tokio::sync::mpsc::Sender<RequestMessage>,
     ) -> StreamAPIProvider {
         Self {
             command_sender,
+            rng: SmallRng::from_entropy(),
             market_tracker: MarketTracker {
                 market_subscriptions: HashMap::new(),
                 market_state: HashMap::new(),
@@ -117,6 +131,11 @@ impl StreamAPIProvider {
             ResponseMessage::StatusMessage(_) => todo!(),
         }
     }
+
+    fn send_message(&mut self, mut msg: RequestMessage) {
+        msg.set_id(self.rng.gen());
+        self.command_sender.try_send(msg).unwrap();
+    }
 }
 
 #[derive(Debug)]
@@ -142,25 +161,54 @@ struct OrderTracker {
 async fn process(
     api: Arc<std::sync::RwLock<StreamAPIProvider>>,
     read: impl futures_util::Stream<Item = Result<ResponseMessage, StreamError>>,
+    hb: HeartbeatStrategy,
 ) -> Result<(), StreamError> {
     use futures_util::{FutureExt, StreamExt};
     futures::pin_mut!(read);
-    let mut read = read.fuse();
 
-    // TODO periodically send heartbeats
+    let mut hb_interval = match hb {
+        HeartbeatStrategy::Interval(period) => tokio::time::interval(period),
+    };
+    hb_interval.reset();
 
-    while let Some(msg) = read.next().await {
-        match msg {
-            Ok(msg) => {
-                tracing::debug!(msg = ?msg, "Received message");
-                let mut w = api.write().unwrap();
-                w.process_response_message(msg);
-                drop(w)
+    loop {
+        tracing::info!("PROCESSING LOOP");
+        tokio::select! {
+            _ = hb_interval.tick() => {
+                tracing::info!("Sending heartbeat");
+                let mut api = api.write().unwrap();
+                api.send_message(RequestMessage::Heartbeat(HeartbeatMessage{
+                    id: None,
+                }));
+                drop(api)
             }
-            Err(err) => {
-                tracing::error!(err = ?err, "Error reading from stream");
-                break
-            }
+            // _ = &mut res => {
+            //     tracing::info!("Sending heartbeat");
+            //     let mut api = api.write().unwrap();
+            //     api.send_message(RequestMessage::Heartbeat(HeartbeatMessage{
+            //         id: None,
+            //     }));
+            //     drop(api)
+            // }
+            // msg = read.next() => {
+            //     tracing::info!("Received message");
+            //     match msg {
+            //         Some(Ok(msg)) => {
+            //             tracing::debug!(msg = ?msg, "Received message");
+            //             let mut api = api.write().unwrap();
+            //             api.process_response_message(msg);
+            //             drop(api)
+            //         }
+            //         Some(Err(err)) => {
+            //             tracing::error!(err = ?err, "Error reading from stream");
+            //             break
+            //         }
+            //         None => {
+            //             tracing::error!("Stream closed");
+            //             break
+            //         }
+            //     }
+            // }
         }
     }
 

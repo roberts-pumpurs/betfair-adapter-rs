@@ -4,13 +4,12 @@ use std::net::SocketAddr;
 use betfair_adapter::{ApplicationKey, SessionToken};
 use betfair_stream_types::request::{authentication_message, RequestMessage};
 use betfair_stream_types::response::ResponseMessage;
-use futures_util::sink::SinkExt;
+use futures_util::{sink::SinkExt, pin_mut, StreamExt};
 use futures_util::Future;
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
-use tokio_stream::StreamExt;
 use tokio_util::bytes;
 use tokio_util::codec::{Decoder, Encoder, FramedRead, FramedWrite};
 
@@ -54,14 +53,14 @@ impl<'a> RawStream<'a> {
         let connector = tls_connector();
         let stream = connector.connect(domain, stream).await.unwrap();
         let (read, write) = tokio::io::split(stream);
-        let (async_task, output) = self.process(write, read, incoming_commands).await?;
-        Ok((async_task, output))
+        let (write_to_wire, output) = self.process(write, read, incoming_commands).await?;
+        Ok((write_to_wire, output))
     }
 
     pub async fn connect_non_tls(
         &mut self,
         socket_addr: SocketAddr,
-        incoming_commands: impl futures_util::Stream<Item = RequestMessage>
+        mut incoming_commands: impl futures_util::Stream<Item = RequestMessage>
             + std::marker::Send
             + std::marker::Unpin,
     ) -> Result<
@@ -73,8 +72,8 @@ impl<'a> RawStream<'a> {
     > {
         let stream = TcpStream::connect(&socket_addr).await.unwrap();
         let (read, write) = stream.into_split();
-        let (async_task, output) = self.process(write, read, incoming_commands).await.unwrap();
-        Ok((async_task, output))
+        let (write_to_wire, output) = self.process(write, read, incoming_commands).await.unwrap();
+        Ok((write_to_wire, output))
     }
 
     async fn process<
@@ -98,13 +97,33 @@ impl<'a> RawStream<'a> {
         let mut reader = FramedRead::new(output, StreamAPIClienCodec);
 
         self.handshake(&mut reader, &mut writer).await?;
-
+        // read commands and send them to the writer
         let write_task = async move {
-            while let Some(command) = incoming_commands.next().await {
-                let _ = writer.send(command).await;
-            }
+            // let h = tokio::spawn(async move {
+                loop {
+                    tracing::info!("Waiting for command");
+                    let command = incoming_commands.next().await;
+                    tracing::info!(command = ?command, "Sending command");
+                    match command {
+                        Some(command) => {
+                            let _ = writer.send(command).await;
+                        }
+                        None => break,
+                    }
+                }
+                // let r = incoming_commands.1.try_recv();
+                // let is_closed = incoming_commands.0.is_closed();
+                // println!("Done sending commands {r:?} | {is_closed}", r = r, is_closed = is_closed);
+                panic!("Done sending commands");
+            // });
+            // while let Some(command) = incoming_commands.next().await {
+            //     let _ = writer.send(command).await;
+            // }
+            // h.await.unwrap();
             Ok(())
         };
+
+        // read responses and yield them
         let read_task = async_stream::stream! {
             while let Some(data) = reader.next().await {
                 yield data;
