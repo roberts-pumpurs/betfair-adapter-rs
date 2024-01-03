@@ -8,7 +8,15 @@ use crate::request::market_subscription_message::StreamMarketFilterBettingType;
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct MarketChangeMessage(DatasetChangeMessage<MarketChange>);
+pub struct MarketChangeMessage(pub DatasetChangeMessage<MarketChange>);
+
+impl std::ops::Deref for MarketChangeMessage {
+    type Target = DatasetChangeMessage<MarketChange>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

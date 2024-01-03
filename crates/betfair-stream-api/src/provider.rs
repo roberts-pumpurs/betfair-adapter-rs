@@ -1,3 +1,5 @@
+mod avilable_cache;
+
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::pin::Pin;
@@ -8,10 +10,13 @@ use betfair_adapter::betfair_types::customer_strategy_ref::CustomerStrategyRef;
 use betfair_adapter::betfair_types::types::sports_aping::MarketId;
 use betfair_adapter::{ApplicationKey, BetfairUrl, SessionToken};
 use betfair_stream_types::request::heartbeat_message::HeartbeatMessage;
-use betfair_stream_types::request::market_subscription_message::MarketFilter;
+use betfair_stream_types::request::market_subscription_message::{
+    MarketDataFilter, MarketFilter, MarketSubscriptionMessage,
+};
 use betfair_stream_types::request::RequestMessage;
 use betfair_stream_types::response::market_change_message::{MarketChange, MarketChangeMessage};
 use betfair_stream_types::response::order_change_message::{OrderChangeMessage, OrderMarketChange};
+use betfair_stream_types::response::status_message::StatusCode;
 use betfair_stream_types::response::ResponseMessage;
 use futures_concurrency::prelude::*;
 use futures_util::{Future, Stream};
@@ -28,6 +33,13 @@ pub struct StreamAPIProvider {
     rng: SmallRng,
     market_tracker: MarketTracker,
     order_tracker: OrderTracker,
+    status: Status,
+}
+
+#[derive(Debug)]
+pub enum Status {
+    Connected,
+    Disconnected,
 }
 
 #[derive(Debug)]
@@ -68,6 +80,11 @@ impl StreamAPIProvider {
                     .connect_tls(domain, socket_addr, ReceiverStream::new(command_reader))
                     .await
                     .unwrap();
+
+                {
+                    let mut api = api.write().await;
+                    api.status = Status::Connected;
+                }
                 let async_task_2 = process(api.clone(), read, hb);
                 let async_task = Box::pin(write_to_wire.race(async_task_2));
                 Ok((api, async_task))
@@ -77,6 +94,10 @@ impl StreamAPIProvider {
                     .connect_non_tls(socket_addr, ReceiverStream::new(command_reader))
                     .await
                     .unwrap();
+                {
+                    let mut api = api.write().await;
+                    api.status = Status::Connected;
+                }
                 let async_task_2 = process(api.clone(), read, hb);
                 let async_task = Box::pin(write_to_wire.race(async_task_2));
                 Ok((api, async_task))
@@ -91,44 +112,213 @@ impl StreamAPIProvider {
         Self {
             command_sender,
             rng: SmallRng::from_entropy(),
+            status: Status::Disconnected,
             market_tracker: MarketTracker {
                 market_subscriptions: HashMap::new(),
                 market_state: HashMap::new(),
-                market_filter: MarketFilter::default(),
                 initial_market_clk: None,
                 latest_market_clk: None,
             },
             order_tracker: OrderTracker {
                 order_subscriptions: HashMap::new(),
                 order_state: HashMap::new(),
-                order_filter: MarketFilter::default(),
                 initial_order_clk: None,
                 latest_order_clk: None,
             },
         }
     }
 
-    pub fn subscribe_to_markets(&mut self, _market_ids: &[MarketId]) {
-        // TODO update internal state
-        // TODO create a new subscription
-        // TODO send the subscription to the stream via the command_sender
-        unimplemented!()
+    pub fn subscribe_to_market(
+        &mut self,
+        market_id: MarketId,
+    ) -> futures::channel::mpsc::UnboundedReceiver<MarketChangeMessage> {
+        let (tx, rx) = futures::channel::mpsc::unbounded();
+        self.market_tracker
+            .market_subscriptions
+            .insert(market_id, tx);
+
+        let all_market_ids = self
+            .market_tracker
+            .market_subscriptions
+            .keys()
+            .map(|id| id.clone())
+            .collect::<Vec<_>>();
+
+        let req = RequestMessage::MarketSubscription(MarketSubscriptionMessage {
+            id: Some(self.rng.gen()),
+            clk: None,         // empty to reset the clock
+            initial_clk: None, // empty to reset the clock
+            segmentation_enabled: Some(true),
+            heartbeat_ms: Some(500),
+            market_filter: Some(Box::new(MarketFilter {
+                country_codes: None,
+                betting_types: None,
+                turn_in_play_enabled: None,
+                market_types: None,
+                venues: None,
+                market_ids: Some(all_market_ids),
+                event_type_ids: None,
+                event_ids: None,
+                bsp_market: None,
+                race_types: None,
+            })),
+            conflate_ms: None,
+            market_data_filter: Some(Box::new(MarketDataFilter {
+                ladder_levels: None,
+                fields: None,
+            })),
+        });
+        self.send_message(req);
+
+        // rx
+        todo!()
     }
 
-    pub fn unsubscribe_from_markets(&mut self, _market_ids: &[MarketId]) {
-        unimplemented!()
+    pub fn unsubscribe_from_market(&mut self, market_ids: MarketId) -> Option<MarketChange> {
+        let _value = self.market_tracker.market_subscriptions.remove(&market_ids);
+        let value = self.market_tracker.market_state.remove(&market_ids);
+
+        if self.market_tracker.market_subscriptions.is_empty() {
+            self.unsubscribe_from_all_markets();
+        }
+
+        value
     }
 
-    pub fn unsubscribe_from_all_markets(&mut self) {
-        unimplemented!()
+    /// https://forum.developer.betfair.com/forum/sports-exchange-api/exchange-api/34555-stream-api-unsubscribe-from-all-markets
+    fn unsubscribe_from_all_markets(&mut self) {
+        let market_that_does_not_exist = MarketId("1.23456789".to_string());
+        let req = RequestMessage::MarketSubscription(MarketSubscriptionMessage {
+            id: Some(self.rng.gen()),
+            segmentation_enabled: Some(true),
+            clk: self.market_tracker.latest_market_clk.clone(),
+            heartbeat_ms: Some(500),
+            initial_clk: self.market_tracker.initial_market_clk.clone(),
+            market_filter: Some(Box::new(MarketFilter {
+                country_codes: None,
+                betting_types: None,
+                turn_in_play_enabled: None,
+                market_types: None,
+                venues: None,
+                market_ids: Some(vec![market_that_does_not_exist]),
+                event_type_ids: None,
+                event_ids: None,
+                bsp_market: None,
+                race_types: None,
+            })),
+            conflate_ms: None,
+            market_data_filter: Some(Box::new(MarketDataFilter {
+                ladder_levels: None,
+                fields: None,
+            })),
+        });
+        self.send_message(req);
     }
 
     fn process_response_message(&mut self, msg: ResponseMessage) {
         match msg {
-            ResponseMessage::Connection(_) => {}
-            ResponseMessage::MarketChange(_) => {}
-            ResponseMessage::OrderChange(_) => {}
-            ResponseMessage::StatusMessage(_) => {}
+            ResponseMessage::Connection(msg) => {
+                tracing::debug!(msg = ?msg, "Received connection message");
+            }
+            ResponseMessage::MarketChange(msg) => {
+                self.handle_market_change_message(msg);
+            }
+            ResponseMessage::OrderChange(msg) => {
+                self.handle_order_change_message(msg);
+
+            }
+            ResponseMessage::StatusMessage(msg) => {
+                self.handle_status_message(msg);
+            }
+        }
+    }
+
+    fn handle_order_change_message(&mut self, msg: OrderChangeMessage) {
+    }
+    fn handle_market_change_message(&mut self, msg: MarketChangeMessage) {
+        match msg.clk {
+            Some(ref clk) => {
+                self.market_tracker.latest_market_clk = Some(clk.clone());
+            }
+            None => {}
+        }
+        match msg.initial_clk {
+            Some(ref initial_clk) => {
+                self.market_tracker.initial_market_clk = Some(initial_clk.clone());
+            }
+            None => {}
+        }
+        match msg.0.mc {
+            Some(mcs) => {
+                for mc in mcs {
+                    let market_id = mc.id.clone();
+                    let Some(market_id) = market_id else {
+                        continue;
+                    };
+
+                    todo!("https://github.com/betcode-org/betfair/blob/7084866a50e6e62ad1f71039507b098fa5249822/betfairlightweight/streaming/stream.py line 190")
+                    // let full_image = mc.img.unwrap_or(false);
+
+                    // let market_change = self
+                    //     .market_tracker
+                    //     .market_state
+                    //     .get_mut(&market_id);
+
+                    // match (market_change, full_image) {
+                    //     (Some(val), false) => {
+
+                    //     }
+                    //     (_, true) | (None, _)  => {
+                    //         // replace the market change
+                    //         self.market_tracker.market_state.insert(market_id, mc.clone());
+                    //     }
+                    // }
+
+                    // let market_change = self
+                    //     .market_tracker
+                    //     .market_state
+                    //     .entry(market_id)
+                    //     .or_insert_with(|| mc.clone());
+
+                    // if mc.img.unwrap_or(false) {
+                    //     // replace the market change
+                    //     *market_change = mc.clone();
+                    // } else {
+                    //     // partial update
+                    //     // if mc.con
+                    //     // market_change.tv = mc.tv;
+                    // }
+
+                    // if let Some(tx) = self.market_tracker.market_subscriptions.get(&market_id) {
+                    //     tx.unbounded_send(mc).unwrap();
+                    // }
+                }
+            }
+            None => {}
+        }
+    }
+
+    fn handle_status_message(
+        &mut self,
+        msg: betfair_stream_types::response::status_message::StatusMessage,
+    ) {
+        match msg.connection_closed {
+            Some(true) => {
+                self.status = Status::Disconnected;
+            }
+            _ => {}
+        }
+        match msg.error_code {
+            Some(_) => {
+                self.status = Status::Disconnected;
+            }
+            _ => {}
+        }
+        match msg.status_code {
+            Some(StatusCode::Failure) => {
+                self.status = Status::Disconnected;
+            }
+            _ => {}
         }
     }
 
@@ -140,10 +330,8 @@ impl StreamAPIProvider {
 
 #[derive(Debug)]
 struct MarketTracker {
-    market_subscriptions:
-        HashMap<MarketId, futures::channel::mpsc::UnboundedSender<MarketChangeMessage>>,
+    market_subscriptions: HashMap<MarketId, futures::channel::mpsc::UnboundedSender<MarketChange>>,
     market_state: HashMap<MarketId, MarketChange>,
-    market_filter: MarketFilter,
     initial_market_clk: Option<String>,
     latest_market_clk: Option<String>,
 }
@@ -153,7 +341,6 @@ struct OrderTracker {
     order_subscriptions:
         HashMap<CustomerStrategyRef, futures::channel::mpsc::UnboundedSender<OrderChangeMessage>>,
     order_state: HashMap<CustomerStrategyRef, OrderMarketChange>,
-    order_filter: MarketFilter,
     initial_order_clk: Option<String>,
     latest_order_clk: Option<String>,
 }
