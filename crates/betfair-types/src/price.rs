@@ -10,7 +10,7 @@ pub enum PriceParseError {
     InvalidPriceSpecified(Decimal),
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, PartialOrd, Clone, Serialize, Deserialize, Eq, Hash, Ord)]
 pub struct Price(rust_decimal::Decimal);
 
 impl Deref for Price {
@@ -50,6 +50,12 @@ impl Price {
     pub fn new(price: rust_decimal::Decimal) -> Result<Self, PriceParseError> {
         let price = Price(Self::adjust_price_to_betfair_boundaries(price)?);
         Ok(price)
+    }
+
+    /// This function is unsafe because it does not check if the price is within the Betfair
+    /// boundaries. Use `Price::new` instead.
+    pub unsafe fn new_unchecked(price: rust_decimal::Decimal) -> Self {
+        Price(price)
     }
 
     /// Betfair docs: https://docs.developer.betfair.com/pages/viewpage.action?pageId=6095894
@@ -98,8 +104,6 @@ impl Price {
                 x.round_dp(2)
             }
         }
-        // TODO: remove the magic constants. Can this be defined in a config file and parsed at
-        // compile time?
         match current_price {
             x if (dec!(1.01)..dec!(2.0)).contains(&x) => {
                 Ok(round_to_nearest(x, dec!(1.01), dec!(0.01)))
