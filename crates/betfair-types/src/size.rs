@@ -23,6 +23,14 @@ impl From<Size> for Decimal {
     }
 }
 
+impl std::ops::Add for Size {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::new(self.0 + rhs.0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rstest::*;

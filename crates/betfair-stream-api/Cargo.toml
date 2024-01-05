@@ -21,6 +21,8 @@ rand.workspace = true
 async-stream.workspace = true
 serde.workspace = true
 rustls.workspace = true
+chrono.workspace = true
+eyre.workspace = true
 rustls-native-certs.workspace = true
 
 [dev-dependencies]

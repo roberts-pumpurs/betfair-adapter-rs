@@ -1,19 +1,20 @@
 //! Inspired by https://github.com/betcode-org/betfair/blob/1ece2bf0ffede3a41bf14ba4ea1c7004f25964dd/betfairlightweight/streaming/cache.py
 
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap, HashMap};
 
 use betfair_adapter::betfair_types::price::Price;
 use betfair_adapter::betfair_types::size::Size;
 use betfair_adapter::rust_decimal::Decimal;
+use betfair_stream_types::response::{Position, UpdateSet2, UpdateSet3};
 use serde::{Deserialize, Serialize};
 
 /// Data structure to hold prices/traded amount
-struct Available<T: UpdateSet> {
+pub struct Available<T: UpdateSet> {
     book: BTreeMap<T::Key, T::Value>,
 }
 
 impl<T: UpdateSet> Available<T> {
-    fn new(prices: &[T]) -> Self {
+    pub fn new(prices: impl AsRef<[T]>) -> Self {
         let mut instance = Self {
             book: BTreeMap::new(),
         };
@@ -22,10 +23,11 @@ impl<T: UpdateSet> Available<T> {
         instance
     }
 
-    fn update(&mut self, book_update: &[T]) {
-        for prices in book_update {
+    pub fn update(&mut self, book_update: impl AsRef<[T]>) {
+        for prices in book_update.as_ref() {
             let key = prices.key(); // this is either `price` or `position`
             let value = prices.value(); // this is either `(price, size)` or `size`
+
             // If the "key" is zero, then we need to delete the item
             if prices.should_be_deleted() {
                 self.book.remove(&key);
@@ -35,17 +37,10 @@ impl<T: UpdateSet> Available<T> {
         }
     }
 
-    fn clear(&mut self) {
+    pub fn clear(&mut self) {
         self.book.clear();
     }
 }
-
-pub struct UpdateSet2(Decimal, Decimal);
-pub struct UpdateSet3(Decimal, Decimal, Decimal);
-
-/// Represents the level of the order book.
-#[derive(Debug, PartialEq, PartialOrd, Clone, Serialize, Deserialize, Eq, Hash, Ord)]
-pub struct Position(Decimal);
 
 pub trait UpdateSet {
     type Key: std::hash::Hash + PartialEq + Eq + Ord;
@@ -64,11 +59,11 @@ impl UpdateSet for UpdateSet2 {
     }
 
     fn key(&self) -> Self::Key {
-        unsafe { Price::new_unchecked(self.0) }
+        self.0.clone()
     }
 
     fn should_be_deleted(&self) -> bool {
-        self.1 == Decimal::ZERO
+        self.1 == Size::new(Decimal::ZERO)
     }
 }
 
@@ -77,29 +72,37 @@ impl UpdateSet for UpdateSet3 {
     type Value = (Price, Size);
 
     fn value(&self) -> Self::Value {
-        (unsafe { Price::new_unchecked(self.1) }, self.2.into())
+        (self.1.clone(), self.2.into())
     }
 
     fn key(&self) -> Self::Key {
-        Position(self.0)
+        self.0.clone()
     }
 
     fn should_be_deleted(&self) -> bool {
-        self.2 == Decimal::ZERO
+        self.2 == Size::new(Decimal::ZERO)
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use rust_decimal_macros::dec;
     use pretty_assertions::assert_eq;
+    use rust_decimal_macros::dec;
+
     use super::*;
 
     fn setup_set3() -> Available<UpdateSet3> {
         let prices = &[
-            UpdateSet3(dec!(1), dec!(1.02), dec!(34.45)),
-            UpdateSet3(dec!(0), dec!(1.01), dec!(12)),
+            UpdateSet3(
+                Position(dec!(1)),
+                Price::new(dec!(1.02)).unwrap(),
+                Size::new(dec!(34.45)),
+            ),
+            UpdateSet3(
+                Position(dec!(0)),
+                Price::new(dec!(1.01)).unwrap(),
+                Size::new(dec!(12)),
+            ),
         ];
         Available::new(prices)
     }
@@ -124,25 +127,16 @@ mod tests {
     #[test]
     fn test_init_2() {
         let prices = &[
-            UpdateSet2(dec!(27), dec!(0.95)),
-            UpdateSet2(dec!(13), dec!(28.01)),
-            UpdateSet2(dec!(1.02), dec!(1157.21)),
+            UpdateSet2(Price::new(dec!(27)).unwrap(), Size::new(dec!(0.95))),
+            UpdateSet2(Price::new(dec!(13)).unwrap(), Size::new(dec!(28.01))),
+            UpdateSet2(Price::new(dec!(1.02)).unwrap(), Size::new(dec!(1157.21))),
         ];
         let init = Available::new(prices);
 
         let mut expected = BTreeMap::new();
-        expected.insert(
-            Price::new(dec!(1.02)).unwrap(),
-            Size::new(dec!(1157.21)),
-        );
-        expected.insert(
-            Price::new(dec!(13)).unwrap(),
-            Size::new(dec!(28.01)),
-        );
-        expected.insert(
-            Price::new(dec!(27)).unwrap(),
-            Size::new(dec!(0.95)),
-        );
+        expected.insert(Price::new(dec!(1.02)).unwrap(), Size::new(dec!(1157.21)));
+        expected.insert(Price::new(dec!(13)).unwrap(), Size::new(dec!(28.01)));
+        expected.insert(Price::new(dec!(27)).unwrap(), Size::new(dec!(0.95)));
 
         assert_eq!(init.book, expected)
     }
@@ -158,26 +152,18 @@ mod tests {
     #[test]
     fn test_update_set_2() {
         let init = Available::new(&[
-            UpdateSet2(dec!(27), dec!(0.95)),
-            UpdateSet2(dec!(13), dec!(28.01)),
-            UpdateSet2(dec!(1.02), dec!(1157.21)),
+            UpdateSet2(Price::new(dec!(27)).unwrap(), Size::new(dec!(0.95))),
+            UpdateSet2(Price::new(dec!(13)).unwrap(), Size::new(dec!(28.01))),
+            UpdateSet2(Price::new(dec!(1.02)).unwrap(), Size::new(dec!(1157.21))),
         ]);
-        let update = &[
-            UpdateSet2(dec!(27), dec!(2)),
-        ];
-        let mut expected = BTreeMap::new();
-        expected.insert(
-            Price::new(dec!(1.02)).unwrap(),
-            Size::new(dec!(1157.21)),
-        );
-        expected.insert(
-            Price::new(dec!(13)).unwrap(),
-            Size::new(dec!(28.01)),
-        );
-        expected.insert(
+        let update = &[UpdateSet2(
             Price::new(dec!(27)).unwrap(),
             Size::new(dec!(2)),
-        );
+        )];
+        let mut expected = BTreeMap::new();
+        expected.insert(Price::new(dec!(1.02)).unwrap(), Size::new(dec!(1157.21)));
+        expected.insert(Price::new(dec!(13)).unwrap(), Size::new(dec!(28.01)));
+        expected.insert(Price::new(dec!(27)).unwrap(), Size::new(dec!(2)));
 
         let mut actual = init;
         actual.update(update);
@@ -188,12 +174,22 @@ mod tests {
     #[test]
     fn test_update_set_3() {
         let init = Available::new(&[
-            UpdateSet3(dec!(1), dec!(1.02), dec!(34.45)),
-            UpdateSet3(dec!(0), dec!(1.01), dec!(12)),
+            UpdateSet3(
+                Position(dec!(1)),
+                Price::new(dec!(1.02)).unwrap(),
+                Size::new(dec!(34.45)),
+            ),
+            UpdateSet3(
+                Position(dec!(0)),
+                Price::new(dec!(1.01)).unwrap(),
+                Size::new(dec!(12)),
+            ),
         ]);
-        let update = &[
-            UpdateSet3(dec!(1), dec!(1.02), dec!(22)),
-        ];
+        let update = &[UpdateSet3(
+            Position(dec!(1)),
+            Price::new(dec!(1.02)).unwrap(),
+            Size::new(dec!(22)),
+        )];
         let mut expected = BTreeMap::new();
         expected.insert(
             Position(dec!(1)),
@@ -213,17 +209,15 @@ mod tests {
     #[test]
     fn test_update_set_2_delete() {
         let init = Available::new(&[
-            UpdateSet2(dec!(27), dec!(0.95)),
-            UpdateSet2(dec!(13), dec!(28.01)),
+            UpdateSet2(Price::new(dec!(27)).unwrap(), Size::new(dec!(0.95))),
+            UpdateSet2(Price::new(dec!(13)).unwrap(), Size::new(dec!(28.01))),
         ]);
-        let update = &[
-            UpdateSet2(dec!(27), dec!(0)),
-        ];
+        let update = &[UpdateSet2(
+            Price::new(dec!(27)).unwrap(),
+            Size::new(dec!(0)),
+        )];
         let mut expected = BTreeMap::new();
-        expected.insert(
-            Price::new(dec!(13)).unwrap(),
-            Size::new(dec!(28.01)),
-        );
+        expected.insert(Price::new(dec!(13)).unwrap(), Size::new(dec!(28.01)));
 
         let mut actual = init;
         actual.update(update);
@@ -234,12 +228,22 @@ mod tests {
     #[test]
     fn test_update_set_3_delete() {
         let init = Available::new(&[
-            UpdateSet3(dec!(1), dec!(1.02), dec!(34.45)),
-            UpdateSet3(dec!(0), dec!(1.01), dec!(12)),
+            UpdateSet3(
+                Position(dec!(1)),
+                Price::new(dec!(1.02)).unwrap(),
+                Size::new(dec!(34.45)),
+            ),
+            UpdateSet3(
+                Position(dec!(0)),
+                Price::new(dec!(1.01)).unwrap(),
+                Size::new(dec!(12)),
+            ),
         ]);
-        let update = &[
-            UpdateSet3(dec!(1), dec!(1.02), dec!(0)),
-        ];
+        let update = &[UpdateSet3(
+            Position(dec!(1)),
+            Price::new(dec!(1.02)).unwrap(),
+            Size::new(dec!(0)),
+        )];
         let mut expected = BTreeMap::new();
         expected.insert(
             Position(dec!(0)),
@@ -251,5 +255,4 @@ mod tests {
 
         assert_eq!(actual.book, expected)
     }
-
 }

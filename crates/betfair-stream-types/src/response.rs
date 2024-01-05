@@ -1,3 +1,5 @@
+use betfair_types::{price::Price, size::Size};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 pub mod connection_message;
@@ -83,6 +85,16 @@ pub struct DatasetChangeMessage<T> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<i32>,
 }
+
+#[derive(Debug, PartialEq, PartialOrd, Clone, Serialize, Deserialize, Eq, Hash, Ord)]
+pub struct UpdateSet2(pub Price, pub Size);
+
+#[derive(Debug, PartialEq, PartialOrd, Clone, Serialize, Deserialize, Eq, Hash, Ord)]
+pub struct UpdateSet3(pub Position, pub Price, pub Size);
+
+/// Represents the level of the order book.
+#[derive(Debug, PartialEq, PartialOrd, Clone, Serialize, Deserialize, Eq, Hash, Ord)]
+pub struct Position(pub Decimal);
 
 #[cfg(test)]
 mod tests {

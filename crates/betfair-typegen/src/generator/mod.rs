@@ -22,7 +22,7 @@ impl BetfairTypeGenerator {
         strategy: impl GeneratorStrategy,
         settings: impl GeneratorSettings,
     ) -> GeneratedOutput {
-        const SERVICES: [(&str, &str); 4] = [
+        const SERVICES: [(&str, &str); 3] = [
             (
                 "account_aping",
                 include_str!("../../assets/AccountAPING.xml"),
@@ -32,10 +32,6 @@ impl BetfairTypeGenerator {
                 include_str!("../../assets/HeartbeatAPING.xml"),
             ),
             ("sports_aping", include_str!("../../assets/SportsAPING.xml")),
-            (
-                "stream_api",
-                include_str!("../../assets/ESASwaggerSchema.json"),
-            ),
         ];
 
         fn parse_aping(
@@ -62,9 +58,6 @@ impl BetfairTypeGenerator {
         }
         if settings.sports_aping() {
             parse_aping(&strategy, &mut output, 2);
-        }
-        if settings.stream_api() {
-            unimplemented!("Stream API is not yet implemented")
         }
 
         output

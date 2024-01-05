@@ -1,8 +1,8 @@
-use betfair_types::price::Price;
+use betfair_types::{price::Price, types::sports_aping::SelectionId};
 use betfair_types::size::Size;
 use serde::{Deserialize, Serialize};
 
-use super::DatasetChangeMessage;
+use super::{DatasetChangeMessage, UpdateSet2};
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -28,11 +28,11 @@ pub struct OrderRunnerChange {
     /// Matched Backs - matched amounts by distinct matched price on the Back side for this runner
     /// (selection)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub mb: Option<Vec<Vec<rust_decimal::Decimal>>>,
+    pub mb: Option<Vec<UpdateSet2>>,
     /// Matched Lays - matched amounts by distinct matched price on the Lay side for this runner
     /// (selection)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ml: Option<Vec<Vec<rust_decimal::Decimal>>>,
+    pub ml: Option<Vec<UpdateSet2>>,
 
     /// Strategy Matches - Matched Backs and Matched Lays grouped by strategy reference
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -41,7 +41,7 @@ pub struct OrderRunnerChange {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub uo: Option<Vec<Order>>,
     /// Selection Id - the id of the runner (selection)
-    pub id: u64, // NOTE: Manually changed from i64 to u64
+    pub id: SelectionId,
     /// Handicap - the handicap of the runner (selection) (null if not applicable)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hc: Option<rust_decimal::Decimal>,
@@ -169,8 +169,8 @@ pub struct StrategyMatchChange {
     /// Matched Backs - matched amounts by distinct matched price on the Back side for this
     /// strategy
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub mb: Option<Vec<Vec<rust_decimal::Decimal>>>,
+    pub mb: Option<Vec<UpdateSet2>>,
     /// Matched Lays - matched amounts by distinct matched price on the Lay side for this strategy
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ml: Option<Vec<Vec<rust_decimal::Decimal>>>,
+    pub ml: Option<Vec<UpdateSet2>>,
 }

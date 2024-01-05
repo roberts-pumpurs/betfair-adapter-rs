@@ -1,9 +1,9 @@
-use betfair_types::price::Price;
+use betfair_types::{price::Price, types::sports_aping::SelectionId};
 use betfair_types::size::Size;
 use betfair_types::types::sports_aping::MarketId;
 use serde::{Deserialize, Serialize};
 
-use super::DatasetChangeMessage;
+use super::{DatasetChangeMessage, UpdateSet3, UpdateSet2};
 use crate::request::market_subscription_message::StreamMarketFilterBettingType;
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
@@ -31,7 +31,7 @@ pub struct MarketChange {
     /// The total amount matched across the market. This value is truncated at 2dp (or null if
     /// un-changed)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub tv: Option<rust_decimal::Decimal>,
+    pub tv: Option<Size>,
     /// Conflated - have more than a single change been combined (or null if not conflated)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub con: Option<bool>,
@@ -197,20 +197,20 @@ pub struct RunnerChange {
     /// Best Available To Back - LevelPriceVol triple delta of price changes, keyed by level (0 vol
     /// is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub batb: Option<Vec<Vec<Price>>>,
+    pub batb: Option<Vec<UpdateSet3>>,
 
     /// Starting Price Back - PriceVol tuple delta of price changes (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub spb: Option<Vec<Vec<Price>>>,
+    pub spb: Option<Vec<UpdateSet2>>,
 
     /// Best Display Available To Lay (includes virtual prices)- LevelPriceVol triple delta of
     /// price changes, keyed by level (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub bdatl: Option<Vec<Vec<Price>>>,
+    pub bdatl: Option<Vec<UpdateSet3>>,
 
     /// Traded - PriceVol tuple delta of price changes (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub trd: Option<Vec<Vec<Price>>>,
+    pub trd: Option<Vec<UpdateSet2>>,
 
     /// Starting Price Far - The far starting price (or null if un-changed)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -222,11 +222,11 @@ pub struct RunnerChange {
 
     /// Available To Back - PriceVol tuple delta of price changes (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub atb: Option<Vec<Vec<Price>>>,
+    pub atb: Option<Vec<UpdateSet2>>,
 
     /// Starting Price Lay - PriceVol tuple delta of price changes (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub spl: Option<Vec<Vec<Price>>>,
+    pub spl: Option<Vec<UpdateSet2>>,
 
     /// Starting Price Near - The far starting price (or null if un-changed)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -234,16 +234,16 @@ pub struct RunnerChange {
 
     /// Available To Lay - PriceVol tuple delta of price changes (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub atl: Option<Vec<Vec<Price>>>,
+    pub atl: Option<Vec<UpdateSet2>>,
 
     /// Best Available To Lay - LevelPriceVol triple delta of price changes, keyed by level (0 vol
     /// is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub batl: Option<Vec<Vec<Price>>>,
+    pub batl: Option<Vec<UpdateSet3>>,
 
     /// Selection Id - the id of the runner (selection)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<u64>, // NOTE: Manually changed from i64 to u64
+    pub id: Option<SelectionId>,
 
     /// Handicap - the handicap of the runner (selection) (null if not applicable)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -252,7 +252,7 @@ pub struct RunnerChange {
     /// Best Display Available To Back (includes virtual prices)- LevelPriceVol triple delta of
     /// price changes, keyed by level (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub bdatb: Option<Vec<Vec<Price>>>,
+    pub bdatb: Option<Vec<UpdateSet3>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
@@ -264,7 +264,7 @@ pub struct RunnerDefinition {
     pub removal_date: Option<String>,
     /// Selection Id - the id of the runner (selection)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<u64>, // NOTE manually altered
+    pub id: Option<SelectionId>,
     /// Handicap - the handicap of the runner (selection) (null if not applicable)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hc: Option<rust_decimal::Decimal>,
