@@ -1,4 +1,5 @@
-use betfair_types::{price::Price, size::Size};
+use betfair_types::price::Price;
+use betfair_types::size::Size;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 

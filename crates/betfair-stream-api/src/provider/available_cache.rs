@@ -1,14 +1,14 @@
 //! Inspired by https://github.com/betcode-org/betfair/blob/1ece2bf0ffede3a41bf14ba4ea1c7004f25964dd/betfairlightweight/streaming/cache.py
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 
 use betfair_adapter::betfair_types::price::Price;
 use betfair_adapter::betfair_types::size::Size;
 use betfair_adapter::rust_decimal::Decimal;
 use betfair_stream_types::response::{Position, UpdateSet2, UpdateSet3};
-use serde::{Deserialize, Serialize};
 
 /// Data structure to hold prices/traded amount
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Available<T: UpdateSet> {
     book: BTreeMap<T::Key, T::Value>,
 }
@@ -55,7 +55,7 @@ impl UpdateSet for UpdateSet2 {
     type Value = Size;
 
     fn value(&self) -> Self::Value {
-        self.1.into()
+        self.1
     }
 
     fn key(&self) -> Self::Key {
@@ -72,7 +72,7 @@ impl UpdateSet for UpdateSet3 {
     type Value = (Price, Size);
 
     fn value(&self) -> Self::Value {
-        (self.1.clone(), self.2.into())
+        (self.1.clone(), self.2)
     }
 
     fn key(&self) -> Self::Key {
@@ -151,7 +151,7 @@ mod tests {
 
     #[test]
     fn test_update_set_2() {
-        let init = Available::new(&[
+        let init = Available::new([
             UpdateSet2(Price::new(dec!(27)).unwrap(), Size::new(dec!(0.95))),
             UpdateSet2(Price::new(dec!(13)).unwrap(), Size::new(dec!(28.01))),
             UpdateSet2(Price::new(dec!(1.02)).unwrap(), Size::new(dec!(1157.21))),
@@ -173,7 +173,7 @@ mod tests {
 
     #[test]
     fn test_update_set_3() {
-        let init = Available::new(&[
+        let init = Available::new([
             UpdateSet3(
                 Position(dec!(1)),
                 Price::new(dec!(1.02)).unwrap(),
@@ -208,7 +208,7 @@ mod tests {
 
     #[test]
     fn test_update_set_2_delete() {
-        let init = Available::new(&[
+        let init = Available::new([
             UpdateSet2(Price::new(dec!(27)).unwrap(), Size::new(dec!(0.95))),
             UpdateSet2(Price::new(dec!(13)).unwrap(), Size::new(dec!(28.01))),
         ]);
@@ -227,7 +227,7 @@ mod tests {
 
     #[test]
     fn test_update_set_3_delete() {
-        let init = Available::new(&[
+        let init = Available::new([
             UpdateSet3(
                 Position(dec!(1)),
                 Price::new(dec!(1.02)).unwrap(),

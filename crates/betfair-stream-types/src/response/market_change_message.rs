@@ -1,9 +1,9 @@
-use betfair_types::{price::Price, types::sports_aping::SelectionId};
+use betfair_types::price::Price;
 use betfair_types::size::Size;
-use betfair_types::types::sports_aping::MarketId;
+use betfair_types::types::sports_aping::{MarketId, SelectionId};
 use serde::{Deserialize, Serialize};
 
-use super::{DatasetChangeMessage, UpdateSet3, UpdateSet2};
+use super::{DatasetChangeMessage, UpdateSet2, UpdateSet3};
 use crate::request::market_subscription_message::StreamMarketFilterBettingType;
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
@@ -255,7 +255,7 @@ pub struct RunnerChange {
     pub bdatb: Option<Vec<UpdateSet3>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct RunnerDefinition {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -274,6 +274,18 @@ pub struct RunnerDefinition {
     pub bsp: Option<rust_decimal::Decimal>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<StreamRunnerDefinitionStatus>,
+}
+
+impl PartialOrd for RunnerDefinition {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.sort_priority.partial_cmp(&other.sort_priority)
+    }
+}
+
+impl Ord for RunnerDefinition {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.sort_priority.cmp(&other.sort_priority)
+    }
 }
 
 #[derive(

@@ -1,6 +1,6 @@
 mod available_cache;
-mod runner_book_cache;
 mod market_book_cache;
+mod runner_book_cache;
 
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -134,7 +134,7 @@ impl StreamAPIProvider {
         &mut self,
         market_id: MarketId,
     ) -> futures::channel::mpsc::UnboundedReceiver<MarketChangeMessage> {
-        let (tx, rx) = futures::channel::mpsc::unbounded();
+        let (tx, _rx) = futures::channel::mpsc::unbounded();
         self.market_tracker
             .market_subscriptions
             .insert(market_id, tx);
@@ -143,7 +143,7 @@ impl StreamAPIProvider {
             .market_tracker
             .market_subscriptions
             .keys()
-            .map(|id| id.clone())
+            .cloned()
             .collect::<Vec<_>>();
 
         let req = RequestMessage::MarketSubscription(MarketSubscriptionMessage {
@@ -227,7 +227,6 @@ impl StreamAPIProvider {
             }
             ResponseMessage::OrderChange(msg) => {
                 self.handle_order_change_message(msg);
-
             }
             ResponseMessage::StatusMessage(msg) => {
                 self.handle_status_message(msg);
@@ -235,8 +234,7 @@ impl StreamAPIProvider {
         }
     }
 
-    fn handle_order_change_message(&mut self, msg: OrderChangeMessage) {
-    }
+    fn handle_order_change_message(&mut self, _msg: OrderChangeMessage) {}
     fn handle_market_change_message(&mut self, msg: MarketChangeMessage) {
         match msg.clk {
             Some(ref clk) => {
@@ -254,7 +252,7 @@ impl StreamAPIProvider {
             Some(mcs) => {
                 for mc in mcs {
                     let market_id = mc.id.clone();
-                    let Some(market_id) = market_id else {
+                    let Some(_market_id) = market_id else {
                         continue;
                     };
 

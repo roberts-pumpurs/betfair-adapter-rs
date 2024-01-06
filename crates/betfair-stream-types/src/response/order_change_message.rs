@@ -1,5 +1,6 @@
-use betfair_types::{price::Price, types::sports_aping::SelectionId};
+use betfair_types::price::Price;
 use betfair_types::size::Size;
+use betfair_types::types::sports_aping::SelectionId;
 use serde::{Deserialize, Serialize};
 
 use super::{DatasetChangeMessage, UpdateSet2};

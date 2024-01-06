@@ -1,6 +1,5 @@
-use std::collections::HashMap;
-
-use betfair_adapter::betfair_types::{size::Size, price::Price};
+use betfair_adapter::betfair_types::price::Price;
+use betfair_adapter::betfair_types::size::Size;
 use betfair_adapter::betfair_types::types::sports_aping::SelectionId;
 use betfair_adapter::rust_decimal;
 use betfair_stream_types::response::market_change_message::{RunnerChange, RunnerDefinition};
@@ -44,39 +43,39 @@ impl RunnerBookCache {
             total_matched: runner_change.tv,
             traded: runner_change
                 .trd
-                .map(|x| Available::new(x))
+                .map(Available::new)
                 .unwrap_or_else(|| Available::new(&[])),
             available_to_back: runner_change
                 .atb
-                .map(|x| Available::new(x))
+                .map(Available::new)
                 .unwrap_or_else(|| Available::new(&[])),
             best_available_to_back: runner_change
                 .batb
-                .map(|x| Available::new(x))
+                .map(Available::new)
                 .unwrap_or_else(|| Available::new(&[])),
             best_display_available_to_back: runner_change
                 .bdatb
-                .map(|x| Available::new(x))
+                .map(Available::new)
                 .unwrap_or_else(|| Available::new(&[])),
             available_to_lay: runner_change
                 .atl
-                .map(|x| Available::new(x))
+                .map(Available::new)
                 .unwrap_or_else(|| Available::new(&[])),
             best_available_to_lay: runner_change
                 .batl
-                .map(|x| Available::new(x))
+                .map(Available::new)
                 .unwrap_or_else(|| Available::new(&[])),
             best_display_available_to_lay: runner_change
                 .bdatl
-                .map(|x| Available::new(x))
+                .map(Available::new)
                 .unwrap_or_else(|| Available::new(&[])),
             starting_price_back: runner_change
                 .spb
-                .map(|x| Available::new(x))
+                .map(Available::new)
                 .unwrap_or_else(|| Available::new(&[])),
             starting_price_lay: runner_change
                 .spl
-                .map(|x| Available::new(x))
+                .map(Available::new)
                 .unwrap_or_else(|| Available::new(&[])),
             starting_price_near: runner_change.spn,
             starting_price_far: runner_change.spf,
@@ -114,6 +113,7 @@ impl RunnerBookCache {
     pub fn update_traded(&mut self, traded: &[UpdateSet2]) {
         if traded.is_empty() {
             self.traded.clear();
+            self.total_matched = Some(Size::new(Decimal::ZERO));
             return;
         }
         self.total_matched = Some(
@@ -145,50 +145,108 @@ impl RunnerBookCache {
         self.total_matched = Some(total_matched);
     }
 
-    pub(crate) fn set_starting_price_near(&mut self, spn: Price)  {
+    pub(crate) fn set_starting_price_near(&mut self, spn: Price) {
         self.starting_price_near = Some(spn);
     }
 
-    pub(crate) fn set_starting_price_far(&mut self, spf: Price)  {
+    pub(crate) fn set_starting_price_far(&mut self, spf: Price) {
         self.starting_price_far = Some(spf);
     }
 
-    pub(crate) fn update_available_to_back(&mut self, atb: impl AsRef<[UpdateSet2]>)  {
+    pub(crate) fn update_available_to_back(&mut self, atb: impl AsRef<[UpdateSet2]>) {
         self.available_to_back.update(atb);
     }
 
-    pub(crate) fn update_available_to_lay(&mut self, atl: impl AsRef<[UpdateSet2]>)  {
+    pub(crate) fn update_available_to_lay(&mut self, atl: impl AsRef<[UpdateSet2]>) {
         self.available_to_lay.update(atl);
     }
 
-    pub(crate) fn update_best_available_to_back(&mut self, batb: impl AsRef<[UpdateSet3]>)  {
+    pub(crate) fn update_best_available_to_back(&mut self, batb: impl AsRef<[UpdateSet3]>) {
         self.best_available_to_back.update(batb);
     }
 
-    pub(crate) fn update_best_available_to_lay(&mut self, batl: impl AsRef<[UpdateSet3]>)  {
+    pub(crate) fn update_best_available_to_lay(&mut self, batl: impl AsRef<[UpdateSet3]>) {
         self.best_available_to_lay.update(batl);
     }
 
-    pub(crate) fn update_best_display_available_to_back(&mut self, bdatb: impl AsRef<[UpdateSet3]>)  {
+    pub(crate) fn update_best_display_available_to_back(
+        &mut self,
+        bdatb: impl AsRef<[UpdateSet3]>,
+    ) {
         self.best_display_available_to_back.update(bdatb);
     }
 
-    pub(crate) fn update_best_display_available_to_lay(&mut self, bdatl: impl AsRef<[UpdateSet3]>)  {
+    pub(crate) fn update_best_display_available_to_lay(&mut self, bdatl: impl AsRef<[UpdateSet3]>) {
         self.best_display_available_to_lay.update(bdatl);
     }
 
-    pub(crate) fn update_starting_price_back(&mut self, spb: impl AsRef<[UpdateSet2]>)  {
+    pub(crate) fn update_starting_price_back(&mut self, spb: impl AsRef<[UpdateSet2]>) {
         self.starting_price_back.update(spb);
     }
 
-    pub(crate) fn update_starting_price_lay(&mut self, spl: impl AsRef<[UpdateSet2]>)  {
+    pub(crate) fn update_starting_price_lay(&mut self, spl: impl AsRef<[UpdateSet2]>) {
         self.starting_price_lay.update(spl);
+    }
+
+    pub fn last_price_traded(&self) -> Option<&Price> {
+        self.last_price_traded.as_ref()
+    }
+
+    pub fn traded(&self) -> &Available<UpdateSet2> {
+        &self.traded
+    }
+
+    pub fn available_to_back(&self) -> &Available<UpdateSet2> {
+        &self.available_to_back
+    }
+
+    pub fn best_available_to_back(&self) -> &Available<UpdateSet3> {
+        &self.best_available_to_back
+    }
+
+    pub fn best_display_available_to_back(&self) -> &Available<UpdateSet3> {
+        &self.best_display_available_to_back
+    }
+
+    pub fn available_to_lay(&self) -> &Available<UpdateSet2> {
+        &self.available_to_lay
+    }
+
+    pub fn best_available_to_lay(&self) -> &Available<UpdateSet3> {
+        &self.best_available_to_lay
+    }
+
+    pub fn best_display_available_to_lay(&self) -> &Available<UpdateSet3> {
+        &self.best_display_available_to_lay
+    }
+
+    pub fn starting_price_back(&self) -> &Available<UpdateSet2> {
+        &self.starting_price_back
+    }
+
+    pub fn starting_price_lay(&self) -> &Available<UpdateSet2> {
+        &self.starting_price_lay
+    }
+
+    pub fn starting_price_near(&self) -> Option<&Price> {
+        self.starting_price_near.as_ref()
+    }
+
+    pub fn starting_price_far(&self) -> Option<&Price> {
+        self.starting_price_far.as_ref()
+    }
+
+    pub fn handicap(&self) -> Option<Decimal> {
+        self.handicap
+    }
+
+    pub fn definition(&self) -> Option<&RunnerDefinition> {
+        self.definition.as_ref()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_update_traded() {}
