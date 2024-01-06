@@ -1,0 +1,47 @@
+use std::collections::HashMap;
+
+use betfair_adapter::betfair_types::customer_strategy_ref::CustomerStrategyRef;
+use betfair_adapter::betfair_types::types::sports_aping::{BetId, MarketId, SelectionId};
+use betfair_adapter::rust_decimal::Decimal;
+use betfair_stream_types::response::order_change_message::{Order, StrategyMatchChange};
+use betfair_stream_types::response::UpdateSet2;
+
+use super::available_cache::Available;
+
+pub struct OrderBookRunner {
+    market_id: MarketId,
+    selection_id: SelectionId,
+    matched_lays: Available<UpdateSet2>,
+    matched_backs: Available<UpdateSet2>,
+    unmatched_orders: HashMap<BetId, Order>,
+    handicap: Option<Decimal>,
+    strategy_matches: HashMap<CustomerStrategyRef, StrategyMatchChange>,
+}
+
+impl OrderBookRunner {
+    pub fn new(market_id: MarketId, selection_id: SelectionId) -> Self {
+        Self {
+            market_id,
+            selection_id,
+            matched_lays: Available::new(&[]),
+            matched_backs: Available::new(&[]),
+            unmatched_orders: HashMap::new(),
+            handicap: None,
+            strategy_matches: HashMap::new(),
+        }
+    }
+
+    pub fn update_unmatched(&mut self, unmatched_orders: impl IntoIterator<Item = Order>) {
+        for order in unmatched_orders.into_iter() {
+            self.unmatched_orders.insert(order.id.clone(), order);
+        }
+    }
+
+    pub(crate) fn update_matched_lays(&mut self, ml: Vec<UpdateSet2>) {
+        self.matched_lays.update(ml)
+    }
+
+    pub(crate) fn update_matched_backs(&mut self, mb: Vec<UpdateSet2>) {
+        self.matched_backs.update(mb)
+    }
+}

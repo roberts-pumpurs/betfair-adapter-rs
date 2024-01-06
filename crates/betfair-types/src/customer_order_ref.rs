@@ -21,6 +21,10 @@ impl CustomerOrderRef {
         }
         Ok(CustomerOrderRef(customer_order_ref))
     }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 #[derive(Debug, thiserror::Error)]

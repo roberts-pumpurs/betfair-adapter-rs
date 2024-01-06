@@ -13,6 +13,10 @@ impl CustomerStrategyRef {
         }
         Ok(CustomerStrategyRef(customer_strategy_ref))
     }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
