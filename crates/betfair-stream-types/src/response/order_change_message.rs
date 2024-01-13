@@ -6,11 +6,17 @@ use betfair_types::types::sports_aping::{BetId, SelectionId};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{DatasetChangeMessage, UpdateSet2};
+use super::{DatasetChangeMessage, UpdateSet2, DataChange};
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderChangeMessage(DatasetChangeMessage<OrderMarketChange>);
+
+impl DataChange<OrderMarketChange> for OrderMarketChange {
+    fn key() -> &'static str {
+        "oc"
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

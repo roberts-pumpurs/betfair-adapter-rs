@@ -238,7 +238,7 @@ impl StreamAPIProvider {
 
     fn handle_order_change_message(&mut self, _msg: OrderChangeMessage) {}
     fn handle_market_change_message(&mut self, msg: MarketChangeMessage) {
-        match msg.clk {
+        match msg.clock {
             Some(ref clk) => {
                 self.market_tracker.latest_market_clk = Some(clk.clone());
             }
@@ -250,7 +250,7 @@ impl StreamAPIProvider {
             }
             None => {}
         }
-        match msg.0.mc {
+        match msg.0.data {
             Some(mcs) => {
                 for mc in mcs {
                     let market_id = mc.id.clone();

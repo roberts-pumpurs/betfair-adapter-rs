@@ -53,60 +53,60 @@ impl MarketBookCache {
             self.market_definition = Some(market_definition);
         }
 
-        if let Some(tv) = market_change.tv {
+        if let Some(tv) = market_change.total_value {
             self.total_matched = tv;
         }
 
         let mut calculate_total_matched = false;
-        if let Some(rc) = market_change.rc {
+        if let Some(rc) = market_change.runner_change {
             for runner_change in rc {
                 let Some(selection_id) = runner_change.id.clone() else {
                     continue;
                 };
-                let runner = self.runners.get_mut(&(selection_id, runner_change.hc));
+                let runner = self.runners.get_mut(&(selection_id, runner_change.handicap));
                 let Some(runner) = runner else {
                     self.add_runner_from_change(runner_change);
                     continue;
                 };
 
-                if let Some(ltp) = runner_change.ltp {
+                if let Some(ltp) = runner_change.last_traded_price {
                     runner.set_last_price_traded(ltp);
                 }
-                if let Some(tv) = runner_change.tv {
+                if let Some(tv) = runner_change.total_value {
                     runner.set_total_matched(tv);
                 }
-                if let Some(spn) = runner_change.spn {
+                if let Some(spn) = runner_change.starting_price_near {
                     runner.set_starting_price_near(spn);
                 }
-                if let Some(spf) = runner_change.spf {
+                if let Some(spf) = runner_change.starting_price_far {
                     runner.set_starting_price_far(spf);
                 }
-                if let Some(trd) = runner_change.trd {
+                if let Some(trd) = runner_change.traded {
                     runner.update_traded(trd.as_slice());
                     calculate_total_matched = true;
                 }
-                if let Some(atb) = runner_change.atb {
+                if let Some(atb) = runner_change.available_to_back {
                     runner.update_available_to_back(atb);
                 }
-                if let Some(atl) = runner_change.atl {
+                if let Some(atl) = runner_change.available_to_lay {
                     runner.update_available_to_lay(atl);
                 }
-                if let Some(batb) = runner_change.batb {
+                if let Some(batb) = runner_change.best_available_to_back {
                     runner.update_best_available_to_back(batb);
                 }
-                if let Some(batl) = runner_change.batl {
+                if let Some(batl) = runner_change.best_available_to_lay {
                     runner.update_best_available_to_lay(batl);
                 }
-                if let Some(bdatb) = runner_change.bdatb {
+                if let Some(bdatb) = runner_change.best_display_available_to_back {
                     runner.update_best_display_available_to_back(bdatb);
                 }
-                if let Some(bdatl) = runner_change.bdatl {
+                if let Some(bdatl) = runner_change.best_display_available_to_lay {
                     runner.update_best_display_available_to_lay(bdatl);
                 }
-                if let Some(spb) = runner_change.spb {
+                if let Some(spb) = runner_change.starting_price_back {
                     runner.update_starting_price_back(spb);
                 }
-                if let Some(spl) = runner_change.spl {
+                if let Some(spl) = runner_change.starting_price_lay {
                     runner.update_starting_price_lay(spl);
                 }
             }
@@ -132,7 +132,7 @@ impl MarketBookCache {
             let Some(selection_id) = selection_id else {
                 continue;
             };
-            let hc = runner_definition.hc;
+            let hc = runner_definition.handicap;
             let key = (selection_id, hc);
             let runner = self.runners.get_mut(&key);
             if let Some(runner) = runner {
@@ -147,7 +147,7 @@ impl MarketBookCache {
         let Some(selection_id) = runner_change.id.clone() else {
             return;
         };
-        let key = (selection_id, runner_change.hc);
+        let key = (selection_id, runner_change.handicap);
         let Ok(runner) = RunnerBookCache::new_from_runner_change(runner_change) else {
             return;
         };
@@ -157,7 +157,7 @@ impl MarketBookCache {
         let Some(selection_id) = runner_definition.id.clone() else {
             return;
         };
-        let key = (selection_id, runner_definition.hc);
+        let key = (selection_id, runner_definition.handicap);
         let Ok(runner) = RunnerBookCache::new_from_runner_definition(runner_definition) else {
             return;
         };
@@ -198,13 +198,13 @@ mod tests {
     fn test_update_mc() {
         let data = r#"{"op":"mcm","id":12345,"clk":"AKEIANcNANkP","pt":1478717720756,"mc":[{"id":"1.128149474","marketDefinition":{"bspMarket":false,"turnInPlayEnabled":true,"persistenceEnabled":true,"marketBaseRate":5,"eventId":"28009395","eventTypeId":"2","numberOfWinners":1,"bettingType":"ODDS","marketType":"GAME_BY_GAME_01_07","marketTime":"2016-11-09T18:15:00.000Z","suspendTime":"2016-11-09T18:15:00.000Z","bspReconciled":false,"complete":true,"inPlay":true,"crossMatching":true,"runnersVoidable":false,"numberOfActiveRunners":2,"betDelay":5,"status":"SUSPENDED","runners":[{"status":"ACTIVE","sortPriority":1,"id":4520808},{"status":"ACTIVE","sortPriority":2,"id":7431682}],"regulators":["MR_INT"],"countryCode":"CO","discountAllowed":true,"timezone":"UTC","openDate":"2016-11-09T18:15:00.000Z","version":1488624717}}]}"#;
         let market_change_message: MarketChangeMessage = serde_json::from_str(data).unwrap();
-        let market_change = market_change_message.mc.as_ref().unwrap();
+        let market_change = market_change_message.data.as_ref().unwrap();
         let mut init = init().2;
 
         for change in market_change {
             init.update_cache(change.clone(), Utc::now(), true);
             assert!(init.active);
-            assert_eq!(init.total_matched, change.tv.unwrap_or_default());
+            assert_eq!(init.total_matched, change.total_value.unwrap_or_default());
         }
     }
 
@@ -212,13 +212,13 @@ mod tests {
     fn test_update_tv() {
         let data = r#"{"op":"mcm","id":2,"clk":"AHMAcArtjjje","pt":1471370160471,"mc":[{"id":"1.126235656","tv":69.69}]}"#;
         let market_change_message: MarketChangeMessage = serde_json::from_str(data).unwrap();
-        let market_change = market_change_message.mc.as_ref().unwrap();
+        let market_change = market_change_message.data.as_ref().unwrap();
         let mut init = init().2;
 
         for change in market_change {
             init.update_cache(change.clone(), Utc::now(), true);
             assert!(init.active);
-            assert_eq!(init.total_matched, change.tv.unwrap_or_default());
+            assert_eq!(init.total_matched, change.total_value.unwrap_or_default());
         }
     }
 
@@ -228,7 +228,7 @@ mod tests {
         let (market_id, _, mut init) = init();
         let data = vec![
             RunnerChange {
-                atb: Some(vec![UpdateSet2(
+                available_to_back: Some(vec![UpdateSet2(
                     Price::new(dec!(1.01)).unwrap(),
                     Size::new(dec!(200)),
                 )]),
@@ -236,7 +236,7 @@ mod tests {
                 ..Default::default()
             },
             RunnerChange {
-                atl: Some(vec![UpdateSet2(
+                available_to_lay: Some(vec![UpdateSet2(
                     Price::new(dec!(1.02)).unwrap(),
                     Size::new(dec!(200)),
                 )]),
@@ -246,7 +246,7 @@ mod tests {
         ];
         let market_change = MarketChange {
             id: Some(market_id),
-            rc: Some(data),
+            runner_change: Some(data),
             ..Default::default()
         };
 
@@ -311,8 +311,8 @@ mod tests {
         {
             let market_change = MarketChange {
                 id: Some(market_id.clone()),
-                rc: Some(vec![RunnerChange {
-                    tv: Some(Size::new(dec!(123.0))),
+                runner_change: Some(vec![RunnerChange {
+                    total_value: Some(Size::new(dec!(123.0))),
                     id: Some(SelectionId(13536143)),
                     ..Default::default()
                 }]),
@@ -327,8 +327,8 @@ mod tests {
         {
             let market_change = MarketChange {
                 id: Some(market_id.clone()),
-                rc: Some(vec![RunnerChange {
-                    trd: Some(vec![]),
+                runner_change: Some(vec![RunnerChange {
+                    traded: Some(vec![]),
                     id: Some(SelectionId(13536143)),
                     ..Default::default()
                 }]),
@@ -343,8 +343,8 @@ mod tests {
         {
             let market_change = MarketChange {
                 id: Some(market_id.clone()),
-                rc: Some(vec![RunnerChange {
-                    trd: Some(vec![UpdateSet2(
+                runner_change: Some(vec![RunnerChange {
+                    traded: Some(vec![UpdateSet2(
                         Price::new(dec!(12.0)).unwrap(),
                         Size::new(dec!(2.0)),
                     )]),
@@ -368,8 +368,8 @@ mod tests {
         {
             let market_change = MarketChange {
                 id: Some(market_id.clone()),
-                rc: Some(vec![RunnerChange {
-                    tv: Some(Size::new(dec!(123.0))),
+                runner_change: Some(vec![RunnerChange {
+                    total_value: Some(Size::new(dec!(123.0))),
                     id: Some(SelectionId(13536143)),
                     ..Default::default()
                 }]),
@@ -381,8 +381,8 @@ mod tests {
         {
             let market_change = MarketChange {
                 id: Some(market_id.clone()),
-                rc: Some(vec![RunnerChange {
-                    trd: Some(vec![UpdateSet2(
+                runner_change: Some(vec![RunnerChange {
+                    traded: Some(vec![UpdateSet2(
                         Price::new(dec!(12.0)).unwrap(),
                         Size::new(dec!(2.0)),
                     )]),

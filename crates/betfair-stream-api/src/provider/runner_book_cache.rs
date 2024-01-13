@@ -34,51 +34,51 @@ impl RunnerBookCache {
             bail!("Invalid selection id");
         };
         let selection_id = id;
-        let handicap = runner_change.hc;
+        let handicap = runner_change.handicap;
         let definition = None;
 
         Ok(Self {
             selection_id,
-            last_price_traded: runner_change.ltp,
-            total_matched: runner_change.tv,
+            last_price_traded: runner_change.last_traded_price,
+            total_matched: runner_change.total_value,
             traded: runner_change
-                .trd
+                .traded
                 .map(Available::new)
                 .unwrap_or_else(|| Available::new(&[])),
             available_to_back: runner_change
-                .atb
+                .available_to_back
                 .map(Available::new)
                 .unwrap_or_else(|| Available::new(&[])),
             best_available_to_back: runner_change
-                .batb
+                .best_available_to_back
                 .map(Available::new)
                 .unwrap_or_else(|| Available::new(&[])),
             best_display_available_to_back: runner_change
-                .bdatb
+                .best_display_available_to_back
                 .map(Available::new)
                 .unwrap_or_else(|| Available::new(&[])),
             available_to_lay: runner_change
-                .atl
+                .available_to_lay
                 .map(Available::new)
                 .unwrap_or_else(|| Available::new(&[])),
             best_available_to_lay: runner_change
-                .batl
+                .best_available_to_lay
                 .map(Available::new)
                 .unwrap_or_else(|| Available::new(&[])),
             best_display_available_to_lay: runner_change
-                .bdatl
+                .best_display_available_to_lay
                 .map(Available::new)
                 .unwrap_or_else(|| Available::new(&[])),
             starting_price_back: runner_change
-                .spb
+                .starting_price_back
                 .map(Available::new)
                 .unwrap_or_else(|| Available::new(&[])),
             starting_price_lay: runner_change
-                .spl
+                .starting_price_lay
                 .map(Available::new)
                 .unwrap_or_else(|| Available::new(&[])),
-            starting_price_near: runner_change.spn,
-            starting_price_far: runner_change.spf,
+            starting_price_near: runner_change.starting_price_near,
+            starting_price_far: runner_change.starting_price_far,
             handicap,
             definition,
         })
