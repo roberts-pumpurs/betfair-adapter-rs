@@ -114,20 +114,13 @@ impl<'a> RawStream<'a> {
             Err(StreamError::StreamProcessorMalfunction)
         };
 
-        // read responses and yield them
-        let read_task = async_stream::stream! {
-            while let Some(data) = reader.next().await {
-                yield data;
-            }
-        };
-
         Ok((
             async move {
                 let res = write_task.await.unwrap();
                 tracing::error!("Write task finished");
                 res
             },
-            read_task,
+            reader,
         ))
     }
 
