@@ -11,6 +11,7 @@ use rust_decimal::Decimal;
 
 use super::runner_book_cache::RunnerBookCache;
 
+#[derive(Debug, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
 pub struct MarketBookCache {
     market_id: MarketId,
     publish_time: DateTime<Utc>,
@@ -63,7 +64,9 @@ impl MarketBookCache {
                 let Some(selection_id) = runner_change.id.clone() else {
                     continue;
                 };
-                let runner = self.runners.get_mut(&(selection_id, runner_change.handicap));
+                let runner = self
+                    .runners
+                    .get_mut(&(selection_id, runner_change.handicap));
                 let Some(runner) = runner else {
                     self.add_runner_from_change(runner_change);
                     continue;
@@ -163,6 +166,22 @@ impl MarketBookCache {
         };
         self.runners.insert(key, runner);
     }
+
+    pub fn publish_time(&self) -> DateTime<Utc> {
+        self.publish_time
+    }
+
+    pub fn runners(&self) -> &HashMap<(SelectionId, Option<Decimal>), RunnerBookCache> {
+        &self.runners
+    }
+
+    pub fn market_definition(&self) -> Option<&Box<MarketDefinition>> {
+        self.market_definition.as_ref()
+    }
+
+    pub fn market_id(&self) -> &MarketId {
+        &self.market_id
+    }
 }
 
 #[cfg(test)]
@@ -245,7 +264,7 @@ mod tests {
             },
         ];
         let market_change = MarketChange {
-            id: Some(market_id),
+            market_id: Some(market_id),
             runner_change: Some(data),
             ..Default::default()
         };
@@ -310,7 +329,7 @@ mod tests {
 
         {
             let market_change = MarketChange {
-                id: Some(market_id.clone()),
+                market_id: Some(market_id.clone()),
                 runner_change: Some(vec![RunnerChange {
                     total_value: Some(Size::new(dec!(123.0))),
                     id: Some(SelectionId(13536143)),
@@ -326,7 +345,7 @@ mod tests {
         }
         {
             let market_change = MarketChange {
-                id: Some(market_id.clone()),
+                market_id: Some(market_id.clone()),
                 runner_change: Some(vec![RunnerChange {
                     traded: Some(vec![]),
                     id: Some(SelectionId(13536143)),
@@ -342,7 +361,7 @@ mod tests {
         }
         {
             let market_change = MarketChange {
-                id: Some(market_id.clone()),
+                market_id: Some(market_id.clone()),
                 runner_change: Some(vec![RunnerChange {
                     traded: Some(vec![UpdateSet2(
                         Price::new(dec!(12.0)).unwrap(),
@@ -367,7 +386,7 @@ mod tests {
 
         {
             let market_change = MarketChange {
-                id: Some(market_id.clone()),
+                market_id: Some(market_id.clone()),
                 runner_change: Some(vec![RunnerChange {
                     total_value: Some(Size::new(dec!(123.0))),
                     id: Some(SelectionId(13536143)),
@@ -380,7 +399,7 @@ mod tests {
         }
         {
             let market_change = MarketChange {
-                id: Some(market_id.clone()),
+                market_id: Some(market_id.clone()),
                 runner_change: Some(vec![RunnerChange {
                     traded: Some(vec![UpdateSet2(
                         Price::new(dec!(12.0)).unwrap(),

@@ -5,9 +5,11 @@ use betfair_adapter::betfair_types::types::sports_aping::{BetId, MarketId, Selec
 use betfair_adapter::rust_decimal::Decimal;
 use betfair_stream_types::response::order_change_message::{Order, StrategyMatchChange};
 use betfair_stream_types::response::UpdateSet2;
+use serde::{Serialize, Deserialize};
 
 use super::available_cache::Available;
 
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct OrderBookRunner {
     market_id: MarketId,
     selection_id: SelectionId,

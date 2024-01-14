@@ -35,7 +35,7 @@ pub struct MarketChange {
     /// if delta)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "img")]
-    pub img: Option<bool>,
+    pub full_image: Option<bool>,
     /// The total amount matched across the market. This value is truncated at 2dp (or null if
     /// un-changed)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -49,7 +49,8 @@ pub struct MarketChange {
     pub market_definition: Option<Box<MarketDefinition>>,
     /// Market Id - the id of the market
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<MarketId>,
+    #[serde(rename = "id")]
+    pub market_id: Option<MarketId>,
 }
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]

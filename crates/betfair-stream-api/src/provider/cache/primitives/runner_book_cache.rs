@@ -9,6 +9,7 @@ use rust_decimal::Decimal;
 
 use super::available_cache::Available;
 
+#[derive(Debug, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
 pub struct RunnerBookCache {
     selection_id: SelectionId,
     last_price_traded: Option<Price>,

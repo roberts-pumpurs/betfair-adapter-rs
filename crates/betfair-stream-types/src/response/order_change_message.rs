@@ -1,4 +1,4 @@
-use betfair_types::customer_order_ref::CustomerOrderRef;
+use betfair_types::{customer_order_ref::CustomerOrderRef, types::sports_aping::MarketId};
 use betfair_types::customer_strategy_ref::CustomerStrategyRef;
 use betfair_types::price::Price;
 use betfair_types::size::Size;
@@ -6,11 +6,11 @@ use betfair_types::types::sports_aping::{BetId, SelectionId};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{DatasetChangeMessage, UpdateSet2, DataChange};
+use super::{DataChange, DatasetChangeMessage, UpdateSet2};
 
-#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct OrderChangeMessage(DatasetChangeMessage<OrderMarketChange>);
+pub struct OrderChangeMessage(pub DatasetChangeMessage<OrderMarketChange>);
 
 impl DataChange<OrderMarketChange> for OrderMarketChange {
     fn key() -> &'static str {
@@ -18,7 +18,15 @@ impl DataChange<OrderMarketChange> for OrderMarketChange {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+impl std::ops::Deref for OrderChangeMessage {
+    type Target = DatasetChangeMessage<OrderMarketChange>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderMarketChange {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -28,7 +36,7 @@ pub struct OrderMarketChange {
     pub order_runner_change: Option<Vec<OrderRunnerChange>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub closed: Option<bool>,
-    pub id: String,
+    pub market_id: MarketId,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub full_image: Option<bool>,
 }

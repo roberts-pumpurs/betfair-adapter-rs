@@ -6,9 +6,10 @@ use betfair_adapter::betfair_types::price::Price;
 use betfair_adapter::betfair_types::size::Size;
 use betfair_adapter::rust_decimal::Decimal;
 use betfair_stream_types::response::{Position, UpdateSet2, UpdateSet3};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 /// Data structure to hold prices/traded amount
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, PartialOrd, Clone, Serialize, Deserialize, Eq, Hash, Ord)]
 pub struct Available<T: UpdateSet> {
     book: BTreeMap<T::Key, T::Value>,
 }
@@ -43,8 +44,8 @@ impl<T: UpdateSet> Available<T> {
 }
 
 pub trait UpdateSet {
-    type Key: std::hash::Hash + PartialEq + Eq + Ord;
-    type Value: PartialEq;
+    type Key: std::hash::Hash + PartialEq + Eq + Ord + Serialize + DeserializeOwned;
+    type Value: PartialEq + Serialize + DeserializeOwned;
     fn value(&self) -> Self::Value;
     fn key(&self) -> Self::Key;
     fn should_be_deleted(&self) -> bool;

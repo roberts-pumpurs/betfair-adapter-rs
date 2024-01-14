@@ -16,13 +16,13 @@ use tokio_util::codec::{Decoder, Encoder, FramedRead, FramedWrite};
 use crate::StreamError;
 
 #[derive(Debug)]
-pub(crate) struct RawStream<'a> {
+pub(crate) struct RawStreamConnection<'a> {
     application_key: Cow<'a, ApplicationKey>,
     session_token: Cow<'a, SessionToken>,
     state: StreamState,
 }
 
-impl<'a> RawStream<'a> {
+impl<'a> RawStreamConnection<'a> {
     pub fn new(
         application_key: Cow<'a, ApplicationKey>,
         session_token: Cow<'a, SessionToken>,
@@ -36,6 +36,7 @@ impl<'a> RawStream<'a> {
 
     pub async fn connect_tls(
         &mut self,
+        unique_id: i32,
         domain: &str,
         socket_addr: SocketAddr,
         incoming_commands: impl futures_util::Stream<Item = RequestMessage>
@@ -53,12 +54,13 @@ impl<'a> RawStream<'a> {
         let connector = tls_connector();
         let stream = connector.connect(domain, stream).await.unwrap();
         let (read, write) = tokio::io::split(stream);
-        let (write_to_wire, output) = self.process(write, read, incoming_commands).await?;
+        let (write_to_wire, output) = self.process(unique_id, write, read, incoming_commands).await?;
         Ok((write_to_wire, output))
     }
 
     pub async fn connect_non_tls(
         &mut self,
+        unique_id: i32,
         socket_addr: SocketAddr,
         incoming_commands: impl futures_util::Stream<Item = RequestMessage>
             + std::marker::Send
@@ -72,7 +74,7 @@ impl<'a> RawStream<'a> {
     > {
         let stream = TcpStream::connect(&socket_addr).await.unwrap();
         let (read, write) = stream.into_split();
-        let (write_to_wire, output) = self.process(write, read, incoming_commands).await.unwrap();
+        let (write_to_wire, output) = self.process(unique_id, write, read, incoming_commands).await.unwrap();
         Ok((write_to_wire, output))
     }
 
@@ -81,6 +83,7 @@ impl<'a> RawStream<'a> {
         O: AsyncRead + std::fmt::Debug + Send + Unpin,
     >(
         &mut self,
+        unique_id: i32,
         input: I,
         output: O,
         mut incoming_commands: impl futures_util::Stream<Item = RequestMessage>
@@ -96,7 +99,7 @@ impl<'a> RawStream<'a> {
         let mut writer = FramedWrite::new(input, StreamAPIClientCodec);
         let mut reader = FramedRead::new(output, StreamAPIClientCodec);
 
-        self.handshake(&mut reader, &mut writer).await?;
+        self.handshake(unique_id, &mut reader, &mut writer).await?;
         // read commands and send them to the writer
         let write_task = async move {
             loop {
@@ -130,6 +133,7 @@ impl<'a> RawStream<'a> {
         O: AsyncRead + std::fmt::Debug + Send + Unpin,
     >(
         &mut self,
+        unique_id: i32,
         reader: &mut FramedRead<O, StreamAPIClientCodec>,
         writer: &mut FramedWrite<I, StreamAPIClientCodec>,
     ) -> Result<(), StreamError> {

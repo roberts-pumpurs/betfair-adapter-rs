@@ -62,7 +62,7 @@ pub struct DatasetChangeMessage<T: DeserializeOwned + DataChange<T>> {
     /// subscription (in case of disconnect)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "clk")]
-    pub clock: Option<String>,
+    pub clock: Option<Clock>,
     /// Heartbeat Milliseconds - the heartbeat rate (may differ from requested: bounds are 500 to
     /// 30000)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -74,7 +74,8 @@ pub struct DatasetChangeMessage<T: DeserializeOwned + DataChange<T>> {
     /// Token value (non-null) should be stored and passed in a MarketSubscriptionMessage to resume
     /// subscription (in case of disconnect)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub initial_clk: Option<String>,
+    #[serde(rename = "initialClk")]
+    pub initial_clock: Option<InitialClock>,
     /// the modifications to T (will be null on a heartbeat)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<Vec<T>>,
@@ -91,6 +92,13 @@ pub struct DatasetChangeMessage<T: DeserializeOwned + DataChange<T>> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<i32>,
 }
+
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+pub struct Clock(pub String);
+
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+pub struct InitialClock(pub String);
+
 
 impl<'de, T> Deserialize<'de> for DatasetChangeMessage<T>
 where
@@ -115,17 +123,17 @@ where
             clock: v
                 .get("clk")
                 .and_then(|clk| clk.as_str())
-                .map(|clk| clk.to_string()),
+                .map(|clk| Clock(clk.to_string())),
             heartbeat_ms: v.get("heartbeatMs").and_then(|hm| hm.as_i64()),
             publish_time: v
                 .get("pt")
                 .and_then(|pt| pt.as_i64())
                 .map(|pt| Utc.timestamp_millis_opt(pt).latest())
                 .flatten(),
-            initial_clk: v
+            initial_clock: v
                 .get("initialClk")
                 .and_then(|ic| ic.as_str())
-                .map(|ic| ic.to_string()),
+                .map(|ic| InitialClock( ic.to_string())),
             data,
             conflate_ms: v.get("conflateMs").and_then(|cm| cm.as_i64()),
             segment_type: v
