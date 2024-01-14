@@ -18,7 +18,7 @@ jobs:
         msrv: [1.56.1] # 2021 edition requires 1.56
     name: ${{ matrix.msrv }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
           fetch-depth: 0
