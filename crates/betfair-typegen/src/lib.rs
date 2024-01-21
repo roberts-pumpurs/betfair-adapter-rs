@@ -9,8 +9,6 @@
     attr(deny(warnings, rust_2018_idioms), allow(dead_code, unused_variables))
 ))]
 #![allow(incomplete_features)]
-#![feature(async_fn_in_trait)]
-#![feature(return_position_impl_trait_in_trait)]
 
 mod aping_ast;
 pub mod gen_v1;

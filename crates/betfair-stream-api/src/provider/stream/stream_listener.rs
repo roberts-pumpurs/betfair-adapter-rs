@@ -140,99 +140,12 @@ impl StreamListener {
         }
     }
 
-    fn replace_queue(&mut self) -> futures::channel::mpsc::UnboundedReceiver<ExternalUpdates> {
+    /// Replace the output queue with a new one, returning the receiver for for the new one.
+    pub fn replace_queue(&mut self) -> futures::channel::mpsc::UnboundedReceiver<ExternalUpdates> {
         let (tx, rx) = futures::channel::mpsc::unbounded();
         self.output_queue = tx;
         rx
     }
-
-    // TODO separate out this logic into a separate module, maybe a wrapper around the stream listener
-    // pub fn subscribe_to_market(
-    //     &mut self,
-    //     market_id: MarketId,
-    // ) -> futures::channel::mpsc::UnboundedReceiver<MarketChangeMessage> {
-    //     let (tx, _rx) = futures::channel::mpsc::unbounded();
-    //     self.market_tracker
-    //         .market_subscriptions
-    //         .insert(market_id, tx);
-
-    //     let all_market_ids = self
-    //         .market_tracker
-    //         .market_subscriptions
-    //         .keys()
-    //         .cloned()
-    //         .collect::<Vec<_>>();
-
-    //     let req = RequestMessage::MarketSubscription(MarketSubscriptionMessage {
-    //         id: Some(self.rng.gen()),
-    //         clk: None,         // empty to reset the clock
-    //         initial_clk: None, // empty to reset the clock
-    //         segmentation_enabled: Some(true),
-    //         heartbeat_ms: Some(500),
-    //         market_filter: Some(Box::new(MarketFilter {
-    //             country_codes: None,
-    //             betting_types: None,
-    //             turn_in_play_enabled: None,
-    //             market_types: None,
-    //             venues: None,
-    //             market_ids: Some(all_market_ids),
-    //             event_type_ids: None,
-    //             event_ids: None,
-    //             bsp_market: None,
-    //             race_types: None,
-    //         })),
-    //         conflate_ms: None,
-    //         market_data_filter: Some(Box::new(MarketDataFilter {
-    //             ladder_levels: None,
-    //             fields: None,
-    //         })),
-    //     });
-    //     self.send_message(req);
-
-    //     // rx
-    //     todo!()
-    // }
-
-    // pub fn unsubscribe_from_market(&mut self, market_ids: MarketId) -> Option<MarketChange> {
-    //     let _value = self.market_tracker.market_subscriptions.remove(&market_ids);
-    //     let value = self.market_tracker.market_state.remove(&market_ids);
-
-    //     if self.market_tracker.market_subscriptions.is_empty() {
-    //         self.unsubscribe_from_all_markets();
-    //     }
-
-    //     value
-    // }
-
-    // /// https://forum.developer.betfair.com/forum/sports-exchange-api/exchange-api/34555-stream-api-unsubscribe-from-all-markets
-    // fn unsubscribe_from_all_markets(&mut self) {
-    //     let market_that_does_not_exist = MarketId("1.23456789".to_string());
-    //     let req = RequestMessage::MarketSubscription(MarketSubscriptionMessage {
-    //         id: Some(self.rng.gen()),
-    //         segmentation_enabled: Some(true),
-    //         clk: self.market_tracker.latest_market_clk.clone(),
-    //         heartbeat_ms: Some(500),
-    //         initial_clk: self.market_tracker.initial_market_clk.clone(),
-    //         market_filter: Some(Box::new(MarketFilter {
-    //             country_codes: None,
-    //             betting_types: None,
-    //             turn_in_play_enabled: None,
-    //             market_types: None,
-    //             venues: None,
-    //             market_ids: Some(vec![market_that_does_not_exist]),
-    //             event_type_ids: None,
-    //             event_ids: None,
-    //             bsp_market: None,
-    //             race_types: None,
-    //         })),
-    //         conflate_ms: None,
-    //         market_data_filter: Some(Box::new(MarketDataFilter {
-    //             ladder_levels: None,
-    //             fields: None,
-    //         })),
-    //     });
-    //     self.send_message(req);
-    // }
 
     async fn process_response_message(&mut self, msg: ResponseMessage) {
         let mut publish_time = None;
@@ -293,7 +206,9 @@ impl StreamListener {
         }
     }
 
-    fn send_message(&mut self, mut msg: RequestMessage) {
+    /// Send a message to the Betfair stream.
+    /// It will generate a unique id for the message
+    pub fn send_message(&mut self, mut msg: RequestMessage) {
         let id = self.rng.gen();
         msg.set_id(id);
         self.tracker.update_unique_id(id);
@@ -351,7 +266,7 @@ async fn create_write_loop(
                 Ok(msg) => {
                     tracing::debug!(msg = ?msg, "Received message");
                     let mut api = api_c.write().await;
-                    api.process_response_message(msg);
+                    api.process_response_message(msg).await;
                     drop(api)
                 }
                 Err(err) => {

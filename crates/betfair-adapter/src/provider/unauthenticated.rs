@@ -47,7 +47,7 @@ impl<'a> BetfairRpcProvider<'a, Unauthenticated> {
     pub async fn authenticate(mut self) -> Result<BetfairRpcProvider<'a, Authenticated>, ApiError> {
         self.bot_log_in().await?;
 
-        let instance: BetfairRpcProvider<Authenticated> = unsafe { std::mem::transmute(self) };
+        let instance: BetfairRpcProvider<'a, Authenticated> = unsafe { std::mem::transmute(self) };
 
         Ok(instance)
     }

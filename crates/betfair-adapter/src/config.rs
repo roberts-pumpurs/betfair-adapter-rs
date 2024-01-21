@@ -20,6 +20,7 @@ pub struct BetfairConfigBuilder<
 pub fn new_global_config(
     secret_provider: secret::SecretProvider<'_>,
 ) -> BetfairConfigBuilder<
+    '_,
     urls::jurisdictions::Global,
     urls::jurisdictions::Global,
     urls::jurisdictions::Global,
