@@ -16,16 +16,16 @@ use tokio_util::codec::{Decoder, Encoder, FramedRead, FramedWrite};
 use crate::StreamError;
 
 #[derive(Debug)]
-pub(crate) struct RawStreamConnection<'a> {
-    application_key: Cow<'a, ApplicationKey>,
-    session_token: Cow<'a, SessionToken>,
+pub(crate) struct RawStreamConnection {
+    application_key: ApplicationKey,
+    session_token: SessionToken,
     state: StreamState,
 }
 
-impl<'a> RawStreamConnection<'a> {
+impl RawStreamConnection {
     pub fn new(
-        application_key: Cow<'a, ApplicationKey>,
-        session_token: Cow<'a, SessionToken>,
+        application_key: ApplicationKey,
+        session_token: SessionToken,
     ) -> Self {
         Self {
             application_key,

@@ -62,8 +62,8 @@ pub enum ExternalUpdates {
 impl StreamListener {
     #[tracing::instrument(skip(application_key, session_token, url), err)]
     pub async fn new<'a>(
-        application_key: Cow<'a, ApplicationKey>,
-        session_token: Cow<'a, SessionToken>,
+        application_key: ApplicationKey,
+        session_token: SessionToken,
         url: BetfairUrl<'a, betfair_adapter::Stream>,
         hb: HeartbeatStrategy,
     ) -> Result<
@@ -74,7 +74,7 @@ impl StreamListener {
         ),
         StreamError,
     > {
-        let mut stream_wrapper = RawStreamConnection::new(application_key, session_token);
+        let mut stream_wrapper = RawStreamConnection::new(application_key.into(), session_token.into());
         let (command_sender, command_reader) = tokio::sync::mpsc::channel(5);
         let (output_sender, output_reader) = futures::channel::mpsc::unbounded();
         let mut api = Self::new_with_commands(command_sender.clone(), output_sender);

@@ -10,10 +10,10 @@ async fn market_subscribtion() {
     let url = mock.url.clone();
 
     let h1 = tokio::spawn(async move {
-        let (_client, async_task) = betfair_stream_api::StreamAPIProvider::new(
-            std::borrow::Cow::Owned(ApplicationKey::new("app_key".to_string())),
-            std::borrow::Cow::Owned(SessionToken::new("app_key".to_string())),
-            BetfairUrl::new(std::borrow::Cow::Owned(url.clone())),
+        let (_client, async_task, _output) = betfair_stream_api::StreamListener::new(
+            ApplicationKey::new("app_key".to_string()),
+            SessionToken::new("token".to_string()),
+            url.into(),
             HeartbeatStrategy::None,
         )
         .await

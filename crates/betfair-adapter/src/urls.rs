@@ -22,6 +22,12 @@ impl<'a, T, K: std::clone::Clone> BetfairUrl<'a, T, K> {
     }
 }
 
+impl<'a, T> Into<BetfairUrl<'a, T>> for url::Url {
+    fn into(self) -> BetfairUrl<'a, T> {
+        BetfairUrl::new(Cow::Owned(self))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct RestBase;
 

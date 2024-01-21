@@ -11,10 +11,10 @@ async fn successful_heartbeat() {
     let duration = std::time::Duration::from_millis(800); // 0.8 seconds
 
     let h1 = tokio::spawn(async move {
-        let (_client, async_task) = betfair_stream_api::StreamAPIProvider::new(
-            std::borrow::Cow::Owned(ApplicationKey::new("app_key".to_string())),
-            std::borrow::Cow::Owned(SessionToken::new("app_key".to_string())),
-            BetfairUrl::new(std::borrow::Cow::Owned(url.clone())),
+        let (_client, async_task, _) = betfair_stream_api::StreamListener::new(
+            ApplicationKey::new("app_key".to_string()),
+            SessionToken::new("session_token".to_string()),
+            url.into(),
             HeartbeatStrategy::Interval(duration),
         )
         .await
