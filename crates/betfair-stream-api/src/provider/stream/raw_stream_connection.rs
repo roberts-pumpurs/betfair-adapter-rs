@@ -1,208 +1,143 @@
 use std::borrow::Cow;
 use std::net::SocketAddr;
+use std::pin::Pin;
 
-use betfair_adapter::{ApplicationKey, SessionToken};
+use betfair_adapter::{ApplicationKey, BetfairUrl, SessionToken};
 use betfair_stream_types::request::{authentication_message, RequestMessage};
 use betfair_stream_types::response::ResponseMessage;
 use futures_util::sink::SinkExt;
-use futures_util::{Future, StreamExt};
+use futures_util::{Future, FutureExt, Stream, StreamExt};
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
+use tokio_stream::wrappers::{errors::BroadcastStreamRecvError, ReceiverStream};
 use tokio_util::bytes;
 use tokio_util::codec::{Decoder, Encoder, FramedRead, FramedWrite};
 
 use crate::StreamError;
 
-#[derive(Debug)]
-pub(crate) struct RawStreamConnection {
-    application_key: ApplicationKey,
-    session_token: SessionToken,
-    state: StreamState,
+pub(crate) async fn connect<'a>(
+    url: BetfairUrl<'a, betfair_adapter::Stream>,
+    command_reader: impl futures_util::Stream<Item = Result<RequestMessage, BroadcastStreamRecvError>>
+        + std::marker::Unpin
+        + Send
+        + 'static,
+) -> Result<
+    (
+        Pin<Box<dyn Future<Output = Result<(), StreamError>> + Send>>,
+        Pin<Box<dyn Stream<Item = Result<ResponseMessage, StreamError>> + Send>>,
+    ),
+    StreamError,
+> {
+    let host = url.url().host_str().unwrap();
+    let is_tls = url.url().scheme() == "https";
+    let port = url.url().port().unwrap_or(if is_tls { 443 } else { 80 });
+    let socket_addr = tokio::net::lookup_host((host, port)).await.unwrap().next();
+    let domain = url.url().domain();
+    let result = match (is_tls, domain, socket_addr) {
+        (true, Some(domain), Some(socket_addr)) => {
+            let (write_to_wire, read) = connect_tls(domain, socket_addr, command_reader)
+                .await
+                .unwrap();
+            Ok((write_to_wire.boxed(), read.boxed()))
+        }
+        (false, _, Some(socket_addr)) => {
+            let (write_to_wire, read) = connect_non_tls(socket_addr, command_reader).await.unwrap();
+            Ok((write_to_wire.boxed(), read.boxed()))
+        }
+        _ => Err(StreamError::MisconfiguredStreamURL),
+    }?;
+
+    Ok(result)
 }
 
-impl RawStreamConnection {
-    pub fn new(
-        application_key: ApplicationKey,
-        session_token: SessionToken,
-    ) -> Self {
-        Self {
-            application_key,
-            session_token,
-            state: StreamState::PreAuth,
-        }
-    }
+pub(crate) async fn connect_tls(
+    domain: &str,
+    socket_addr: SocketAddr,
+    incoming_commands: impl futures_util::Stream<Item = Result<RequestMessage, BroadcastStreamRecvError>>
+        + std::marker::Unpin
+        + 'static,
+) -> Result<
+    (
+        impl Future<Output = Result<(), StreamError>>,
+        impl futures_util::Stream<Item = Result<ResponseMessage, StreamError>>,
+    ),
+    StreamError,
+> {
+    let domain = rustls::pki_types::ServerName::try_from(domain.to_string()).unwrap();
+    let stream = TcpStream::connect(&socket_addr).await?;
+    let connector = tls_connector();
+    let stream = connector.connect(domain, stream).await.unwrap();
+    let (read, write) = tokio::io::split(stream);
+    let (write_to_wire, output) = process(write, read, incoming_commands).await?;
+    Ok((write_to_wire, output))
+}
 
-    pub async fn connect_tls(
-        &mut self,
-        unique_id: i32,
-        domain: &str,
-        socket_addr: SocketAddr,
-        incoming_commands: impl futures_util::Stream<Item = RequestMessage>
-            + std::marker::Send
-            + std::marker::Unpin,
-    ) -> Result<
-        (
-            impl Future<Output = Result<(), StreamError>>,
-            impl futures_util::Stream<Item = Result<ResponseMessage, StreamError>>,
-        ),
-        StreamError,
-    > {
-        let domain = rustls::pki_types::ServerName::try_from(domain.to_string()).unwrap();
-        let stream = TcpStream::connect(&socket_addr).await?;
-        let connector = tls_connector();
-        let stream = connector.connect(domain, stream).await.unwrap();
-        let (read, write) = tokio::io::split(stream);
-        let (write_to_wire, output) = self.process(unique_id, write, read, incoming_commands).await?;
-        Ok((write_to_wire, output))
-    }
+pub(crate) async fn connect_non_tls(
+    socket_addr: SocketAddr,
+    incoming_commands: impl futures_util::Stream<Item = Result<RequestMessage, BroadcastStreamRecvError>>
+        + std::marker::Unpin
+        + 'static,
+) -> Result<
+    (
+        impl Future<Output = Result<(), StreamError>>,
+        impl futures_util::Stream<Item = Result<ResponseMessage, StreamError>>,
+    ),
+    StreamError,
+> {
+    let stream = TcpStream::connect(&socket_addr).await.unwrap();
+    let (read, write) = stream.into_split();
+    let (write_to_wire, output) = process(write, read, incoming_commands).await.unwrap();
+    Ok((write_to_wire, output))
+}
 
-    pub async fn connect_non_tls(
-        &mut self,
-        unique_id: i32,
-        socket_addr: SocketAddr,
-        incoming_commands: impl futures_util::Stream<Item = RequestMessage>
-            + std::marker::Send
-            + std::marker::Unpin,
-    ) -> Result<
-        (
-            impl Future<Output = Result<(), StreamError>>,
-            impl futures_util::Stream<Item = Result<ResponseMessage, StreamError>>,
-        ),
-        StreamError,
-    > {
-        let stream = TcpStream::connect(&socket_addr).await.unwrap();
-        let (read, write) = stream.into_split();
-        let (write_to_wire, output) = self.process(unique_id, write, read, incoming_commands).await.unwrap();
-        Ok((write_to_wire, output))
-    }
+async fn process<
+    I: AsyncWrite + std::fmt::Debug + Send + Unpin,
+    O: AsyncRead + std::fmt::Debug + Send + Unpin,
+>(
+    input: I,
+    output: O,
+    mut incoming_commands: impl futures_util::Stream<Item = Result<RequestMessage, BroadcastStreamRecvError>>
+        + std::marker::Unpin
+        + 'static,
+) -> Result<
+    (
+        impl Future<Output = Result<(), StreamError>>,
+        impl futures_util::Stream<Item = Result<ResponseMessage, StreamError>>,
+    ),
+    StreamError,
+> {
+    let mut writer = FramedWrite::new(input, StreamAPIClientCodec);
+    let reader = FramedRead::new(output, StreamAPIClientCodec);
 
-    async fn process<
-        I: AsyncWrite + std::fmt::Debug + Send + Unpin,
-        O: AsyncRead + std::fmt::Debug + Send + Unpin,
-    >(
-        &mut self,
-        unique_id: i32,
-        input: I,
-        output: O,
-        mut incoming_commands: impl futures_util::Stream<Item = RequestMessage>
-            + std::marker::Send
-            + std::marker::Unpin,
-    ) -> Result<
-        (
-            impl Future<Output = Result<(), StreamError>>,
-            impl futures_util::Stream<Item = Result<ResponseMessage, StreamError>>,
-        ),
-        StreamError,
-    > {
-        let mut writer = FramedWrite::new(input, StreamAPIClientCodec);
-        let mut reader = FramedRead::new(output, StreamAPIClientCodec);
-
-        self.handshake(unique_id, &mut reader, &mut writer).await?;
-        // read commands and send them to the writer
-        let write_task = async move {
-            loop {
-                tracing::info!("Waiting for command");
-                let command = incoming_commands.next().await;
-                tracing::info!(command = ?command, "Sending command");
-                match command {
-                    Some(command) => {
-                        let _ = writer.send(command).await;
-                    }
-                    None => break,
-                }
-            }
-            tracing::error!("Done sending commands");
-            Err(StreamError::StreamProcessorMalfunction)
-        };
-
-        Ok((
-            async move {
-                let res = write_task.await.unwrap();
-                tracing::error!("Write task finished");
-                res
-            },
-            reader,
-        ))
-    }
-
-    #[tracing::instrument(level = "DEBUG", skip(self, reader, writer), ret, err)]
-    async fn handshake<
-        I: AsyncWrite + std::fmt::Debug + Send + Unpin,
-        O: AsyncRead + std::fmt::Debug + Send + Unpin,
-    >(
-        &mut self,
-        unique_id: i32,
-        reader: &mut FramedRead<O, StreamAPIClientCodec>,
-        writer: &mut FramedWrite<I, StreamAPIClientCodec>,
-    ) -> Result<(), StreamError> {
-        let mut rng = SmallRng::from_entropy();
+    // read commands and send them to the writer
+    let write_task = async move {
         loop {
-            match &mut self.state {
-                StreamState::PreAuth => {
-                    let data = next_msg(reader).await?;
-                    let Some(data) = data else { continue };
-                    if let ResponseMessage::Connection(connection_message) = data {
-                        if let Some(connection_id) = connection_message.connection_id {
-                            tracing::debug!(connection_id = ?connection_id, "Connection established");
-                            self.state = StreamState::SendAuth { connection_id };
-                            continue
-                        }
-                        tracing::error!("No connection id");
-                        return Err(StreamError::ConnectionIdNotPresent)
-                    }
-                    tracing::error!("Unexpected response");
-                    return Err(StreamError::UnexpectedResponse(format!("{:?}", data)))
+            tracing::info!("Waiting for command");
+            let command = incoming_commands.next().await;
+            tracing::info!(command = ?command, "Sending command");
+            match command {
+                Some(Ok(command)) => {
+                    let _ = writer.send(command);
                 }
-                StreamState::SendAuth { connection_id } => {
-                    let id = rng.gen();
-                    let authorization_message = RequestMessage::Authentication(
-                        authentication_message::AuthenticationMessage {
-                            id: Some(id),
-                            session: self.session_token.0.expose_secret().clone(),
-                            app_key: self.application_key.0.expose_secret().clone(),
-                        },
-                    );
-                    writer.send(authorization_message).await?;
-                    self.state = StreamState::AwaitStatus {
-                        connection_id: connection_id.clone(),
-                    };
-                }
-                StreamState::AwaitStatus { connection_id } => {
-                    let data = next_msg(reader).await?;
-                    let Some(data) = data else { continue };
-                    if let ResponseMessage::StatusMessage(ref status_message) = data {
-                        if status_message.connection_id.as_ref() == Some(connection_id) {
-                            tracing::debug!(connection_id = ?connection_id, "Authenticated");
-                            self.state = StreamState::Authenticated {
-                                connection_id: connection_id.clone(),
-                            };
-                            continue
-                        }
-                    }
-                    tracing::error!("Unexpected response");
-                    return Err(StreamError::UnexpectedResponse(format!("{:?}", data)))
-                }
-                StreamState::Authenticated { connection_id } => {
-                    tracing::info!(connection_id =? connection_id, "Handshake complete");
-                    break;
-                }
+                _ => break,
             }
         }
-        Ok(())
-    }
-}
+        tracing::error!("Done sending commands");
+        Err(StreamError::StreamProcessorMalfunction)
+    };
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum StreamState {
-    PreAuth,
-    SendAuth { connection_id: String },
-    AwaitStatus { connection_id: String },
-    Authenticated { connection_id: String },
+    Ok((
+        async move {
+            let res = write_task.await;
+            tracing::error!("Write task finished");
+            res
+        },
+        reader,
+    ))
 }
-
-pub struct StreamAPIClientCodec;
+pub(crate) struct StreamAPIClientCodec;
 
 impl Decoder for StreamAPIClientCodec {
     type Item = ResponseMessage;

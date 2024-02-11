@@ -1,8 +1,6 @@
 [workspace]
 resolver = "2"
-members = [
-  "crates/*",
-]
+members = ["crates/*"]
 
 [workspace.dependencies]
 # Our crates
@@ -16,7 +14,7 @@ betfair-typegen = { path = "crates/betfair-typegen" }
 # Utils
 rust_decimal = "1"
 rust_decimal_macros = "1"
-rand = {version = "0.8", features = ["small_rng"]}
+rand = { version = "0.8", features = ["small_rng"] }
 chrono = { version = "0.4", default-features = false, features = [
   "serde",
   "clock",
@@ -32,7 +30,7 @@ redact = { version = "0.1", features = ["serde"] }
 # Async
 tokio = { version = "1.0", features = ["full", "tracing"] }
 tokio-util = { version = "0.7", features = ["codec"] }
-tokio-stream = "0.1"
+tokio-stream = { version = "0.1", features = ["sync"] }
 tokio-rustls = "0.25"
 futures-concurrency = "7.4"
 futures-util = "0.3"

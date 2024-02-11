@@ -19,7 +19,7 @@ async fn successful_heartbeat() {
         )
         .await
         .unwrap();
-        async_task.await.unwrap();
+        async_task.await;
     });
 
     let connection = mock.process_next().await;

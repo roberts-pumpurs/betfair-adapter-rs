@@ -95,7 +95,7 @@ impl MarketSubscriber {
             })),
         });
         let mut w = self.stream_listener.write().await;
-        w.send_message(req);
+        w.send_message(req).unwrap();
         drop(w);
     }
 
@@ -117,7 +117,7 @@ impl MarketSubscriber {
             })),
         });
         let mut w = self.stream_listener.write().await;
-        w.send_message(req);
+        w.send_message(req).unwrap();
         drop(w);
     }
 

@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::convert::Infallible;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
@@ -11,7 +12,7 @@ use betfair_stream_types::request::heartbeat_message::HeartbeatMessage;
 use betfair_stream_types::request::market_subscription_message::{
     MarketDataFilter, MarketFilter, MarketSubscriptionMessage,
 };
-use betfair_stream_types::request::RequestMessage;
+use betfair_stream_types::request::{authentication_message, RequestMessage};
 use betfair_stream_types::response::market_change_message::{MarketChange, MarketChangeMessage};
 use betfair_stream_types::response::order_change_message::{OrderChangeMessage, OrderMarketChange};
 use betfair_stream_types::response::status_message::StatusCode;
@@ -19,12 +20,14 @@ use betfair_stream_types::response::{
     market_change_message, order_change_message, ResponseMessage,
 };
 use futures_concurrency::prelude::*;
-use futures_util::{Future, SinkExt, Stream};
+use futures_util::{pin_mut, AsyncRead, AsyncWrite, Future, FutureExt, SinkExt, Stream, StreamExt};
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
-use tokio_stream::wrappers::ReceiverStream;
+use tokio::sync::Notify;
+use tokio_stream::wrappers::BroadcastStream;
+use tokio_util::codec::{FramedRead, FramedWrite};
 
-use super::raw_stream_connection::RawStreamConnection;
+use super::raw_stream_connection::{self, StreamAPIClientCodec};
 use crate::provider::cache::tracker::{IncomingMessage, StreamStateTracker};
 use crate::provider::primitives::{MarketBookCache, OrderBookCache};
 use crate::StreamError;
@@ -33,101 +36,74 @@ use crate::StreamError;
 /// book caches
 #[derive(Debug)]
 pub struct StreamListener {
-    command_sender: tokio::sync::mpsc::Sender<RequestMessage>,
-    output_queue: futures::channel::mpsc::UnboundedSender<ExternalUpdates>,
+    /// Send data to the underlying stream
+    command_sender: tokio::sync::broadcast::Sender<RequestMessage>,
+    /// Notify whoever is interested in the updates
+    output_queue: tokio::sync::broadcast::Sender<ExternalUpdates>,
     rng: SmallRng,
     connections_available: Option<i32>,
     connection_id: Option<String>,
     tracker: StreamStateTracker,
+    application_key: ApplicationKey,
+    session_token: SessionToken,
     status: Status,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Status {
     Connected,
+    Reconnecting,
+    /// Fatal error where the underlying TCP connection needs to be rest
     Disconnected,
+    Authenticated,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum HeartbeatStrategy {
     None,
     Interval(Duration),
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum ExternalUpdates {
     Market(Vec<MarketBookCache>),
     Order(Vec<OrderBookCache>),
 }
 
 impl StreamListener {
-    #[tracing::instrument(skip(application_key, session_token, url), err)]
-    pub async fn new<'a>(
+    pub async fn new(
         application_key: ApplicationKey,
         session_token: SessionToken,
-        url: BetfairUrl<'a, betfair_adapter::Stream>,
+        url: BetfairUrl<'static, betfair_adapter::Stream>,
         hb: HeartbeatStrategy,
     ) -> Result<
         (
             Arc<tokio::sync::RwLock<Self>>,
-            Pin<Box<dyn Future<Output = Result<(), StreamError>> + Send>>,
-            futures::channel::mpsc::UnboundedReceiver<ExternalUpdates>,
+            impl Future<Output = ()>,
+            tokio::sync::broadcast::Receiver<ExternalUpdates>,
         ),
         StreamError,
     > {
-        let mut stream_wrapper = RawStreamConnection::new(application_key.into(), session_token.into());
-        let (command_sender, command_reader) = tokio::sync::mpsc::channel(5);
-        let (output_sender, output_reader) = futures::channel::mpsc::unbounded();
-        let mut api = Self::new_with_commands(command_sender.clone(), output_sender);
-        let unique_id = api.rng.gen::<i32>();
-        api.tracker.update_unique_id(unique_id);
+        let (command_sender, command_reader) = tokio::sync::broadcast::channel(100);
+        let (output_sender, output_reader) = tokio::sync::broadcast::channel(100);
+        let mut api = Self::new_with_commands(
+            command_sender.clone(),
+            output_sender,
+            application_key,
+            session_token,
+        );
+        api.tracker.update_unique_id(api.rng.gen());
         let api = Arc::new(tokio::sync::RwLock::new(api));
 
-        let host = url.url().host_str().unwrap();
-        let is_tls = url.url().scheme() == "https";
-        let port = url.url().port().unwrap_or(if is_tls { 443 } else { 80 });
-        let socket_addr = tokio::net::lookup_host((host, port)).await.unwrap().next();
-        let domain = url.url().domain();
-
-        match (is_tls, domain, socket_addr) {
-            (true, Some(domain), Some(socket_addr)) => {
-                let (write_to_wire, read) = stream_wrapper
-                    .connect_tls(
-                        unique_id,
-                        domain,
-                        socket_addr,
-                        ReceiverStream::new(command_reader),
-                    )
-                    .await
-                    .unwrap();
-
-                {
-                    let mut api = api.write().await;
-                    api.status = Status::Connected;
-                }
-                let async_task_2 = process(api.clone(), read, hb);
-                let async_task = Box::pin(write_to_wire.race(async_task_2));
-                Ok((api, async_task, output_reader))
-            }
-            (false, _, Some(socket_addr)) => {
-                let (write_to_wire, read) = stream_wrapper
-                    .connect_non_tls(unique_id, socket_addr, ReceiverStream::new(command_reader))
-                    .await
-                    .unwrap();
-                {
-                    let mut api = api.write().await;
-                    api.status = Status::Connected;
-                }
-                let async_task_2 = process(api.clone(), read, hb);
-                let async_task = Box::pin(write_to_wire.race(async_task_2));
-                Ok((api, async_task, output_reader))
-            }
-            _ => Err(StreamError::MisconfiguredStreamURL),
-        }
+        let async_task = connect(url, command_reader, api.clone(), hb).await;
+        Ok((api, async_task, output_reader))
     }
 
     fn new_with_commands(
-        command_sender: tokio::sync::mpsc::Sender<RequestMessage>,
-        output_queue: futures::channel::mpsc::UnboundedSender<ExternalUpdates>,
+        command_sender: tokio::sync::broadcast::Sender<RequestMessage>,
+        output_queue: tokio::sync::broadcast::Sender<ExternalUpdates>,
+        application_key: ApplicationKey,
+        session_token: SessionToken,
     ) -> StreamListener {
         Self {
             command_sender,
@@ -136,15 +112,10 @@ impl StreamListener {
             tracker: StreamStateTracker::new(),
             output_queue,
             rng: SmallRng::from_entropy(),
-            status: Status::Disconnected,
+            status: Status::Connected,
+            application_key,
+            session_token,
         }
-    }
-
-    /// Replace the output queue with a new one, returning the receiver for for the new one.
-    pub fn replace_queue(&mut self) -> futures::channel::mpsc::UnboundedReceiver<ExternalUpdates> {
-        let (tx, rx) = futures::channel::mpsc::unbounded();
-        self.output_queue = tx;
-        rx
     }
 
     async fn process_response_message(&mut self, msg: ResponseMessage) {
@@ -152,6 +123,14 @@ impl StreamListener {
         let updates = match msg {
             ResponseMessage::Connection(msg) => {
                 tracing::debug!(msg = ?msg, "Received connection message");
+                self.status = Status::Reconnecting;
+
+                let authorization_message = authentication_message::AuthenticationMessage {
+                    id: None,
+                    session: self.session_token.0.expose_secret().clone(),
+                    app_key: self.application_key.0.expose_secret().clone(),
+                };
+                let _ = self.send_message(RequestMessage::Authentication(authorization_message));
                 None
             }
             ResponseMessage::MarketChange(msg) => {
@@ -176,7 +155,7 @@ impl StreamListener {
                     ExternalUpdates::Order(msg.into_iter().cloned().collect())
                 }
             };
-            let _res = self.output_queue.feed(update).await;
+            let _res = self.output_queue.send(update);
             if let Some(publish_time) = publish_time {
                 self.tracker.clear_stale_cache(publish_time);
             }
@@ -204,28 +183,96 @@ impl StreamListener {
         if let Some(connection_id) = msg.connection_id {
             self.connection_id = Some(connection_id);
         }
+
+        if self.status == Status::Reconnecting {
+            self.status = Status::Authenticated;
+        }
     }
 
     /// Send a message to the Betfair stream.
     /// It will generate a unique id for the message
-    pub fn send_message(&mut self, mut msg: RequestMessage) {
+    pub fn send_message(
+        &mut self,
+        mut msg: RequestMessage,
+    ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
         let id = self.rng.gen();
         msg.set_id(id);
         self.tracker.update_unique_id(id);
-        self.command_sender.try_send(msg).expect("Unable to send message to the underlying stream!");
+        self.command_sender.send(msg).map(|_x| ())
     }
 }
 
-async fn process(
+async fn connect(
+    url: BetfairUrl<'static, betfair_adapter::Stream>,
+    command_reader: tokio::sync::broadcast::Receiver<RequestMessage>,
     api: Arc<tokio::sync::RwLock<StreamListener>>,
-    read: impl futures_util::Stream<Item = Result<ResponseMessage, StreamError>>,
     hb: HeartbeatStrategy,
-) -> Result<(), StreamError> {
-    let hb_loop = create_heartbeat_loop(hb, api.clone()).await;
-    let write_loop = create_write_loop(read, api.clone()).await;
-    hb_loop.race(write_loop).await;
+) -> impl Future<Output = ()> {
+    let reconnect_notifier = Arc::new(tokio::sync::Notify::new());
 
-    Err(StreamError::StreamProcessorMalfunction)
+    let url = url.clone();
+    let async_task = async move {
+        let async_task = loop {
+            if let Ok(conn) = connect_and_process(
+                url.clone(),
+                command_reader.resubscribe(),
+                api.clone(),
+                hb.clone(),
+                reconnect_notifier.clone(),
+            )
+            .await
+            {
+                break conn;
+            } else {
+                // Sleep for 5 seconds if we cannot connect to the stream
+                tokio::time::sleep(Duration::from_secs(5)).await;
+            }
+        };
+        let mut async_task = Box::pin(async_task);
+
+        loop {
+            tokio::select! {
+                _ = reconnect_notifier.notified() => {
+                    tracing::info!("Reconnecting to the stream!");
+                    let connection = connect_and_process(
+                        url.clone(),
+                        command_reader.resubscribe(),
+                        api.clone(),
+                        hb.clone(),
+                        reconnect_notifier.clone()
+                    ).await;
+                    if let Ok(connection) = connection {
+                        async_task = Box::pin(connection);
+                    } else {
+                        tracing::error!("Error reconnecting to the stream!");
+                    }
+                }
+                _res = &mut async_task => {
+                    tracing::info!("Stream has been closed");
+                }
+            }
+        }
+    };
+    async_task
+}
+
+async fn connect_and_process(
+    url: BetfairUrl<'_, betfair_adapter::Stream>,
+    command_reader: tokio::sync::broadcast::Receiver<RequestMessage>,
+    api: Arc<tokio::sync::RwLock<StreamListener>>,
+    hb: HeartbeatStrategy,
+    reconnect_notifier: Arc<Notify>,
+) -> Result<impl Future<Output = Result<(), StreamError>>, StreamError> {
+    let (write_to_socket, read) = raw_stream_connection::connect(
+        url.clone(),
+        BroadcastStream::new(command_reader.resubscribe()),
+    )
+    .await?;
+    let async_task = write_to_socket
+        .race(create_heartbeat_loop(hb, api.clone()).map(|_| Ok(())))
+        .race(create_write_loop(read, api.clone()).map(|_| Ok(())))
+        .race(create_reconnect_loop(reconnect_notifier, api.clone()).map(|_| Ok(())));
+    Ok(async_task)
 }
 
 /// Send a heartbeat message to the Betfair stream every `period`
@@ -244,7 +291,14 @@ async fn create_heartbeat_loop(
                 loop {
                     interval.tick().await;
                     let mut api = api_c.write().await;
-                    api.send_message(RequestMessage::Heartbeat(HeartbeatMessage { id: None }));
+
+                    // Only send a heartbeat if we are connected
+                    if api.status != Status::Authenticated {
+                        continue;
+                    }
+
+                    let _ =
+                        api.send_message(RequestMessage::Heartbeat(HeartbeatMessage { id: None }));
                     drop(api)
                 }
             }
@@ -257,8 +311,6 @@ async fn create_write_loop(
     read: impl Stream<Item = Result<ResponseMessage, StreamError>>,
     api_c: Arc<tokio::sync::RwLock<StreamListener>>,
 ) -> impl Future<Output = ()> {
-    use futures_util::StreamExt;
-
     async move {
         tokio::pin!(read);
         while let Some(msg) = read.next().await {
@@ -270,9 +322,51 @@ async fn create_write_loop(
                     drop(api)
                 }
                 Err(err) => {
-                    tracing::error!(err = ?err, "Error reading from stream");
+                    let mut api = api_c.write().await;
+                    api.status = Status::Disconnected;
+                    drop(api);
+
+                    tracing::error!(err = ?err, "Error reading from stream! Disconnecting!");
                 }
             }
+        }
+    }
+}
+
+/// TODO list for reconnecting to the stream:
+/// - [ ] **Exponential Backoff**: Implement an exponential backoff strategy for retries.
+/// - [ ] **Jitter**: Add jitter to the retry intervals.
+/// - [ ] **Retry Limits**: Set a maximum number of retries.
+/// - [ ] **Circuit Breaker Pattern**: Use a circuit breaker for failing services.
+/// - [ ] **Status Code Handling**: Handle different HTTP status codes appropriately.
+/// - [ ] **Logging and Monitoring**: Log retries and monitor the API service.
+/// - [ ] **Configurability**: Make retry parameters configurable.
+/// - [ ] **Network Checks**: Check network availability before retrying.
+/// - [ ] **Thread Safety**: Ensure reconnection logic is thread-safe.
+/// - [ ] **Fallback Strategies**: Have fallback strategies like using cached data.
+/// - [ ] **Timeouts**: Implement request timeouts.
+/// - [ ] **Async and Non-Blocking**: Make reconnection logic asynchronous and non-blocking.
+/// - [ ] **User Notification**: Inform users about reconnection attempts.
+/// - [ ] **Load Balancing**: Use load balancing for request distribution.
+/// - [ ] **API Versioning**: Be aware of API version changes.
+async fn create_reconnect_loop(
+    reconnect_notifier: Arc<Notify>,
+    api_c: Arc<tokio::sync::RwLock<StreamListener>>,
+) -> impl Future<Output = ()> {
+    async move {
+        // Give 20 seconds for the initial stream to connect before we start monitoring for
+        // reconnections
+        tokio::time::sleep(Duration::from_secs(20)).await;
+        loop {
+            // sleep for 10 sec
+            tokio::time::sleep(Duration::from_secs(10)).await;
+
+            let api = api_c.read().await;
+            if api.status == Status::Disconnected {
+                tracing::info!("Restart the whole stream");
+                reconnect_notifier.notify_one();
+            }
+            drop(api);
         }
     }
 }
