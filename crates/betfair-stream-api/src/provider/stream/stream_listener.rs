@@ -1,3 +1,4 @@
+use core::panic;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::convert::Infallible;
@@ -52,7 +53,6 @@ pub struct StreamListener {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Status {
     Connected,
-    Reconnecting,
     /// Fatal error where the underlying TCP connection needs to be rest
     Disconnected,
     Authenticated,
@@ -121,9 +121,10 @@ impl StreamListener {
     async fn process_response_message(&mut self, msg: ResponseMessage) {
         let mut publish_time = None;
         let updates = match msg {
-            ResponseMessage::Connection(msg) => {
-                tracing::debug!(msg = ?msg, "Received connection message");
-                self.status = Status::Reconnecting;
+            ResponseMessage::Connection(_msg) => {
+                // TODO store the _msg.connection_id and _msg.id, use it as Display properties of
+                // the client
+                self.status = Status::Connected;
 
                 let authorization_message = authentication_message::AuthenticationMessage {
                     id: None,
@@ -162,6 +163,7 @@ impl StreamListener {
         }
     }
 
+    #[tracing::instrument(skip(self))]
     fn handle_status_message(
         &mut self,
         msg: betfair_stream_types::response::status_message::StatusMessage,
@@ -184,7 +186,7 @@ impl StreamListener {
             self.connection_id = Some(connection_id);
         }
 
-        if self.status == Status::Reconnecting {
+        if self.status != Status::Disconnected {
             self.status = Status::Authenticated;
         }
     }
@@ -218,38 +220,44 @@ async fn connect(
                 command_reader.resubscribe(),
                 api.clone(),
                 hb.clone(),
-                reconnect_notifier.clone(),
             )
             .await
             {
                 break conn;
-            } else {
-                // Sleep for 5 seconds if we cannot connect to the stream
-                tokio::time::sleep(Duration::from_secs(5)).await;
             }
+            // Sleep for 5 seconds if we cannot connect to the stream
+            tokio::time::sleep(Duration::from_secs(5)).await;
+            tracing::warn!("Reconnecting to the betfair stream during initial setup");
         };
         let mut async_task = Box::pin(async_task);
 
         loop {
-            tokio::select! {
-                _ = reconnect_notifier.notified() => {
-                    tracing::info!("Reconnecting to the stream!");
-                    let connection = connect_and_process(
-                        url.clone(),
-                        command_reader.resubscribe(),
-                        api.clone(),
-                        hb.clone(),
-                        reconnect_notifier.clone()
-                    ).await;
-                    if let Ok(connection) = connection {
-                        async_task = Box::pin(connection);
-                    } else {
-                        tracing::error!("Error reconnecting to the stream!");
-                    }
+            let mut connection = None;
+            let _ = async {
+                // Reconnect if the reconnect_notifier is notified
+                reconnect_notifier.notified().await;
+                tracing::info!("Reconnecting to the stream!");
+                let new_connection = connect_and_process(
+                    url.clone(),
+                    command_reader.resubscribe(),
+                    api.clone(),
+                    hb.clone(),
+                )
+                .await;
+                if let Ok(new_connection) = new_connection {
+                    connection = Some(new_connection);
+                } else {
+                    tracing::error!("Error reconnecting to the stream!");
                 }
-                _res = &mut async_task => {
-                    tracing::info!("Stream has been closed");
-                }
+                Ok(())
+            }
+            .race(&mut async_task)
+            .race(create_reconnect_loop(reconnect_notifier.clone(), api.clone()).map(|_| Ok(())))
+            .await;
+
+            // Pin the new connection future if it's been set
+            if let Some(connection) = connection {
+                async_task = Box::pin(connection);
             }
         }
     };
@@ -261,7 +269,6 @@ async fn connect_and_process(
     command_reader: tokio::sync::broadcast::Receiver<RequestMessage>,
     api: Arc<tokio::sync::RwLock<StreamListener>>,
     hb: HeartbeatStrategy,
-    reconnect_notifier: Arc<Notify>,
 ) -> Result<impl Future<Output = Result<(), StreamError>>, StreamError> {
     let (write_to_socket, read) = raw_stream_connection::connect(
         url.clone(),
@@ -271,12 +278,14 @@ async fn connect_and_process(
     let async_task = write_to_socket
         .race(create_heartbeat_loop(hb, api.clone()).map(|_| Ok(())))
         .race(create_write_loop(read, api.clone()).map(|_| Ok(())))
-        .race(create_reconnect_loop(reconnect_notifier, api.clone()).map(|_| Ok(())));
+        .fuse();
+
     Ok(async_task)
 }
 
 /// Send a heartbeat message to the Betfair stream every `period`
-async fn create_heartbeat_loop(
+#[tracing::instrument(skip(api_c))]
+fn create_heartbeat_loop(
     hb: HeartbeatStrategy,
     api_c: Arc<tokio::sync::RwLock<StreamListener>>,
 ) -> impl Future<Output = ()> {
@@ -285,7 +294,7 @@ async fn create_heartbeat_loop(
             HeartbeatStrategy::None => loop {
                 std::future::pending::<()>().await;
             },
-            HeartbeatStrategy::Interval(period) => {
+            HeartbeatStrategy::Interval(period) => loop {
                 let mut interval = tokio::time::interval(period);
                 interval.reset();
                 loop {
@@ -301,19 +310,21 @@ async fn create_heartbeat_loop(
                         api.send_message(RequestMessage::Heartbeat(HeartbeatMessage { id: None }));
                     drop(api)
                 }
-            }
+            },
         };
     }
 }
 
 /// Read from the Betfair stream and process the messages, send them away!
-async fn create_write_loop(
+#[tracing::instrument(skip(api_c, read))]
+fn create_write_loop(
     read: impl Stream<Item = Result<ResponseMessage, StreamError>>,
     api_c: Arc<tokio::sync::RwLock<StreamListener>>,
 ) -> impl Future<Output = ()> {
     async move {
         tokio::pin!(read);
         while let Some(msg) = read.next().await {
+            tracing::info!("GOT MSG!{:#?}", msg);
             match msg {
                 Ok(msg) => {
                     tracing::debug!(msg = ?msg, "Received message");
@@ -342,18 +353,16 @@ async fn create_write_loop(
 /// - [ ] **Logging and Monitoring**: Log retries and monitor the API service.
 /// - [ ] **Configurability**: Make retry parameters configurable.
 /// - [ ] **Network Checks**: Check network availability before retrying.
-/// - [ ] **Thread Safety**: Ensure reconnection logic is thread-safe.
-/// - [ ] **Fallback Strategies**: Have fallback strategies like using cached data.
 /// - [ ] **Timeouts**: Implement request timeouts.
 /// - [ ] **Async and Non-Blocking**: Make reconnection logic asynchronous and non-blocking.
 /// - [ ] **User Notification**: Inform users about reconnection attempts.
-/// - [ ] **Load Balancing**: Use load balancing for request distribution.
-/// - [ ] **API Versioning**: Be aware of API version changes.
-async fn create_reconnect_loop(
+#[tracing::instrument(skip(api_c, reconnect_notifier))]
+fn create_reconnect_loop(
     reconnect_notifier: Arc<Notify>,
     api_c: Arc<tokio::sync::RwLock<StreamListener>>,
 ) -> impl Future<Output = ()> {
     async move {
+        // TODO move these intervals to persistent state (api_c) maybe?
         // Give 20 seconds for the initial stream to connect before we start monitoring for
         // reconnections
         tokio::time::sleep(Duration::from_secs(20)).await;

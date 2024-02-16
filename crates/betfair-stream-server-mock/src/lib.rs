@@ -1,9 +1,9 @@
-#![warn(missing_docs, unreachable_pub, unused_crate_dependencies)]
-#![deny(unused_must_use, rust_2018_idioms)]
-#![doc(test(
-    no_crate_inject,
-    attr(deny(warnings, rust_2018_idioms), allow(dead_code, unused_variables))
-))]
+// #![warn(missing_docs, unreachable_pub, unused_crate_dependencies)]
+// #![deny(unused_must_use, rust_2018_idioms)]
+// #![doc(test(
+//     no_crate_inject,
+//     attr(deny(warnings, rust_2018_idioms), allow(dead_code, unused_variables))
+// ))]
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -14,7 +14,6 @@ use betfair_stream_types::response::connection_message::ConnectionMessage;
 use betfair_stream_types::response::status_message::StatusMessage;
 use betfair_stream_types::response::ResponseMessage;
 use futures_util::{SinkExt, StreamExt};
-use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_util::bytes;
 use tokio_util::codec::{Decoder, Encoder, Framed};
@@ -79,7 +78,9 @@ impl ClientStateW {
                     ClientState::Init(ConnState::WaitingForAuthInfo)
                 }
                 ClientState::Init(ConnState::WaitingForAuthInfo) => {
-                    let msg = socket.next().await.transpose().unwrap();
+                    tracing::warn!("WAITING FOR MESSAGE");
+                    let msg = socket.next().await.transpose().expect("client stream closed!");
+                    tracing::info!("ConnState::WaitingForAuthInfo: Received message {msg:?}");
                     let Some(msg) = msg else { continue };
                     let RequestMessage::Authentication(AuthenticationMessage {
                         id,

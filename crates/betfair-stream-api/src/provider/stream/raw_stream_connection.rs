@@ -11,7 +11,8 @@ use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
-use tokio_stream::wrappers::{errors::BroadcastStreamRecvError, ReceiverStream};
+use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
+use tokio_stream::wrappers::ReceiverStream;
 use tokio_util::bytes;
 use tokio_util::codec::{Decoder, Encoder, FramedRead, FramedWrite};
 
@@ -30,6 +31,7 @@ pub(crate) async fn connect<'a>(
     ),
     StreamError,
 > {
+    // TODO get rid of the unwraps
     let host = url.url().host_str().unwrap();
     let is_tls = url.url().scheme() == "https";
     let port = url.url().port().unwrap_or(if is_tls { 443 } else { 80 });
@@ -37,13 +39,11 @@ pub(crate) async fn connect<'a>(
     let domain = url.url().domain();
     let result = match (is_tls, domain, socket_addr) {
         (true, Some(domain), Some(socket_addr)) => {
-            let (write_to_wire, read) = connect_tls(domain, socket_addr, command_reader)
-                .await
-                .unwrap();
+            let (write_to_wire, read) = connect_tls(domain, socket_addr, command_reader).await?;
             Ok((write_to_wire.boxed(), read.boxed()))
         }
         (false, _, Some(socket_addr)) => {
-            let (write_to_wire, read) = connect_non_tls(socket_addr, command_reader).await.unwrap();
+            let (write_to_wire, read) = connect_non_tls(socket_addr, command_reader).await?;
             Ok((write_to_wire.boxed(), read.boxed()))
         }
         _ => Err(StreamError::MisconfiguredStreamURL),
@@ -114,12 +114,12 @@ async fn process<
     // read commands and send them to the writer
     let write_task = async move {
         loop {
-            tracing::info!("Waiting for command");
+            tracing::trace!("Waiting for command");
             let command = incoming_commands.next().await;
             tracing::info!(command = ?command, "Sending command");
             match command {
                 Some(Ok(command)) => {
-                    let _ = writer.send(command);
+                    let _ = writer.send(command).await;
                 }
                 _ => break,
             }
@@ -191,13 +191,6 @@ fn tls_connector() -> tokio_rustls::TlsConnector {
         .with_root_certificates(roots)
         .with_no_client_auth();
     TlsConnector::from(std::sync::Arc::new(config))
-}
-
-async fn next_msg<O: AsyncRead + std::fmt::Debug + Send + Unpin>(
-    reader: &mut FramedRead<O, StreamAPIClientCodec>,
-) -> Result<Option<ResponseMessage>, StreamError> {
-    let data = reader.next().await.transpose()?;
-    Ok(data)
 }
 
 #[cfg(test)]

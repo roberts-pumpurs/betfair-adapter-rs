@@ -9,7 +9,7 @@ async fn successful_handshake() {
     let mock = StreamAPIBackend::new().await;
     let url = mock.url.clone();
 
-    let h1 = tokio::spawn(async move {
+    let client_task = tokio::spawn(async move {
         let (_client, async_task, _output) = betfair_stream_api::StreamListener::new(
             ApplicationKey::new("app_key".to_string()),
             SessionToken::new("session_token".to_string()),
@@ -24,14 +24,14 @@ async fn successful_handshake() {
     let connection = mock.process_next().await;
     let conn_state = connection.state.clone();
 
-    let h2 = tokio::spawn(async move {
+    let mock_server = tokio::spawn(async move {
         connection.process().await;
     });
 
     // Sleep for 1 second to allow the connection to be established
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-    assert!(!h1.is_finished());
-    assert!(!h2.is_finished());
+    assert!(!client_task.is_finished(), "the client should not be finished");
+    assert!(!mock_server.is_finished(), "the server should not be finished");
     let conn_state = conn_state.lock().await;
     assert_eq!(
         *conn_state,
