@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use super::available_cache::Available;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub(crate) struct OrderBookRunner {
+pub struct OrderBookRunner {
     market_id: MarketId,
     selection_id: SelectionId,
     matched_lays: Available<UpdateSet2>,

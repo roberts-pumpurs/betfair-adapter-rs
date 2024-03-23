@@ -10,10 +10,11 @@ use super::orderbook_runner_cache::OrderBookRunner;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct OrderBookCache {
-    market_id: MarketId,
+    pub market_id: MarketId,
     publish_time: DateTime<Utc>,
     closed: Option<bool>,
-    runners: HashMap<(SelectionId, Option<Handicap>), OrderBookRunner>,
+    /// cache of orders placed on a runner
+    pub runners: HashMap<(SelectionId, Option<Handicap>), OrderBookRunner>,
 }
 
 impl OrderBookCache {
