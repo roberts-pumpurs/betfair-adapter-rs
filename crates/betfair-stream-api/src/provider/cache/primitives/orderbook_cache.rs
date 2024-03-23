@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
+use betfair_adapter::betfair_types::handicap::Handicap;
 use betfair_adapter::betfair_types::types::sports_aping::{MarketId, SelectionId};
-use betfair_adapter::rust_decimal::Decimal;
 use betfair_stream_types::response::order_change_message::OrderMarketChange;
 use chrono::{DateTime, Utc};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use super::orderbook_runner_cache::OrderBookRunner;
 
@@ -13,7 +13,7 @@ pub struct OrderBookCache {
     market_id: MarketId,
     publish_time: DateTime<Utc>,
     closed: Option<bool>,
-    runners: HashMap<(SelectionId, Option<Decimal>), OrderBookRunner>,
+    runners: HashMap<(SelectionId, Option<Handicap>), OrderBookRunner>,
 }
 
 impl OrderBookCache {

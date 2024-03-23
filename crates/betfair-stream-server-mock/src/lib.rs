@@ -79,7 +79,11 @@ impl ClientStateW {
                 }
                 ClientState::Init(ConnState::WaitingForAuthInfo) => {
                     tracing::warn!("WAITING FOR MESSAGE");
-                    let msg = socket.next().await.transpose().expect("client stream closed!");
+                    let msg = socket
+                        .next()
+                        .await
+                        .transpose()
+                        .expect("client stream closed!");
                     tracing::info!("ConnState::WaitingForAuthInfo: Received message {msg:?}");
                     let Some(msg) = msg else { continue };
                     let RequestMessage::Authentication(AuthenticationMessage {

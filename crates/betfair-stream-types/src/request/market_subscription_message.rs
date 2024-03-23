@@ -1,5 +1,3 @@
-use std::path::Display;
-
 use betfair_types::types::sports_aping::{
     CountryCode, EventId, EventTypeId, MarketId, MarketType, Venue,
 };
@@ -68,15 +66,14 @@ impl std::fmt::Display for InvalidLadderLevel {
     }
 }
 
-#[derive(
-    Clone, Debug, PartialEq, PartialOrd, Eq, Default, Serialize, Deserialize,
-)]
-// For depth-based ladders the number of levels to send (1 to 10). 1 is best price to back or lay etc.
+#[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Default, Serialize, Deserialize)]
+// For depth-based ladders the number of levels to send (1 to 10). 1 is best price to back or lay
+// etc.
 pub struct LadderLevel(u8);
 
 impl LadderLevel {
     pub fn new(level: u8) -> Result<Self, InvalidLadderLevel> {
-        if level > 10 || level < 1 {
+        if !(1..=10).contains(&level) {
             return Err(InvalidLadderLevel)
         };
 

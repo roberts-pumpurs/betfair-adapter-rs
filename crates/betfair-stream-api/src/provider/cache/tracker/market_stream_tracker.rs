@@ -1,30 +1,29 @@
 use std::collections::HashMap;
 
 use betfair_adapter::betfair_types::types::sports_aping::MarketId;
-use betfair_stream_types::response::market_change_message::{MarketChange, MarketChangeMessage};
-use betfair_stream_types::response::{Clock, InitialClock};
+use betfair_stream_types::response::market_change_message::MarketChangeMessage;
 
 use super::HasFullImage;
 use crate::provider::primitives::MarketBookCache;
 
 #[derive(Debug)]
-pub struct MarketStreamTracker {
+pub(crate) struct MarketStreamTracker {
     market_state: HashMap<MarketId, MarketBookCache>,
     updates_processed: u64,
 }
 
 impl MarketStreamTracker {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             market_state: HashMap::new(),
             updates_processed: 0,
         }
     }
 
-    pub fn process<'a>(
-        &'a mut self,
+    pub(crate) fn process(
+        &mut self,
         msg: MarketChangeMessage,
-    ) -> (Option<Vec<&'a MarketBookCache>>, HasFullImage) {
+    ) -> (Option<Vec<&MarketBookCache>>, HasFullImage) {
         let mut updated_caches: Vec<&MarketBookCache> = Vec::new();
         let mut img = HasFullImage(false);
         let Some(publish_time) = msg.publish_time else {
@@ -62,7 +61,7 @@ impl MarketStreamTracker {
                     continue;
                 };
 
-                updated_caches.push(&*market);
+                updated_caches.push(market);
                 self.updates_processed += 1;
             }
         }
@@ -74,14 +73,9 @@ impl MarketStreamTracker {
         }
     }
 
-    pub fn clear_stale_cache(&mut self, publish_time: chrono::DateTime<chrono::Utc>) {
+    pub(crate) fn clear_stale_cache(&mut self, publish_time: chrono::DateTime<chrono::Utc>) {
         let max_cache_age = chrono::Duration::hours(8);
-        self.market_state.retain(|_, v| {
-            if v.is_closed() && (publish_time - v.publish_time()) > max_cache_age {
-                false
-            } else {
-                true
-            }
-        });
+        self.market_state
+            .retain(|_, v| !(v.is_closed() && (publish_time - v.publish_time()) > max_cache_age));
     }
 }

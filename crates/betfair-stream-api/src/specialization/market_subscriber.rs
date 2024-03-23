@@ -6,11 +6,12 @@ use betfair_stream_types::request::market_subscription_message::{
     Fields, LadderLevel, MarketDataFilter, MarketFilter, MarketSubscriptionMessage,
 };
 use betfair_stream_types::request::RequestMessage;
-use betfair_stream_types::response::market_change_message::{MarketChange, MarketChangeMessage};
+use betfair_stream_types::response::market_change_message::MarketChangeMessage;
 
 use crate::StreamListener;
 
-/// A warpper around a `StreamListener` that allows subscribing to markets with a somewhat ergonomic API.
+/// A warpper around a `StreamListener` that allows subscribing to markets with a somewhat ergonomic
+/// API.
 pub struct MarketSubscriber {
     stream_listener: std::sync::Arc<tokio::sync::RwLock<StreamListener>>,
     filter: MarketFilter,
@@ -51,9 +52,8 @@ impl MarketSubscriber {
         rx
     }
 
-
     /// Unsubscribe from a market.
-    pub async fn unsubscribe_from_market(&mut self, market_ids: MarketId)  {
+    pub async fn unsubscribe_from_market(&mut self, market_ids: MarketId) {
         let _value = self.market_mpsc.remove(&market_ids);
 
         if self.market_mpsc.is_empty() {

@@ -1,18 +1,14 @@
-use std::borrow::Cow;
 use std::net::SocketAddr;
 use std::pin::Pin;
 
-use betfair_adapter::{ApplicationKey, BetfairUrl, SessionToken};
-use betfair_stream_types::request::{authentication_message, RequestMessage};
+use betfair_adapter::BetfairUrl;
+use betfair_stream_types::request::RequestMessage;
 use betfair_stream_types::response::ResponseMessage;
 use futures_util::sink::SinkExt;
 use futures_util::{Future, FutureExt, Stream, StreamExt};
-use rand::rngs::SmallRng;
-use rand::{Rng, SeedableRng};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
 use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
-use tokio_stream::wrappers::ReceiverStream;
 use tokio_util::bytes;
 use tokio_util::codec::{Decoder, Encoder, FramedRead, FramedWrite};
 

@@ -4,7 +4,7 @@ mod order_stream_tracker;
 use betfair_stream_types::response::market_change_message::MarketChangeMessage;
 use betfair_stream_types::response::order_change_message::OrderChangeMessage;
 use betfair_stream_types::response::{
-    ChangeType, Clock, DataChange, DatasetChangeMessage, InitialClock, ResponseMessage,
+    ChangeType, Clock, DataChange, DatasetChangeMessage, InitialClock,
 };
 use serde::de::DeserializeOwned;
 
@@ -14,7 +14,7 @@ use super::primitives::{MarketBookCache, OrderBookCache};
 
 /// Separate stream struct to hold market/order caches
 #[derive(Debug)]
-pub struct StreamStateTracker {
+pub(crate) struct StreamStateTracker {
     pub(crate) stream_id: Option<u64>,
     pub(crate) update_clk: Option<Clock>,
     pub(crate) max_latency_ms: Option<u64>,
@@ -26,20 +26,20 @@ pub struct StreamStateTracker {
     pub(crate) order_stream_tracker: OrderStreamTracker,
 }
 
-pub enum Updates<'a> {
+pub(crate) enum Updates<'a> {
     Market(Vec<&'a MarketBookCache>),
     Order(Vec<&'a OrderBookCache>),
 }
 
-pub enum IncomingMessage {
+pub(crate) enum IncomingMessage {
     Market(MarketChangeMessage),
     Order(OrderChangeMessage),
 }
 
-pub struct HasFullImage(pub bool);
+pub(crate) struct HasFullImage(pub(crate) bool);
 
 impl StreamStateTracker {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             stream_id: None,
             update_clk: None,
@@ -53,14 +53,14 @@ impl StreamStateTracker {
         }
     }
 
-    pub fn update_unique_id(&mut self, unique_id: i32) {
+    pub(crate) fn update_unique_id(&mut self, unique_id: i32) {
         self.unique_id = Some(unique_id);
     }
 
-    pub fn calculate_updates<'a>(&'a mut self, msg: IncomingMessage) -> Option<Updates<'a>> {
+    pub(crate) fn calculate_updates(&mut self, msg: IncomingMessage) -> Option<Updates<'_>> {
         let change_type = match &msg {
-            IncomingMessage::Market(msg) => msg.change_type.clone(),
-            IncomingMessage::Order(msg) => msg.change_type.clone(),
+            IncomingMessage::Market(msg) => msg.change_type,
+            IncomingMessage::Order(msg) => msg.change_type,
         };
 
         match change_type {
@@ -71,7 +71,7 @@ impl StreamStateTracker {
         }
     }
 
-    fn on_subscribe<'a>(&'a mut self, msg: IncomingMessage) -> (Option<Updates<'a>>, HasFullImage) {
+    fn on_subscribe(&mut self, msg: IncomingMessage) -> (Option<Updates<'_>>, HasFullImage) {
         self.update_clock_global(&msg);
 
         let res = match msg {
@@ -82,21 +82,18 @@ impl StreamStateTracker {
         res
     }
 
-    fn on_resubscribe<'a>(
-        &'a mut self,
-        msg: IncomingMessage,
-    ) -> (Option<Updates<'a>>, HasFullImage) {
+    fn on_resubscribe(&mut self, msg: IncomingMessage) -> (Option<Updates<'_>>, HasFullImage) {
         self.on_update(msg)
     }
 
-    fn on_update<'a>(&'a mut self, msg: IncomingMessage) -> (Option<Updates<'a>>, HasFullImage) {
+    fn on_update(&mut self, msg: IncomingMessage) -> (Option<Updates<'_>>, HasFullImage) {
         if self.update_clk.is_some() {
             self.update_clock_global(&msg);
         }
 
         let publish_time = match &msg {
-            IncomingMessage::Market(msg) => msg.publish_time.clone(),
-            IncomingMessage::Order(msg) => msg.publish_time.clone(),
+            IncomingMessage::Market(msg) => msg.publish_time,
+            IncomingMessage::Order(msg) => msg.publish_time,
         };
 
         match (publish_time, self.max_latency_ms) {
@@ -120,12 +117,12 @@ impl StreamStateTracker {
         res
     }
 
-    fn on_heartbeat<'a>(&'a mut self, msg: IncomingMessage) -> (Option<Updates<'a>>, HasFullImage) {
+    fn on_heartbeat(&mut self, msg: IncomingMessage) -> (Option<Updates<'_>>, HasFullImage) {
         self.update_clock_global(&msg);
         (None, HasFullImage(false))
     }
 
-    pub fn clear_stale_cache(&mut self, publish_time: chrono::DateTime<chrono::Utc>) {
+    pub(crate) fn clear_stale_cache(&mut self, publish_time: chrono::DateTime<chrono::Utc>) {
         self.market_stream_tracker.clear_stale_cache(publish_time);
         self.order_stream_tracker.clear_stale_cache(publish_time);
     }
@@ -133,10 +130,10 @@ impl StreamStateTracker {
     fn update_clock_global(&mut self, msg: &IncomingMessage) {
         match msg {
             IncomingMessage::Market(msg) => {
-                self.update_clk(&msg);
+                self.update_clk(msg);
             }
             IncomingMessage::Order(msg) => {
-                self.update_clk(&msg);
+                self.update_clk(msg);
             }
         };
     }
@@ -153,21 +150,21 @@ impl StreamStateTracker {
         self.time_updated = chrono::Utc::now();
     }
 
-    fn process_market_change<'a>(
-        &'a mut self,
+    fn process_market_change(
+        &mut self,
         msg: MarketChangeMessage,
     ) -> (Option<Updates<'_>>, HasFullImage) {
         let res = self.market_stream_tracker.process(msg);
-        let updates = res.0.map(|x| Updates::Market(x));
+        let updates = res.0.map(Updates::Market);
         (updates, res.1)
     }
 
-    fn process_order_change<'a>(
-        &'a mut self,
+    fn process_order_change(
+        &mut self,
         msg: OrderChangeMessage,
     ) -> (Option<Updates<'_>>, HasFullImage) {
         let res = self.order_stream_tracker.process(msg);
-        let updates = res.0.map(|x| Updates::Order(x));
+        let updates = res.0.map(Updates::Order);
         (updates, res.1)
     }
 }

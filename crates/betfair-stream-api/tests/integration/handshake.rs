@@ -1,4 +1,4 @@
-use betfair_adapter::{ApplicationKey, BetfairUrl, SessionToken};
+use betfair_adapter::{ApplicationKey, SessionToken};
 use betfair_stream_api::HeartbeatStrategy;
 use betfair_stream_server_mock::{ClientState, StreamAPIBackend, SubSate};
 
@@ -30,8 +30,14 @@ async fn successful_handshake() {
 
     // Sleep for 1 second to allow the connection to be established
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-    assert!(!client_task.is_finished(), "the client should not be finished");
-    assert!(!mock_server.is_finished(), "the server should not be finished");
+    assert!(
+        !client_task.is_finished(),
+        "the client should not be finished"
+    );
+    assert!(
+        !mock_server.is_finished(),
+        "the server should not be finished"
+    );
     let conn_state = conn_state.lock().await;
     assert_eq!(
         *conn_state,

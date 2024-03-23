@@ -99,7 +99,6 @@ pub struct Clock(pub String);
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct InitialClock(pub String);
 
-
 impl<'de, T> Deserialize<'de> for DatasetChangeMessage<T>
 where
     T: DeserializeOwned + DataChange<T>,
@@ -128,12 +127,11 @@ where
             publish_time: v
                 .get("pt")
                 .and_then(|pt| pt.as_i64())
-                .map(|pt| Utc.timestamp_millis_opt(pt).latest())
-                .flatten(),
+                .and_then(|pt| Utc.timestamp_millis_opt(pt).latest()),
             initial_clock: v
                 .get("initialClk")
                 .and_then(|ic| ic.as_str())
-                .map(|ic| InitialClock( ic.to_string())),
+                .map(|ic| InitialClock(ic.to_string())),
             data,
             conflate_ms: v.get("conflateMs").and_then(|cm| cm.as_i64()),
             segment_type: v

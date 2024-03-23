@@ -1,4 +1,4 @@
-use std::ops::{Add, Deref, Div};
+use std::ops::{Add, Deref, Div, Mul, Sub};
 
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -28,6 +28,26 @@ impl Add for Price {
         let lhs = self.0;
         let rhs = rhs.0;
         Self(lhs + rhs)
+    }
+}
+
+impl Sub for Price {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        let lhs = self.0;
+        let rhs = rhs.0;
+        Self(lhs - rhs)
+    }
+}
+
+impl Mul for Price {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        let lhs = self.0;
+        let rhs = rhs.0;
+        Self(lhs * rhs)
     }
 }
 

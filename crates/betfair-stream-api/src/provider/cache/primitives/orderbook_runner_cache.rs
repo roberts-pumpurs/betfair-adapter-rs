@@ -5,12 +5,12 @@ use betfair_adapter::betfair_types::types::sports_aping::{BetId, MarketId, Selec
 use betfair_adapter::rust_decimal::Decimal;
 use betfair_stream_types::response::order_change_message::{Order, StrategyMatchChange};
 use betfair_stream_types::response::UpdateSet2;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use super::available_cache::Available;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub struct OrderBookRunner {
+pub(crate) struct OrderBookRunner {
     market_id: MarketId,
     selection_id: SelectionId,
     matched_lays: Available<UpdateSet2>,
@@ -21,7 +21,7 @@ pub struct OrderBookRunner {
 }
 
 impl OrderBookRunner {
-    pub fn new(market_id: MarketId, selection_id: SelectionId) -> Self {
+    pub(crate) fn new(market_id: MarketId, selection_id: SelectionId) -> Self {
         Self {
             market_id,
             selection_id,
@@ -33,7 +33,7 @@ impl OrderBookRunner {
         }
     }
 
-    pub fn update_unmatched(&mut self, unmatched_orders: impl IntoIterator<Item = Order>) {
+    pub(crate) fn update_unmatched(&mut self, unmatched_orders: impl IntoIterator<Item = Order>) {
         for order in unmatched_orders.into_iter() {
             self.unmatched_orders.insert(order.id.clone(), order);
         }

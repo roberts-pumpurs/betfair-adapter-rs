@@ -1,34 +1,19 @@
-use core::panic;
-use std::borrow::Cow;
-use std::collections::HashMap;
-use std::convert::Infallible;
-use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
-use betfair_adapter::betfair_types::customer_strategy_ref::CustomerStrategyRef;
-use betfair_adapter::betfair_types::types::sports_aping::MarketId;
 use betfair_adapter::{ApplicationKey, BetfairUrl, SessionToken};
 use betfair_stream_types::request::heartbeat_message::HeartbeatMessage;
-use betfair_stream_types::request::market_subscription_message::{
-    MarketDataFilter, MarketFilter, MarketSubscriptionMessage,
-};
 use betfair_stream_types::request::{authentication_message, RequestMessage};
-use betfair_stream_types::response::market_change_message::{MarketChange, MarketChangeMessage};
-use betfair_stream_types::response::order_change_message::{OrderChangeMessage, OrderMarketChange};
 use betfair_stream_types::response::status_message::StatusCode;
-use betfair_stream_types::response::{
-    market_change_message, order_change_message, ResponseMessage,
-};
+use betfair_stream_types::response::ResponseMessage;
 use futures_concurrency::prelude::*;
-use futures_util::{pin_mut, AsyncRead, AsyncWrite, Future, FutureExt, SinkExt, Stream, StreamExt};
+use futures_util::{Future, FutureExt, SinkExt, Stream, StreamExt};
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
 use tokio::sync::Notify;
 use tokio_stream::wrappers::BroadcastStream;
-use tokio_util::codec::{FramedRead, FramedWrite};
 
-use super::raw_stream_connection::{self, StreamAPIClientCodec};
+use super::raw_stream_connection::{self};
 use crate::provider::cache::tracker::{IncomingMessage, StreamStateTracker};
 use crate::provider::primitives::{MarketBookCache, OrderBookCache};
 use crate::StreamError;
@@ -135,11 +120,11 @@ impl StreamListener {
                 None
             }
             ResponseMessage::MarketChange(msg) => {
-                publish_time = msg.publish_time.clone();
+                publish_time = msg.publish_time;
                 self.tracker.calculate_updates(IncomingMessage::Market(msg))
             }
             ResponseMessage::OrderChange(msg) => {
-                publish_time = msg.publish_time.clone();
+                publish_time = msg.publish_time;
                 self.tracker.calculate_updates(IncomingMessage::Order(msg))
             }
             ResponseMessage::StatusMessage(msg) => {
@@ -171,7 +156,7 @@ impl StreamListener {
         if let Some(true) = msg.connection_closed {
             self.status = Status::Disconnected;
         }
-        if let Some(_) = msg.error_code {
+        if msg.error_code.is_some() {
             self.status = Status::Disconnected;
         }
         if let Some(StatusCode::Failure) = msg.status_code {
@@ -213,7 +198,8 @@ async fn connect(
     let reconnect_notifier = Arc::new(tokio::sync::Notify::new());
 
     let url = url.clone();
-    let async_task = async move {
+
+    async move {
         let async_task = loop {
             if let Ok(conn) = connect_and_process(
                 url.clone(),
@@ -260,8 +246,7 @@ async fn connect(
                 async_task = Box::pin(connection);
             }
         }
-    };
-    async_task
+    }
 }
 
 async fn connect_and_process(

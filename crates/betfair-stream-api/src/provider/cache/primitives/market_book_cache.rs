@@ -191,9 +191,8 @@ mod tests {
     use betfair_stream_types::response::UpdateSet2;
     use rust_decimal_macros::dec;
 
-    use crate::provider::primitives::available_cache::Available;
-
     use super::*;
+    use crate::provider::primitives::available_cache::Available;
 
     fn init() -> (MarketId, DateTime<Utc>, MarketBookCache) {
         let market_id = MarketId("1.23456789".to_string());

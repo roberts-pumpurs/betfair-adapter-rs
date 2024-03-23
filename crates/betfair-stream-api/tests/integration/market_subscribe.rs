@@ -1,16 +1,18 @@
-use betfair_adapter::{ApplicationKey, BetfairUrl, SessionToken};
-use betfair_stream_api::HeartbeatStrategy;
+use betfair_adapter::betfair_types::types::sports_aping::MarketId;
+use betfair_adapter::{ApplicationKey, SessionToken};
+use betfair_stream_api::{HeartbeatStrategy, MarketSubscriber};
 use betfair_stream_server_mock::{ClientState, StreamAPIBackend, SubSate};
+use futures_util::StreamExt;
 
 #[rstest::rstest]
 #[timeout(std::time::Duration::from_secs(5))]
 #[test_log::test(tokio::test)]
-async fn market_subscribtion() {
+async fn market_subscription() {
     let mock = StreamAPIBackend::new().await;
     let url = mock.url.clone();
 
     let h1 = tokio::spawn(async move {
-        let (_client, async_task, _output) = betfair_stream_api::StreamListener::new(
+        let (stream_listener, async_task, _output) = betfair_stream_api::StreamListener::new(
             ApplicationKey::new("app_key".to_string()),
             SessionToken::new("token".to_string()),
             url.into(),
@@ -18,7 +20,24 @@ async fn market_subscribtion() {
         )
         .await
         .unwrap();
-        let _ = async_task.await;
+        let async_task_handle = tokio::spawn(async_task);
+
+        let mut ms = MarketSubscriber::new(
+            stream_listener,
+            betfair_stream_types::request::market_subscription_message::MarketFilter::default(),
+            vec![betfair_stream_types::request::market_subscription_message::Fields::ExBestOffers],
+            Some(
+                betfair_stream_types::request::market_subscription_message::LadderLevel::new(3)
+                    .unwrap(),
+            ),
+        );
+
+        let market_id = MarketId("1.23456789".to_string());
+        let mut receiver = ms.subscribe_to_market(market_id).await;
+
+        let msg = receiver.next().await.unwrap();
+
+        async_task_handle.await.unwrap();
     });
 
     let connection = mock.process_next().await;

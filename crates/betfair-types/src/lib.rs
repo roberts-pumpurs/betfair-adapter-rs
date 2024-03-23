@@ -5,6 +5,7 @@ pub mod bot_login;
 pub mod customer_order_ref;
 pub mod customer_ref;
 pub mod customer_strategy_ref;
+pub mod handicap;
 pub mod price;
 pub mod size;
 

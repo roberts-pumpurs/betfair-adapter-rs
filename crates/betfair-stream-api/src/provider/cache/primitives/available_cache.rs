@@ -6,7 +6,8 @@ use betfair_adapter::betfair_types::price::Price;
 use betfair_adapter::betfair_types::size::Size;
 use betfair_adapter::rust_decimal::Decimal;
 use betfair_stream_types::response::{Position, UpdateSet2, UpdateSet3};
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 
 /// Data structure to hold prices/traded amount
 #[derive(Debug, PartialEq, PartialOrd, Clone, Serialize, Deserialize, Eq, Hash, Ord)]

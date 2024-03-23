@@ -1,8 +1,9 @@
-use betfair_types::{customer_order_ref::CustomerOrderRef, types::sports_aping::MarketId};
+use betfair_types::customer_order_ref::CustomerOrderRef;
 use betfair_types::customer_strategy_ref::CustomerStrategyRef;
+use betfair_types::handicap::Handicap;
 use betfair_types::price::Price;
 use betfair_types::size::Size;
-use betfair_types::types::sports_aping::{BetId, SelectionId};
+use betfair_types::types::sports_aping::{BetId, MarketId, SelectionId};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -69,7 +70,7 @@ pub struct OrderRunnerChange {
     /// Handicap - the handicap of the runner (selection) (null if not applicable)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "hc")]
-    pub handicap: Option<rust_decimal::Decimal>,
+    pub handicap: Option<Handicap>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub full_image: Option<bool>,
 }

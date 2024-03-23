@@ -1,4 +1,4 @@
-use betfair_adapter::{ApplicationKey, BetfairUrl, SessionToken};
+use betfair_adapter::{ApplicationKey, SessionToken};
 use betfair_stream_api::HeartbeatStrategy;
 use betfair_stream_server_mock::{ClientState, StreamAPIBackend, SubSate};
 

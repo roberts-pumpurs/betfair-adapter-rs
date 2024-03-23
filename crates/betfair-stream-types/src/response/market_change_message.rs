@@ -3,7 +3,7 @@ use betfair_types::size::Size;
 use betfair_types::types::sports_aping::{MarketId, SelectionId};
 use serde::{Deserialize, Serialize};
 
-use super::{DatasetChangeMessage, UpdateSet2, UpdateSet3, DataChange};
+use super::{DataChange, DatasetChangeMessage, UpdateSet2, UpdateSet3};
 use crate::request::market_subscription_message::StreamMarketFilterBettingType;
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
