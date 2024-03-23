@@ -11,13 +11,13 @@ use super::available_cache::Available;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct OrderBookRunner {
-    market_id: MarketId,
-    selection_id: SelectionId,
-    matched_lays: Available<UpdateSet2>,
-    matched_backs: Available<UpdateSet2>,
-    unmatched_orders: HashMap<BetId, Order>,
-    handicap: Option<Decimal>,
-    strategy_matches: HashMap<CustomerStrategyRef, StrategyMatchChange>,
+    pub market_id: MarketId,
+    pub selection_id: SelectionId,
+    pub matched_lays: Available<UpdateSet2>,
+    pub matched_backs: Available<UpdateSet2>,
+    pub unmatched_orders: HashMap<BetId, Order>,
+    pub handicap: Option<Decimal>,
+    pub strategy_matches: HashMap<CustomerStrategyRef, StrategyMatchChange>,
 }
 
 impl OrderBookRunner {
