@@ -169,9 +169,9 @@ pub struct Order {
 pub enum Side {
     #[default]
     #[serde(rename = "B")]
-    SellLine,
+    Back,
     #[serde(rename = "L")]
-    BuyLine,
+    Lay,
 }
 
 /// Persistence Type - whether the order will persist at in play or not (L = LAPSE, P = PERSIST, MOC
