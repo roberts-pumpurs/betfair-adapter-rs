@@ -168,8 +168,10 @@ pub struct Order {
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Side {
     #[default]
-    B,
-    L,
+    #[serde(rename = "B")]
+    SellLine,
+    #[serde(rename = "L")]
+    BuyLine,
 }
 
 /// Persistence Type - whether the order will persist at in play or not (L = LAPSE, P = PERSIST, MOC
@@ -180,9 +182,12 @@ pub enum Side {
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Pt {
     #[default]
-    L,
-    P,
-    Moc,
+    #[serde(rename = "L")]
+    Lapse,
+    #[serde(rename = "P")]
+    Persist,
+    #[serde(rename = "MOC")]
+    MarketOnClose,
 }
 
 /// Order Type - the type of the order (L = LIMIT, MOC = MARKET_ON_CLOSE, LOC = LIMIT_ON_CLOSE)
@@ -192,9 +197,12 @@ pub enum Pt {
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Ot {
     #[default]
-    L,
-    Loc,
-    Moc,
+    #[serde(rename = "L")]
+    Limit,
+    #[serde(rename = "LOC")]
+    LimitOnClose,
+    #[serde(rename = "MOC")]
+    MarketOnClose,
 }
 
 /// Status - the status of the order (E = EXECUTABLE, EC = EXECUTION_COMPLETE)
@@ -204,8 +212,10 @@ pub enum Ot {
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum StreamOrderStatus {
     #[default]
-    E,
-    Ec,
+    #[serde(rename = "E")]
+    Executable,
+    #[serde(rename = "EC")]
+    ExecutionComplete,
 }
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
