@@ -112,7 +112,7 @@ pub struct Order {
     pub size: Size,
     /// Placed Date - the date the order was placed
     #[serde(rename = "pd")]
-    pub place_date: i64,
+    pub place_date: chrono::DateTime<chrono::Utc>,
     /// Regulator Auth Code - the auth code returned by the regulator
     #[serde(rename = "rac")]
     pub regulator_auth_code: String,
