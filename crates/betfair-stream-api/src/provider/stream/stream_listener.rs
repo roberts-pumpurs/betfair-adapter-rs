@@ -14,8 +14,8 @@ use tokio::sync::Notify;
 use tokio_stream::wrappers::BroadcastStream;
 
 use super::raw_stream_connection::{self};
+use crate::provider::cache::primitives::{MarketBookCache, OrderBookCache};
 use crate::provider::cache::tracker::{IncomingMessage, StreamStateTracker};
-use crate::provider::primitives::{MarketBookCache, OrderBookCache};
 use crate::StreamError;
 
 /// Stream listener, processes results from socket, holds a stream which can hold order or market

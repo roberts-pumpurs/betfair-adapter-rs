@@ -4,7 +4,7 @@ use betfair_adapter::betfair_types::types::sports_aping::MarketId;
 use betfair_stream_types::response::market_change_message::MarketChangeMessage;
 
 use super::HasFullImage;
-use crate::provider::primitives::MarketBookCache;
+use crate::provider::cache::primitives::MarketBookCache;
 
 #[derive(Debug)]
 pub(crate) struct MarketStreamTracker {

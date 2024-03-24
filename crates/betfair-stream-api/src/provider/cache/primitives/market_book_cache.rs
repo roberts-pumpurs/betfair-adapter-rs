@@ -192,7 +192,7 @@ mod tests {
     use rust_decimal_macros::dec;
 
     use super::*;
-    use crate::provider::primitives::available_cache::Available;
+    use crate::provider::cache::primitives::available_cache::Available;
 
     fn init() -> (MarketId, DateTime<Utc>, MarketBookCache) {
         let market_id = MarketId("1.23456789".to_string());

@@ -4,7 +4,7 @@ use betfair_adapter::betfair_types::types::sports_aping::MarketId;
 use betfair_stream_types::response::order_change_message::OrderChangeMessage;
 
 use super::HasFullImage;
-use crate::provider::primitives::OrderBookCache;
+use crate::provider::cache::primitives::OrderBookCache;
 
 #[derive(Debug)]
 pub(crate) struct OrderStreamTracker {
