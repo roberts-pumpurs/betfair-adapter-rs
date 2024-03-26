@@ -10,5 +10,5 @@ mod provider;
 mod specialization;
 pub use betfair_stream_types as types;
 pub use error::StreamError;
-pub use provider::{ExternalUpdates, HeartbeatStrategy, Status, StreamListener};
-pub use specialization::MarketSubscriber;
+pub use provider::{cache, ExternalUpdates, HeartbeatStrategy, Status, StreamListener};
+pub use specialization::{MarketSubscriber, OrderSubscriber};
