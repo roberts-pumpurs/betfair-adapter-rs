@@ -72,15 +72,9 @@ async fn list_market_catalogue() {
             }
         }
     ]);
-
-    Mock::given(method("POST"))
-        .and(path(rpc_path::<list_market_catalogue::Parameters>()))
-        .and(header("Accept", "application/json"))
-        .and(header("X-Authentication", SESSION_TOKEN))
-        .and(header("X-Application", APP_KEY))
-        .respond_with(ResponseTemplate::new(200).set_body_json(response.clone()))
+    server
+        .mock_authenticated_rpc_from_json::<list_market_catalogue::Parameters>(response)
         .expect(1)
-        .named("single market book call")
         .mount(&server.bf_api_mock_server)
         .await;
 

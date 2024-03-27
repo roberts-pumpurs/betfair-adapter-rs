@@ -6,10 +6,11 @@ use betfair_adapter::{
     Unauthenticated, Username,
 };
 use betfair_types::types::BetfairRpcRequest;
+use reqwest::header;
 use serde_json::json;
-use wiremock::matchers::{method, path};
-use wiremock::{Mock, MockServer, ResponseTemplate};
 pub use wiremock;
+use wiremock::matchers::{method, path, PathExactMatcher};
+use wiremock::{Mock, MockServer, ResponseTemplate};
 
 pub const USERNAME: &str = "usrn";
 pub const PASSWORD: &str = "pasw";
@@ -89,6 +90,63 @@ impl Server {
         };
 
         BetfairRpcProvider::new_with_config(config)
+    }
+
+    pub fn mock(
+        &self,
+        http_method: &str,
+        path_matcher: PathExactMatcher,
+        name: &str,
+        with_auth_headers: bool,
+        response: serde_json::Value,
+    ) -> Mock {
+        use wiremock::matchers::{header, method, path};
+
+        let m = Mock::given(method(http_method)).and(path_matcher);
+
+        let m = if with_auth_headers {
+            m.and(header("Accept", "application/json"))
+                .and(header("X-Authentication", SESSION_TOKEN))
+                .and(header("X-Application", APP_KEY))
+        } else {
+            m
+        };
+
+        m.respond_with(ResponseTemplate::new(200).set_body_json(response))
+            .named(name)
+    }
+
+    pub fn mock_keep_alive(&self) -> Mock {
+        let response = json!(
+            {
+                "token":"SESSIONTOKEN",
+                "product":"AppKey",
+                "status":"SUCCESS",
+                "error":""
+            }
+        );
+
+        self.mock("GET", path(KEEP_ALIVE_URL), "Keep alive", true, response)
+    }
+
+    pub fn mock_authenticated_rpc<T: BetfairRpcRequest>(&self, response: T::Res) -> Mock
+    where
+        T::Res: serde::Serialize,
+    {
+        self.mock_authenticated_rpc_from_json::<T>(serde_json::to_value(&response).unwrap())
+    }
+
+    pub fn mock_authenticated_rpc_from_json<T: BetfairRpcRequest>(
+        &self,
+        response: serde_json::Value,
+    ) -> Mock {
+        self.mock(
+            "POST",
+            path(rpc_path::<T>()),
+            &rpc_path::<T>(),
+            true,
+            serde_json::to_value(&response).unwrap(),
+        )
     }
 }
 

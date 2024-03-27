@@ -10,22 +10,9 @@ async fn keep_alive() {
     let server = Server::new().await;
 
     // Setup
-    let response = json!(
-        {
-            "token":"SESSIONTOKEN",
-            "product":"AppKey",
-            "status":"SUCCESS",
-            "error":""
-        }
-    );
-    Mock::given(method("GET"))
-        .and(path(KEEP_ALIVE_URL))
-        .and(header("Accept", "application/json"))
-        .and(header("X-Authentication", SESSION_TOKEN))
-        .and(header("X-Application", APP_KEY))
-        .respond_with(ResponseTemplate::new(200).set_body_json(response))
+    server
+        .mock_keep_alive()
         .expect(1)
-        .named("Keep alive")
         .mount(&server.bf_api_mock_server)
         .await;
 
