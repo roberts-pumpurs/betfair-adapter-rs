@@ -2,11 +2,10 @@ use std::borrow::Cow;
 
 use betfair_adapter::jurisdictions::CustomUrl;
 use betfair_adapter::{
-    ApplicationKey, BetfairConfigBuilder, BetfairRpcProvider, Identity, Password, SecretProvider,
-    Unauthenticated, Username,
+    ApplicationKey, BetfairConfigBuilder, BetfairRpcProvider, BotLogin, Identity, InteractiveLogin,
+    KeepAlive, Logout, Password, RestBase, SecretProvider, Unauthenticated, Username,
 };
 use betfair_types::types::BetfairRpcRequest;
-use reqwest::header;
 use serde_json::json;
 pub use wiremock;
 use wiremock::matchers::{method, path, PathExactMatcher};
@@ -70,6 +69,13 @@ impl Server {
 
     /// Create a betfair client with the mock server as the base url
     pub async fn client(&self) -> BetfairRpcProvider<Unauthenticated> {
+        let secrets_provider = self.secrets_provider();
+        let config = self.betfair_config(secrets_provider);
+
+        BetfairRpcProvider::new_with_config(config)
+    }
+
+    fn secrets_provider(&self) -> SecretProvider<'static> {
         let identity = reqwest::Identity::from_pem(CERTIFICATE.as_bytes()).unwrap();
 
         let secrets_provider = SecretProvider {
@@ -78,18 +84,30 @@ impl Server {
             password: Cow::Owned(Password::new(PASSWORD.to_string())),
             username: Cow::Owned(Username::new(USERNAME.to_string())),
         };
+        secrets_provider
+    }
+
+    pub fn betfair_config<'a>(
+        &self,
+        secrets_provider: SecretProvider<'a>,
+    ) -> BetfairConfigBuilder<
+        'a,
+        CustomUrl<RestBase>,
+        CustomUrl<KeepAlive>,
+        CustomUrl<BotLogin>,
+        CustomUrl<Logout>,
+        CustomUrl<InteractiveLogin>,
+    > {
         let base_uri: url::Url = self.bf_api_mock_server.uri().parse().unwrap();
 
-        let config = BetfairConfigBuilder {
+        BetfairConfigBuilder {
             rest: CustomUrl::new(base_uri.join(REST_URL).unwrap()),
             keep_alive: CustomUrl::new(base_uri.join(KEEP_ALIVE_URL).unwrap()),
             bot_login: CustomUrl::new(base_uri.join(BOT_LOGIN_URL).unwrap()),
             logout: CustomUrl::new(base_uri.join(LOGOUT).unwrap()),
             login: CustomUrl::new(base_uri.join(LOGIN_URL).unwrap()),
             secrets_provider,
-        };
-
-        BetfairRpcProvider::new_with_config(config)
+        }
     }
 
     pub fn mock(
@@ -100,7 +118,7 @@ impl Server {
         with_auth_headers: bool,
         response: serde_json::Value,
     ) -> Mock {
-        use wiremock::matchers::{header, method, path};
+        use wiremock::matchers::{header, method};
 
         let m = Mock::given(method(http_method)).and(path_matcher);
 
@@ -145,7 +163,7 @@ impl Server {
             path(rpc_path::<T>()),
             &rpc_path::<T>(),
             true,
-            serde_json::to_value(&response).unwrap(),
+            serde_json::to_value(response).unwrap(),
         )
     }
 }

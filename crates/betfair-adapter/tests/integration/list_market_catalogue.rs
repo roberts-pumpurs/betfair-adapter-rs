@@ -1,4 +1,4 @@
-use betfair_rpc_server_mock::{rpc_path, Server, APP_KEY, SESSION_TOKEN};
+use betfair_rpc_server_mock::Server;
 use betfair_types::types::sports_aping::{
     list_market_catalogue, Competition, CompetitionId, CountryCode, Event, EventId, EventType,
     EventTypeId, MarketCatalogue, MarketDescription, MarketFilter, MarketId, MarketProjection,
@@ -8,8 +8,6 @@ use pretty_assertions::assert_eq;
 use rstest::rstest;
 use rust_decimal_macros::dec;
 use serde_json::json;
-use wiremock::matchers::{header, method, path};
-use wiremock::{Mock, ResponseTemplate};
 
 #[rstest]
 #[test_log::test(tokio::test)]

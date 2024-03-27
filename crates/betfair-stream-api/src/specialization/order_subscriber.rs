@@ -2,10 +2,6 @@ use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 
 use betfair_adapter::betfair_types::customer_strategy_ref::CustomerStrategyRef;
-use betfair_adapter::betfair_types::types::sports_aping::MarketId;
-use betfair_stream_types::request::market_subscription_message::{
-    Fields, LadderLevel, MarketDataFilter, MarketFilter, MarketSubscriptionMessage,
-};
 use betfair_stream_types::request::order_subscription_message::{
     OrderFilter, OrderSubscriptionMessage,
 };
