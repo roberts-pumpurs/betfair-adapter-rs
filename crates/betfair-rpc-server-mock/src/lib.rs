@@ -75,7 +75,7 @@ impl Server {
         BetfairRpcProvider::new_with_config(config)
     }
 
-    fn secrets_provider(&self) -> SecretProvider<'static> {
+    pub fn secrets_provider(&self) -> SecretProvider<'static> {
         let identity = reqwest::Identity::from_pem(CERTIFICATE.as_bytes()).unwrap();
 
         let secrets_provider = SecretProvider {
