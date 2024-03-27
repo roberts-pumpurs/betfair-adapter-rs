@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 
 use crate::{secret, urls};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BetfairRpcProvider<'a, T> {
     client: reqwest::Client,
     rest_base: urls::BetfairUrl<'a, urls::RestBase>,
@@ -17,5 +17,8 @@ pub struct BetfairRpcProvider<'a, T> {
     _type: PhantomData<T>,
 }
 
+#[derive(Debug)]
 pub struct Authenticated;
+
+#[derive(Debug)]
 pub struct Unauthenticated;

@@ -9,6 +9,7 @@ betfair-types = { path = "crates/betfair-types" }
 betfair-stream-types = { path = "crates/betfair-stream-types" }
 betfair-stream-server-mock = { path = "crates/betfair-stream-server-mock" }
 betfair-xml-parser = { path = "crates/betfair-xml-parser" }
+betfair-rpc-server-mock = { path = "crates/betfair-rpc-server-mock" }
 betfair-typegen = { path = "crates/betfair-typegen" }
 
 # Utils
@@ -16,9 +17,9 @@ rust_decimal = "1"
 rust_decimal_macros = "1"
 rand = { version = "0.8", features = ["small_rng"] }
 chrono = { version = "0.4", default-features = false, features = [
-  "serde",
-  "clock",
-  "std",
+    "serde",
+    "clock",
+    "std",
 ] }
 eyre = "0.6"
 thiserror = "1.0"
@@ -45,11 +46,11 @@ serde_json = "1.0"
 # HTTP
 hyper = { version = "1", features = ["full"] }
 reqwest = { version = "0.11", default-features = false, features = [
-  "json",
-  "gzip",
-  "deflate",
-  "rustls-tls",
-  "stream",
+    "json",
+    "gzip",
+    "deflate",
+    "rustls-tls",
+    "stream",
 ] }
 url = "2"
 http = "1"
@@ -72,10 +73,10 @@ json-rpc-types = "1"
 # Tracing
 tracing = { version = "0.1" }
 tracing-subscriber = { version = "0.3", features = [
-  "env-filter",
-  "fmt",
-  "tracing-log",
-  "json",
-  "valuable",
-  "tracing",
+    "env-filter",
+    "fmt",
+    "tracing-log",
+    "json",
+    "valuable",
+    "tracing",
 ] }

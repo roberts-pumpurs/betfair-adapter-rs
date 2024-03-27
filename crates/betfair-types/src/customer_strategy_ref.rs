@@ -4,23 +4,10 @@ use serde::{Deserialize, Serialize};
 /// The reference will be returned on order change messages through the stream API. The string
 /// is limited to 15 characters. If an empty string is provided it will be treated as null.
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
-pub struct CustomerStrategyRef(String);
+pub struct CustomerStrategyRef([char; 15]);
 
 impl CustomerStrategyRef {
-    pub fn new(customer_strategy_ref: String) -> Result<Self, CustomerStrategyRefParseError> {
-        if customer_strategy_ref.len() >= 15 {
-            return Err(CustomerStrategyRefParseError::TooLong)
-        }
-        Ok(CustomerStrategyRef(customer_strategy_ref))
+    pub fn new(customer_strategy_ref: [char; 15]) -> Self {
+        CustomerStrategyRef(customer_strategy_ref)
     }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum CustomerStrategyRefParseError {
-    #[error("Customer strategy reference too long")]
-    TooLong,
 }

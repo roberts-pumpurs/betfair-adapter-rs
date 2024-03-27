@@ -1,3 +1,4 @@
+use betfair_rpc_server_mock::{rpc_path, Server, APP_KEY, SESSION_TOKEN};
 use betfair_types::price::Price;
 use betfair_types::size::Size;
 use betfair_types::types::sports_aping::{
@@ -10,8 +11,6 @@ use rust_decimal_macros::dec;
 use serde_json::json;
 use wiremock::matchers::{header, method, path};
 use wiremock::{Mock, ResponseTemplate};
-
-use crate::utils::{rpc_path, Server, APP_KEY, SESSION_TOKEN};
 
 #[rstest]
 #[test_log::test(tokio::test)]

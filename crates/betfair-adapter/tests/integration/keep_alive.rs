@@ -1,9 +1,8 @@
+use betfair_rpc_server_mock::{Server, APP_KEY, KEEP_ALIVE_URL, SESSION_TOKEN};
 use rstest::rstest;
 use serde_json::json;
 use wiremock::matchers::{header, method, path};
 use wiremock::{Mock, ResponseTemplate};
-
-use crate::utils::{Server, APP_KEY, KEEP_ALIVE_URL, SESSION_TOKEN};
 
 #[rstest]
 #[test_log::test(tokio::test)]

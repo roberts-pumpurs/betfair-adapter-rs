@@ -168,6 +168,7 @@ checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
 name = "betfair-adapter"
 version = "0.1.0"
 dependencies = [
+ "betfair-rpc-server-mock",
  "betfair-types",
  "chrono",
  "eyre",
@@ -189,6 +190,36 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "typed-builder",
+ "url",
+ "wiremock",
+]
+
+[[package]]
+name = "betfair-rpc-server-mock"
+version = "0.1.0"
+dependencies = [
+ "async-stream",
+ "betfair-adapter",
+ "betfair-stream-types",
+ "betfair-types",
+ "chrono",
+ "eyre",
+ "futures",
+ "futures-concurrency",
+ "futures-util",
+ "rand 0.8.5",
+ "reqwest",
+ "rust_decimal",
+ "rust_decimal_macros",
+ "rustls 0.22.2",
+ "rustls-native-certs",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tokio-rustls 0.25.0",
+ "tokio-stream",
+ "tokio-util",
+ "tracing",
  "url",
  "wiremock",
 ]

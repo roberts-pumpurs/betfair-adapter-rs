@@ -9,6 +9,7 @@ use betfair_types::types::BetfairRpcRequest;
 use serde_json::json;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
+pub use wiremock;
 
 pub const USERNAME: &str = "usrn";
 pub const PASSWORD: &str = "pasw";

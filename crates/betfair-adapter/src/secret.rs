@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SecretProvider<'a> {
     pub application_key: Cow<'a, ApplicationKey>,
     pub username: Cow<'a, Username>,

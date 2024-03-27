@@ -23,6 +23,7 @@ typed-builder.workspace = true
 
 [dev-dependencies]
 tracing-subscriber.workspace = true
+betfair-rpc-server-mock.workspace = true
 rstest.workspace = true
 tokio.workspace = true
 test-log.workspace = true

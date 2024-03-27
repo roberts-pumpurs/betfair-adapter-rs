@@ -63,8 +63,9 @@ impl OrderSubscriber {
     /// unsubscribing from all markets.
     /// https://forum.developer.betfair.com/forum/sports-exchange-api/exchange-api/34555-stream-api-unsubscribe-from-all-markets
     pub async fn unsubscribe_from_all_markets(&mut self) {
-        let strategy_that_does_not_exist =
-            CustomerStrategyRef::new("does-not-exist".to_string()).unwrap();
+        let strategy_that_does_not_exist = CustomerStrategyRef::new([
+            'd', 'o', 's', 'e', 'n', 't', ' ', 'e', 'x', 'i', 's', 't', ' ', ' ', ' ',
+        ]);
         self.filter = OrderFilter::default();
 
         let req = RequestMessage::OrderSubscription(OrderSubscriptionMessage {
