@@ -1,30 +1,25 @@
-use std::borrow::Cow;
-
 #[derive(Debug, Clone)]
-pub struct BetfairUrl<'a, T, K = url::Url>
-where
-    K: std::clone::Clone,
-{
-    url: Cow<'a, K>,
+pub struct BetfairUrl<T> {
+    url: url::Url,
     _type: std::marker::PhantomData<T>,
 }
 
-impl<'a, T, K: std::clone::Clone> BetfairUrl<'a, T, K> {
-    pub fn new(url: Cow<'a, K>) -> Self {
+impl<T> BetfairUrl<T> {
+    pub fn new(url: url::Url) -> Self {
         Self {
             url,
             _type: std::marker::PhantomData,
         }
     }
 
-    pub fn url(&self) -> &K {
+    pub fn url(&self) -> &url::Url {
         &self.url
     }
 }
 
-impl<'a, T> From<url::Url> for BetfairUrl<'a, T> {
+impl<T> From<url::Url> for BetfairUrl<T> {
     fn from(val: url::Url) -> Self {
-        BetfairUrl::new(Cow::Owned(val))
+        BetfairUrl::new(val)
     }
 }
 
@@ -46,7 +41,7 @@ pub struct Logout;
 #[derive(Debug, Clone)]
 pub struct Stream;
 
-pub mod jurisdictions {
+pub mod jurisdiction {
     #[derive(Debug)]
     pub struct Global;
     #[derive(Debug)]
@@ -61,56 +56,54 @@ pub mod jurisdictions {
     pub struct Australia;
 
     #[derive(Debug, Clone)]
-    pub struct CustomUrl<T, K = url::Url>(pub super::BetfairUrl<'static, T, K>)
-    where
-        K: std::clone::Clone + 'static;
+    pub struct CustomUrl<T>(pub super::BetfairUrl<T>);
 
-    impl<T, K> CustomUrl<T, K>
-    where
-        K: std::clone::Clone,
-    {
-        pub fn new(url: K) -> Self {
-            Self(super::BetfairUrl::new(std::borrow::Cow::Owned(url)))
+    impl<T> CustomUrl<T> {
+        pub fn new(url: url::Url) -> Self {
+            Self(super::BetfairUrl::new(url))
+        }
+    }
+
+    impl<T> From<url::Url> for CustomUrl<T> {
+        fn from(value: url::Url) -> Self {
+            CustomUrl::new(value)
         }
     }
 }
 
-pub trait RetrieveUrl<'a, T, K = url::Url>
-where
-    K: std::clone::Clone,
-{
-    fn url(&self) -> BetfairUrl<'a, T, K>;
+pub trait RetrieveUrl<T> {
+    fn url(&self) -> BetfairUrl<T>;
 }
 
 mod rest_url {
     use super::*;
 
-    impl<'a> RetrieveUrl<'a, RestBase> for jurisdictions::Global {
-        fn url(&self) -> BetfairUrl<'a, RestBase> {
-            BetfairUrl::new(Cow::Owned(
+    impl RetrieveUrl<RestBase> for jurisdiction::Global {
+        fn url(&self) -> BetfairUrl<RestBase> {
+            BetfairUrl::new(
                 url::Url::parse("https://api.betfair.com/exchange/betting/rest/v1.0").unwrap(),
-            ))
+            )
         }
     }
 
-    impl<'a> RetrieveUrl<'a, RestBase> for jurisdictions::Italy {
-        fn url(&self) -> BetfairUrl<'a, RestBase> {
-            BetfairUrl::new(Cow::Owned(
+    impl RetrieveUrl<RestBase> for jurisdiction::Italy {
+        fn url(&self) -> BetfairUrl<RestBase> {
+            BetfairUrl::new(
                 url::Url::parse("https://api.betfair.it/exchange/betting/rest/v1.0").unwrap(),
-            ))
+            )
         }
     }
 
-    impl<'a> RetrieveUrl<'a, RestBase> for jurisdictions::Spain {
-        fn url(&self) -> BetfairUrl<'a, RestBase> {
-            BetfairUrl::new(Cow::Owned(
+    impl RetrieveUrl<RestBase> for jurisdiction::Spain {
+        fn url(&self) -> BetfairUrl<RestBase> {
+            BetfairUrl::new(
                 url::Url::parse("https://api.betfair.com/exchange/betting/rest/v1.0").unwrap(),
-            ))
+            )
         }
     }
 
-    impl<'a> RetrieveUrl<'a, RestBase> for jurisdictions::CustomUrl<RestBase> {
-        fn url(&self) -> BetfairUrl<'a, RestBase> {
+    impl RetrieveUrl<RestBase> for jurisdiction::CustomUrl<RestBase> {
+        fn url(&self) -> BetfairUrl<RestBase> {
             self.0.clone()
         }
     }
@@ -119,56 +112,56 @@ mod rest_url {
 mod keep_alive_url {
     use super::*;
 
-    impl<'a> RetrieveUrl<'a, KeepAlive> for jurisdictions::Global {
-        fn url(&self) -> BetfairUrl<'a, KeepAlive> {
-            BetfairUrl::new(Cow::Owned(
+    impl RetrieveUrl<KeepAlive> for jurisdiction::Global {
+        fn url(&self) -> BetfairUrl<KeepAlive> {
+            BetfairUrl::new(
                 url::Url::parse("https://identitysso.betfair.com/api/keepAlive").unwrap(),
-            ))
+            )
         }
     }
 
-    impl<'a> RetrieveUrl<'a, KeepAlive> for jurisdictions::Italy {
-        fn url(&self) -> BetfairUrl<'a, KeepAlive> {
-            BetfairUrl::new(Cow::Owned(
+    impl RetrieveUrl<KeepAlive> for jurisdiction::Italy {
+        fn url(&self) -> BetfairUrl<KeepAlive> {
+            BetfairUrl::new(
                 url::Url::parse("https://identitysso.betfair.it/api/keepAlive").unwrap(),
-            ))
+            )
         }
     }
 
-    impl<'a> RetrieveUrl<'a, KeepAlive> for jurisdictions::Spain {
-        fn url(&self) -> BetfairUrl<'a, KeepAlive> {
-            BetfairUrl::new(Cow::Owned(
+    impl RetrieveUrl<KeepAlive> for jurisdiction::Spain {
+        fn url(&self) -> BetfairUrl<KeepAlive> {
+            BetfairUrl::new(
                 url::Url::parse("https://identitysso.betfair.es/api/keepAlive").unwrap(),
-            ))
+            )
         }
     }
 
-    impl<'a> RetrieveUrl<'a, KeepAlive> for jurisdictions::Romania {
-        fn url(&self) -> BetfairUrl<'a, KeepAlive> {
-            BetfairUrl::new(Cow::Owned(
+    impl RetrieveUrl<KeepAlive> for jurisdiction::Romania {
+        fn url(&self) -> BetfairUrl<KeepAlive> {
+            BetfairUrl::new(
                 url::Url::parse("https://identitysso.betfair.ro/api/keepAlive").unwrap(),
-            ))
+            )
         }
     }
 
-    impl<'a> RetrieveUrl<'a, KeepAlive> for jurisdictions::Sweden {
-        fn url(&self) -> BetfairUrl<'a, KeepAlive> {
-            BetfairUrl::new(Cow::Owned(
+    impl RetrieveUrl<KeepAlive> for jurisdiction::Sweden {
+        fn url(&self) -> BetfairUrl<KeepAlive> {
+            BetfairUrl::new(
                 url::Url::parse("https://identitysso.betfair.se/api/keepAlive").unwrap(),
-            ))
+            )
         }
     }
 
-    impl<'a> RetrieveUrl<'a, KeepAlive> for jurisdictions::Australia {
-        fn url(&self) -> BetfairUrl<'a, KeepAlive> {
-            BetfairUrl::new(Cow::Owned(
+    impl RetrieveUrl<KeepAlive> for jurisdiction::Australia {
+        fn url(&self) -> BetfairUrl<KeepAlive> {
+            BetfairUrl::new(
                 url::Url::parse("https://identitysso.betfair.au/api/keepAlive").unwrap(),
-            ))
+            )
         }
     }
 
-    impl<'a> RetrieveUrl<'a, KeepAlive> for jurisdictions::CustomUrl<KeepAlive> {
-        fn url(&self) -> BetfairUrl<'a, KeepAlive> {
+    impl RetrieveUrl<KeepAlive> for jurisdiction::CustomUrl<KeepAlive> {
+        fn url(&self) -> BetfairUrl<KeepAlive> {
             self.0.clone()
         }
     }
@@ -177,48 +170,48 @@ mod keep_alive_url {
 mod bot_login_url {
     use super::*;
 
-    impl<'a> RetrieveUrl<'a, BotLogin> for jurisdictions::Global {
-        fn url(&self) -> BetfairUrl<'a, BotLogin> {
-            BetfairUrl::new(Cow::Owned(
+    impl RetrieveUrl<BotLogin> for jurisdiction::Global {
+        fn url(&self) -> BetfairUrl<BotLogin> {
+            BetfairUrl::new(
                 url::Url::parse("https://identitysso-cert.betfair.com/api/certlogin").unwrap(),
-            ))
+            )
         }
     }
 
-    impl<'a> RetrieveUrl<'a, BotLogin> for jurisdictions::Italy {
-        fn url(&self) -> BetfairUrl<'a, BotLogin> {
-            BetfairUrl::new(Cow::Owned(
+    impl RetrieveUrl<BotLogin> for jurisdiction::Italy {
+        fn url(&self) -> BetfairUrl<BotLogin> {
+            BetfairUrl::new(
                 url::Url::parse("https://identitysso-cert.betfair.it/api/certlogin").unwrap(),
-            ))
+            )
         }
     }
 
-    impl<'a> RetrieveUrl<'a, BotLogin> for jurisdictions::Spain {
-        fn url(&self) -> BetfairUrl<'a, BotLogin> {
-            BetfairUrl::new(Cow::Owned(
+    impl RetrieveUrl<BotLogin> for jurisdiction::Spain {
+        fn url(&self) -> BetfairUrl<BotLogin> {
+            BetfairUrl::new(
                 url::Url::parse("https://identitysso-cert.betfair.es/api/certlogin").unwrap(),
-            ))
+            )
         }
     }
 
-    impl<'a> RetrieveUrl<'a, BotLogin> for jurisdictions::Romania {
-        fn url(&self) -> BetfairUrl<'a, BotLogin> {
-            BetfairUrl::new(Cow::Owned(
+    impl RetrieveUrl<BotLogin> for jurisdiction::Romania {
+        fn url(&self) -> BetfairUrl<BotLogin> {
+            BetfairUrl::new(
                 url::Url::parse("https://identitysso-cert.betfair.ro/api/certlogin").unwrap(),
-            ))
+            )
         }
     }
 
-    impl<'a> RetrieveUrl<'a, BotLogin> for jurisdictions::Sweden {
-        fn url(&self) -> BetfairUrl<'a, BotLogin> {
-            BetfairUrl::new(Cow::Owned(
+    impl RetrieveUrl<BotLogin> for jurisdiction::Sweden {
+        fn url(&self) -> BetfairUrl<BotLogin> {
+            BetfairUrl::new(
                 url::Url::parse("https://identitysso-cert.betfair.se/api/certlogin").unwrap(),
-            ))
+            )
         }
     }
 
-    impl<'a> RetrieveUrl<'a, BotLogin> for jurisdictions::CustomUrl<BotLogin> {
-        fn url(&self) -> BetfairUrl<'a, BotLogin> {
+    impl RetrieveUrl<BotLogin> for jurisdiction::CustomUrl<BotLogin> {
+        fn url(&self) -> BetfairUrl<BotLogin> {
             self.0.clone()
         }
     }
@@ -227,48 +220,38 @@ mod bot_login_url {
 mod interactive_login_url {
     use super::*;
 
-    impl<'a> RetrieveUrl<'a, InteractiveLogin> for jurisdictions::Global {
-        fn url(&self) -> BetfairUrl<'a, InteractiveLogin> {
-            BetfairUrl::new(Cow::Owned(
-                url::Url::parse("https://identitysso.betfair.com/api/login").unwrap(),
-            ))
+    impl RetrieveUrl<InteractiveLogin> for jurisdiction::Global {
+        fn url(&self) -> BetfairUrl<InteractiveLogin> {
+            BetfairUrl::new(url::Url::parse("https://identitysso.betfair.com/api/login").unwrap())
         }
     }
 
-    impl<'a> RetrieveUrl<'a, InteractiveLogin> for jurisdictions::Italy {
-        fn url(&self) -> BetfairUrl<'a, InteractiveLogin> {
-            BetfairUrl::new(Cow::Owned(
-                url::Url::parse("https://identitysso.betfair.it/api/login").unwrap(),
-            ))
+    impl RetrieveUrl<InteractiveLogin> for jurisdiction::Italy {
+        fn url(&self) -> BetfairUrl<InteractiveLogin> {
+            BetfairUrl::new(url::Url::parse("https://identitysso.betfair.it/api/login").unwrap())
         }
     }
 
-    impl<'a> RetrieveUrl<'a, InteractiveLogin> for jurisdictions::Spain {
-        fn url(&self) -> BetfairUrl<'a, InteractiveLogin> {
-            BetfairUrl::new(Cow::Owned(
-                url::Url::parse("https://identitysso.betfair.es/api/login").unwrap(),
-            ))
+    impl RetrieveUrl<InteractiveLogin> for jurisdiction::Spain {
+        fn url(&self) -> BetfairUrl<InteractiveLogin> {
+            BetfairUrl::new(url::Url::parse("https://identitysso.betfair.es/api/login").unwrap())
         }
     }
 
-    impl<'a> RetrieveUrl<'a, InteractiveLogin> for jurisdictions::Romania {
-        fn url(&self) -> BetfairUrl<'a, InteractiveLogin> {
-            BetfairUrl::new(Cow::Owned(
-                url::Url::parse("https://identitysso.betfair.ro/api/login").unwrap(),
-            ))
+    impl RetrieveUrl<InteractiveLogin> for jurisdiction::Romania {
+        fn url(&self) -> BetfairUrl<InteractiveLogin> {
+            BetfairUrl::new(url::Url::parse("https://identitysso.betfair.ro/api/login").unwrap())
         }
     }
 
-    impl<'a> RetrieveUrl<'a, InteractiveLogin> for jurisdictions::Sweden {
-        fn url(&self) -> BetfairUrl<'a, InteractiveLogin> {
-            BetfairUrl::new(Cow::Owned(
-                url::Url::parse("https://identitysso.betfair.se/api/login").unwrap(),
-            ))
+    impl RetrieveUrl<InteractiveLogin> for jurisdiction::Sweden {
+        fn url(&self) -> BetfairUrl<InteractiveLogin> {
+            BetfairUrl::new(url::Url::parse("https://identitysso.betfair.se/api/login").unwrap())
         }
     }
 
-    impl<'a> RetrieveUrl<'a, InteractiveLogin> for jurisdictions::CustomUrl<InteractiveLogin> {
-        fn url(&self) -> BetfairUrl<'a, InteractiveLogin> {
+    impl RetrieveUrl<InteractiveLogin> for jurisdiction::CustomUrl<InteractiveLogin> {
+        fn url(&self) -> BetfairUrl<InteractiveLogin> {
             self.0.clone()
         }
     }
@@ -277,15 +260,13 @@ mod interactive_login_url {
 mod logout_url {
     use super::*;
 
-    impl<'a> RetrieveUrl<'a, Logout> for jurisdictions::Global {
-        fn url(&self) -> BetfairUrl<'a, Logout> {
-            BetfairUrl::new(Cow::Owned(
-                url::Url::parse("https://identitysso.betfair.com/api/logout").unwrap(),
-            ))
+    impl RetrieveUrl<Logout> for jurisdiction::Global {
+        fn url(&self) -> BetfairUrl<Logout> {
+            BetfairUrl::new(url::Url::parse("https://identitysso.betfair.com/api/logout").unwrap())
         }
     }
-    impl<'a> RetrieveUrl<'a, Logout> for jurisdictions::CustomUrl<Logout> {
-        fn url(&self) -> BetfairUrl<'a, Logout> {
+    impl RetrieveUrl<Logout> for jurisdiction::CustomUrl<Logout> {
+        fn url(&self) -> BetfairUrl<Logout> {
             self.0.clone()
         }
     }
@@ -294,15 +275,13 @@ mod logout_url {
 mod stream_url {
     use super::*;
 
-    impl<'a> RetrieveUrl<'a, Stream> for jurisdictions::Global {
-        fn url(&self) -> BetfairUrl<'a, Stream> {
-            BetfairUrl::new(Cow::Owned(
-                url::Url::parse("tcptls://stream-api.betfair.com:443").unwrap(),
-            ))
+    impl RetrieveUrl<Stream> for jurisdiction::Global {
+        fn url(&self) -> BetfairUrl<Stream> {
+            BetfairUrl::new(url::Url::parse("tcptls://stream-api.betfair.com:443").unwrap())
         }
     }
-    impl<'a> RetrieveUrl<'a, Stream> for jurisdictions::CustomUrl<Stream> {
-        fn url(&self) -> BetfairUrl<'a, Stream> {
+    impl RetrieveUrl<Stream> for jurisdiction::CustomUrl<Stream> {
+        fn url(&self) -> BetfairUrl<Stream> {
             self.0.clone()
         }
     }

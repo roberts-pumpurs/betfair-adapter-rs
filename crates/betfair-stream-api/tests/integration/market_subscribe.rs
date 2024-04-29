@@ -1,6 +1,6 @@
 use betfair_adapter::betfair_types::types::sports_aping::MarketId;
 use betfair_adapter::{ApplicationKey, SessionToken};
-use betfair_stream_api::{HeartbeatStrategy, MarketSubscriber};
+use betfair_stream_api::{BetfairProviderExt, HeartbeatStrategy, MarketSubscriber};
 use betfair_stream_server_mock::{ClientState, StreamAPIBackend, SubSate};
 use futures_util::StreamExt;
 
@@ -9,17 +9,14 @@ use futures_util::StreamExt;
 #[test_log::test(tokio::test)]
 async fn market_subscription() {
     let mock = StreamAPIBackend::new().await;
-    let url = mock.url.clone();
+    let url = mock.url.clone().into();
 
     let h1 = tokio::spawn(async move {
-        let (stream_listener, async_task, _output) = betfair_stream_api::StreamListener::new(
-            ApplicationKey::new("app_key".to_string()),
-            SessionToken::new("token".to_string()),
-            url.into(),
-            HeartbeatStrategy::None,
-        )
-        .await
-        .unwrap();
+        let bf_mock = betfair_rpc_server_mock::Server::new_with_stream_url(url).await;
+        let client = bf_mock.client().await;
+        let authenticated = client.authenticate().await.unwrap();
+        let (stream_listener, async_task, _output) =
+            authenticated.connect_to_stream().await.unwrap();
         let async_task_handle = tokio::spawn(async_task);
 
         let mut ms = MarketSubscriber::new(

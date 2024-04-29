@@ -8,7 +8,9 @@
 mod error;
 mod provider;
 mod specialization;
-pub use betfair_stream_types as types;
 pub use error::StreamError;
-pub use provider::{cache, ExternalUpdates, HeartbeatStrategy, Status, StreamListener};
+pub use provider::{
+    cache, BetfairProviderExt, ExternalUpdates, HeartbeatStrategy, Status, StreamListener,
+};
 pub use specialization::{MarketSubscriber, OrderSubscriber};
+pub use {betfair_adapter, betfair_stream_types as types};

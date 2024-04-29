@@ -1,24 +1,37 @@
 mod authenticated;
 mod unauthenticated;
 
-use std::marker::PhantomData;
-
-use crate::{secret, urls};
+use crate::{secret, urls, SessionToken};
 
 #[derive(Debug, Clone)]
-pub struct BetfairRpcProvider<'a, T> {
-    client: reqwest::Client,
-    rest_base: urls::BetfairUrl<'a, urls::RestBase>,
-    keep_alive: urls::BetfairUrl<'a, urls::KeepAlive>,
-    bot_login: urls::BetfairUrl<'a, urls::BotLogin>,
-    logout: urls::BetfairUrl<'a, urls::Logout>,
-    login: urls::BetfairUrl<'a, urls::InteractiveLogin>,
-    secret_provider: secret::SecretProvider<'a>,
-    _type: PhantomData<T>,
+pub struct BetfairRpcProviderBase {
+    pub bot_login_client: reqwest::Client,
+    pub rest_base: urls::BetfairUrl<urls::RestBase>,
+    pub keep_alive: urls::BetfairUrl<urls::KeepAlive>,
+    pub bot_login: urls::BetfairUrl<urls::BotLogin>,
+    pub logout: urls::BetfairUrl<urls::Logout>,
+    pub login: urls::BetfairUrl<urls::InteractiveLogin>,
+    pub stream: urls::BetfairUrl<urls::Stream>,
+    pub secret_provider: secret::SecretProvider,
 }
 
-#[derive(Debug)]
-pub struct Authenticated;
+#[derive(Debug, Clone)]
+#[repr(transparent)]
+pub struct UnauthenticatedBetfairRpcProvider(BetfairRpcProviderBase);
 
-#[derive(Debug)]
-pub struct Unauthenticated;
+#[derive(Debug, Clone)]
+pub struct AuthenticatedBetfairRpcProvider {
+    base: BetfairRpcProviderBase,
+    session_token: SessionToken,
+    authenticated_client: reqwest::Client,
+}
+
+impl AuthenticatedBetfairRpcProvider {
+    pub fn session_token(&self) -> &SessionToken {
+        &self.session_token
+    }
+
+    pub fn base(&self) -> &BetfairRpcProviderBase {
+        &self.base
+    }
+}

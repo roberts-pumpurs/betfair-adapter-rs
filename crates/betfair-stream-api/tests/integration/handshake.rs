@@ -1,5 +1,6 @@
+use betfair_adapter::jurisdiction::CustomUrl;
 use betfair_adapter::{ApplicationKey, SessionToken};
-use betfair_stream_api::HeartbeatStrategy;
+use betfair_stream_api::{BetfairProviderExt, HeartbeatStrategy};
 use betfair_stream_server_mock::{ClientState, StreamAPIBackend, SubSate};
 
 #[rstest::rstest]
@@ -7,18 +8,14 @@ use betfair_stream_server_mock::{ClientState, StreamAPIBackend, SubSate};
 #[test_log::test(tokio::test)]
 async fn successful_handshake() {
     let mock = StreamAPIBackend::new().await;
-    let url = mock.url.clone();
+    let url = mock.url.clone().into();
 
     let client_task = tokio::spawn(async move {
-        let (_client, async_task, _output) = betfair_stream_api::StreamListener::new(
-            ApplicationKey::new("app_key".to_string()),
-            SessionToken::new("session_token".to_string()),
-            url.into(),
-            HeartbeatStrategy::None,
-        )
-        .await
-        .unwrap();
-        let _ = async_task.await;
+        let bf_mock = betfair_rpc_server_mock::Server::new_with_stream_url(url).await;
+        let client = bf_mock.client().await;
+        let authenticated = client.authenticate().await.unwrap();
+        let (_client, async_task, _output) = authenticated.connect_to_stream().await.unwrap();
+        async_task.await
     });
 
     let connection = mock.process_next().await;

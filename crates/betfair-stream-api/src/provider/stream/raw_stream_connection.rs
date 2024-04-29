@@ -14,8 +14,8 @@ use tokio_util::codec::{Decoder, Encoder, FramedRead, FramedWrite};
 
 use crate::StreamError;
 
-pub(crate) async fn connect<'a>(
-    url: BetfairUrl<'a, betfair_adapter::Stream>,
+pub(crate) async fn connect(
+    url: BetfairUrl<betfair_adapter::Stream>,
     command_reader: impl futures_util::Stream<Item = Result<RequestMessage, BroadcastStreamRecvError>>
         + std::marker::Unpin
         + Send

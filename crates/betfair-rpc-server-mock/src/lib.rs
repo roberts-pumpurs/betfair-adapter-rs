@@ -1,9 +1,9 @@
 use std::borrow::Cow;
 
-use betfair_adapter::jurisdictions::CustomUrl;
+use betfair_adapter::jurisdiction::CustomUrl;
 use betfair_adapter::{
-    ApplicationKey, BetfairConfigBuilder, BetfairRpcProvider, BotLogin, Identity, InteractiveLogin,
-    KeepAlive, Logout, Password, RestBase, SecretProvider, Unauthenticated, Username,
+    ApplicationKey, BetfairConfigBuilder, BotLogin, Identity, InteractiveLogin, KeepAlive, Logout,
+    Password, RestBase, SecretProvider, Stream, UnauthenticatedBetfairRpcProvider, Username,
 };
 use betfair_types::types::BetfairRpcRequest;
 use serde_json::json;
@@ -35,15 +35,28 @@ pub struct Server {
 pub struct MockSettings {
     pub keep_alive_period: std::time::Duration,
     pub health_check_period: std::time::Duration,
+    pub stream_url: CustomUrl<Stream>,
+}
+
+impl Default for MockSettings {
+    fn default() -> Self {
+        Self {
+            keep_alive_period: std::time::Duration::from_secs(10),
+            health_check_period: std::time::Duration::from_secs(10),
+            stream_url: CustomUrl::new("localhost/stream".parse().unwrap()),
+        }
+    }
 }
 
 impl Server {
     pub async fn new() -> Self {
-        Self::new_with_settings(MockSettings {
-            keep_alive_period: std::time::Duration::from_secs(10),
-            health_check_period: std::time::Duration::from_secs(10),
-        })
-        .await
+        Self::new_with_settings(MockSettings::default()).await
+    }
+
+    pub async fn new_with_stream_url(stream_url: CustomUrl<Stream>) -> Self {
+        let mut settings = MockSettings::default();
+        settings.stream_url = stream_url;
+        Self::new_with_settings(settings).await
     }
 
     pub async fn new_with_settings(mock_settings: MockSettings) -> Self {
@@ -68,35 +81,35 @@ impl Server {
     }
 
     /// Create a betfair client with the mock server as the base url
-    pub async fn client(&self) -> BetfairRpcProvider<Unauthenticated> {
+    pub async fn client(&self) -> UnauthenticatedBetfairRpcProvider {
         let secrets_provider = self.secrets_provider();
         let config = self.betfair_config(secrets_provider);
 
-        BetfairRpcProvider::new_with_config(config)
+        UnauthenticatedBetfairRpcProvider::new_with_config(config).unwrap()
     }
 
-    pub fn secrets_provider(&self) -> SecretProvider<'static> {
+    pub fn secrets_provider(&self) -> SecretProvider {
         let identity = reqwest::Identity::from_pem(CERTIFICATE.as_bytes()).unwrap();
 
         let secrets_provider = SecretProvider {
-            application_key: Cow::Owned(ApplicationKey::new(APP_KEY.to_string())),
-            identity: Cow::Owned(Identity::new(identity)),
-            password: Cow::Owned(Password::new(PASSWORD.to_string())),
-            username: Cow::Owned(Username::new(USERNAME.to_string())),
+            application_key: ApplicationKey::new(APP_KEY.to_string()),
+            identity: Identity::new(identity),
+            password: Password::new(PASSWORD.to_string()),
+            username: Username::new(USERNAME.to_string()),
         };
         secrets_provider
     }
 
     pub fn betfair_config<'a>(
         &self,
-        secrets_provider: SecretProvider<'a>,
+        secrets_provider: SecretProvider,
     ) -> BetfairConfigBuilder<
-        'a,
         CustomUrl<RestBase>,
         CustomUrl<KeepAlive>,
         CustomUrl<BotLogin>,
         CustomUrl<Logout>,
         CustomUrl<InteractiveLogin>,
+        CustomUrl<Stream>,
     > {
         let base_uri: url::Url = self.bf_api_mock_server.uri().parse().unwrap();
 
@@ -106,6 +119,7 @@ impl Server {
             bot_login: CustomUrl::new(base_uri.join(BOT_LOGIN_URL).unwrap()),
             logout: CustomUrl::new(base_uri.join(LOGOUT).unwrap()),
             login: CustomUrl::new(base_uri.join(LOGIN_URL).unwrap()),
+            stream: self.mock_settings.stream_url.clone(),
             secrets_provider,
         }
     }

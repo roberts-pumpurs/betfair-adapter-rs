@@ -1,38 +1,40 @@
 use crate::{secret, urls};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BetfairConfigBuilder<
-    'a,
-    T: urls::RetrieveUrl<'a, urls::RestBase> + std::fmt::Debug,
-    K: urls::RetrieveUrl<'a, urls::KeepAlive> + std::fmt::Debug,
-    V: urls::RetrieveUrl<'a, urls::BotLogin> + std::fmt::Debug,
-    Z: urls::RetrieveUrl<'a, urls::Logout> + std::fmt::Debug,
-    X: urls::RetrieveUrl<'a, urls::InteractiveLogin> + std::fmt::Debug,
+    T: urls::RetrieveUrl<urls::RestBase> + std::fmt::Debug,
+    K: urls::RetrieveUrl<urls::KeepAlive> + std::fmt::Debug,
+    V: urls::RetrieveUrl<urls::BotLogin> + std::fmt::Debug,
+    Z: urls::RetrieveUrl<urls::Logout> + std::fmt::Debug,
+    X: urls::RetrieveUrl<urls::InteractiveLogin> + std::fmt::Debug,
+    A: urls::RetrieveUrl<urls::Stream> + std::fmt::Debug,
 > {
     pub rest: T,
     pub keep_alive: K,
     pub bot_login: V,
     pub logout: Z,
     pub login: X,
-    pub secrets_provider: secret::SecretProvider<'a>,
+    pub stream: A,
+    pub secrets_provider: secret::SecretProvider,
 }
 
 pub fn new_global_config(
-    secret_provider: secret::SecretProvider<'_>,
+    secret_provider: secret::SecretProvider,
 ) -> BetfairConfigBuilder<
-    '_,
-    urls::jurisdictions::Global,
-    urls::jurisdictions::Global,
-    urls::jurisdictions::Global,
-    urls::jurisdictions::Global,
-    urls::jurisdictions::Global,
+    urls::jurisdiction::Global,
+    urls::jurisdiction::Global,
+    urls::jurisdiction::Global,
+    urls::jurisdiction::Global,
+    urls::jurisdiction::Global,
+    urls::jurisdiction::Global,
 > {
     BetfairConfigBuilder {
-        rest: urls::jurisdictions::Global,
-        keep_alive: urls::jurisdictions::Global,
-        bot_login: urls::jurisdictions::Global,
-        logout: urls::jurisdictions::Global,
-        login: urls::jurisdictions::Global,
+        rest: urls::jurisdiction::Global,
+        keep_alive: urls::jurisdiction::Global,
+        bot_login: urls::jurisdiction::Global,
+        logout: urls::jurisdiction::Global,
+        login: urls::jurisdiction::Global,
+        stream: urls::jurisdiction::Global,
         secrets_provider: secret_provider,
     }
 }

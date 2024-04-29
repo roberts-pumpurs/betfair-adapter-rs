@@ -56,15 +56,15 @@ pub enum ExternalUpdates {
 }
 
 impl StreamListener {
-    pub async fn new(
+    pub(super) async fn new(
         application_key: ApplicationKey,
         session_token: SessionToken,
-        url: BetfairUrl<'static, betfair_adapter::Stream>,
+        url: BetfairUrl<betfair_adapter::Stream>,
         hb: HeartbeatStrategy,
     ) -> Result<
         (
             Arc<tokio::sync::RwLock<Self>>,
-            impl Future<Output = ()>,
+            impl Future<Output = ()> + Send + 'static,
             tokio::sync::broadcast::Receiver<ExternalUpdates>,
         ),
         StreamError,
@@ -190,14 +190,12 @@ impl StreamListener {
 }
 
 async fn connect(
-    url: BetfairUrl<'static, betfair_adapter::Stream>,
+    url: BetfairUrl<betfair_adapter::Stream>,
     command_reader: tokio::sync::broadcast::Receiver<RequestMessage>,
     api: Arc<tokio::sync::RwLock<StreamListener>>,
     hb: HeartbeatStrategy,
 ) -> impl Future<Output = ()> {
     let reconnect_notifier = Arc::new(tokio::sync::Notify::new());
-
-    let url = url.clone();
 
     async move {
         let async_task = loop {
@@ -250,7 +248,7 @@ async fn connect(
 }
 
 async fn connect_and_process(
-    url: BetfairUrl<'_, betfair_adapter::Stream>,
+    url: BetfairUrl<betfair_adapter::Stream>,
     command_reader: tokio::sync::broadcast::Receiver<RequestMessage>,
     api: Arc<tokio::sync::RwLock<StreamListener>>,
     hb: HeartbeatStrategy,

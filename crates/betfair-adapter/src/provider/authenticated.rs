@@ -1,9 +1,9 @@
 use betfair_types::keep_alive;
 use betfair_types::types::BetfairRpcRequest;
 
-use crate::{ApiError, Authenticated, BetfairRpcProvider};
+use crate::{ApiError, AuthenticatedBetfairRpcProvider};
 
-impl<'a> BetfairRpcProvider<'a, Authenticated> {
+impl AuthenticatedBetfairRpcProvider {
     #[tracing::instrument(skip_all, ret, err, fields(req = ?request))]
     pub async fn send_request<T>(&self, request: T) -> Result<T::Res, ApiError>
     where
@@ -12,10 +12,10 @@ impl<'a> BetfairRpcProvider<'a, Authenticated> {
         T::Error: serde::de::DeserializeOwned,
         ApiError: From<<T as BetfairRpcRequest>::Error>,
     {
-        let endpoint = self.rest_base.url().join(T::method())?;
+        let endpoint = self.base.rest_base.url().join(T::method())?;
         tracing::debug!(endpoint = ?endpoint.to_string(), "Sending request");
         let full = self
-            .client
+            .authenticated_client
             .post(endpoint.as_str())
             .json(&request)
             .send()
@@ -38,8 +38,8 @@ impl<'a> BetfairRpcProvider<'a, Authenticated> {
     #[tracing::instrument(skip_all, ret, err)]
     pub async fn keep_alive(&self) -> Result<(), ApiError> {
         let _res = self
-            .client
-            .get(self.keep_alive.url().clone())
+            .authenticated_client
+            .get(self.base.keep_alive.url().clone())
             .send()
             .await?
             .error_for_status()?
@@ -55,8 +55,8 @@ impl<'a> BetfairRpcProvider<'a, Authenticated> {
     #[tracing::instrument(skip_all, ret, err)]
     pub async fn logout(&self) -> Result<(), ApiError> {
         let _res = self
-            .client
-            .get(self.logout.url().clone())
+            .authenticated_client
+            .get(self.base.logout.url().clone())
             .send()
             .await?
             .error_for_status()?
@@ -69,7 +69,9 @@ impl<'a> BetfairRpcProvider<'a, Authenticated> {
     }
 
     pub async fn update_auth_token(&mut self) -> Result<(), ApiError> {
-        self.bot_log_in().await?;
+        let (session_token, authenticated_client) = self.base.bot_log_in().await?;
+        self.session_token = session_token;
+        self.authenticated_client = authenticated_client;
         Ok(())
     }
 }

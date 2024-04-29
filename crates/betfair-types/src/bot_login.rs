@@ -3,6 +3,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 
 #[derive(Debug)]
+#[repr(transparent)]
 pub struct BotLoginResponse(pub Result<SuccessResponse, LoginError>);
 
 impl std::ops::Deref for BotLoginResponse {

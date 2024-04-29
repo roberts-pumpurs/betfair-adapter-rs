@@ -24,6 +24,7 @@ rustls.workspace = true
 chrono.workspace = true
 eyre.workspace = true
 rustls-native-certs.workspace = true
+trait-variant.workspace = true
 
 [dev-dependencies]
 rust_decimal_macros.workspace = true
@@ -35,3 +36,4 @@ pretty_assertions.workspace = true
 rstest.workspace = true
 test-log.workspace = true
 betfair-stream-server-mock.workspace = true
+betfair-rpc-server-mock.workspace = true
