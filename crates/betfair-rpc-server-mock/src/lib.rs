@@ -43,7 +43,7 @@ impl Default for MockSettings {
         Self {
             keep_alive_period: std::time::Duration::from_secs(10),
             health_check_period: std::time::Duration::from_secs(10),
-            stream_url: CustomUrl::new("localhost/stream".parse().unwrap()),
+            stream_url: CustomUrl::new("http://localhost:80/stream".parse().unwrap()),
         }
     }
 }
