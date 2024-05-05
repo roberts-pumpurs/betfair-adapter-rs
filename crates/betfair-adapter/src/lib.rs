@@ -15,7 +15,6 @@ pub use betfair_types;
 pub use betfair_types::rust_decimal;
 pub use config::{new_global_config, BetfairConfigBuilder};
 pub use error::ApiError;
-use provider::BetfairRpcProviderBase;
 pub use provider::{AuthenticatedBetfairRpcProvider, UnauthenticatedBetfairRpcProvider};
 pub use secret::{ApplicationKey, Identity, Password, SecretProvider, SessionToken, Username};
 pub use urls::{

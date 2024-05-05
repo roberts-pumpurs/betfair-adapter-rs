@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/*"]
+members = ["crates/*", "xtask"]
 
 [workspace.dependencies]
 # Our crates
@@ -28,6 +28,7 @@ nanoid = "0.4"
 typed-builder = "0.18"
 redact = { version = "0.1", features = ["serde"] }
 trait-variant = "0.1"
+itertools = "0.12"
 
 # Async
 tokio = { version = "1.0", features = ["full", "tracing"] }
@@ -81,3 +82,5 @@ tracing-subscriber = { version = "0.3", features = [
     "valuable",
     "tracing",
 ] }
+
+# xtask

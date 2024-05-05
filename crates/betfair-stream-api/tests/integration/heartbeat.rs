@@ -1,6 +1,6 @@
-use betfair_adapter::{ApplicationKey, SessionToken};
 use betfair_stream_api::{BetfairProviderExt, HeartbeatStrategy};
 use betfair_stream_server_mock::{ClientState, StreamAPIBackend, SubSate};
+use tokio_stream::StreamExt;
 
 #[rstest::rstest]
 #[timeout(std::time::Duration::from_secs(5))]
@@ -14,11 +14,14 @@ async fn successful_heartbeat() {
         let bf_mock = betfair_rpc_server_mock::Server::new_with_stream_url(url).await;
         let client = bf_mock.client().await;
         let authenticated = client.authenticate().await.unwrap();
-        let (_client, async_task, _output) = authenticated
+        let mut stream_api_abi = authenticated
             .connect_to_stream_with_hb(HeartbeatStrategy::Interval(duration))
-            .await
-            .unwrap();
-        async_task.await
+            .await;
+
+        let mut stream = stream_api_abi.run_with_default_runtime();
+        while let Some(value) = stream.next().await {
+            tracing::info!(?value, "received vaue from stream");
+        }
     });
 
     let connection = mock.process_next().await;
@@ -37,7 +40,7 @@ async fn successful_heartbeat() {
     assert_eq!(
         *conn_state,
         ClientState::LoggedIn(SubSate {
-            keep_alive_counter: 2
+            heartbeat_counter: 2
         })
     );
 }

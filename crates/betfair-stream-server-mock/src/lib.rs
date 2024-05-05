@@ -100,7 +100,7 @@ impl ClientStateW {
                             id,
                             connection_closed: None,
                             connection_id: Some("conn_id_fake123".to_string()),
-                            connections_available: None,
+                            connections_available: Some(42),
                             error_code: None,
                             error_message: None,
                             status_code: None,
@@ -108,7 +108,7 @@ impl ClientStateW {
                         .await
                         .unwrap();
                     ClientState::LoggedIn(SubSate {
-                        keep_alive_counter: 0,
+                        heartbeat_counter: 0,
                     })
                 }
                 ClientState::LoggedIn(mut state) => {
@@ -119,7 +119,7 @@ impl ClientStateW {
                     let sub_state = match msg {
                         RequestMessage::Authentication(_) => todo!(),
                         RequestMessage::Heartbeat(_hb) => {
-                            state.keep_alive_counter += 1;
+                            state.heartbeat_counter += 1;
                             socket
                                 .feed(ResponseMessage::StatusMessage(StatusMessage {
                                     id: Some(1),
@@ -157,7 +157,7 @@ pub enum ConnState {
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct SubSate {
-    pub keep_alive_counter: u64,
+    pub heartbeat_counter: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]

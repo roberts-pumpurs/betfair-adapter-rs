@@ -1,6 +1,5 @@
 use betfair_adapter::betfair_types::types::sports_aping::MarketId;
-use betfair_adapter::{ApplicationKey, SessionToken};
-use betfair_stream_api::{BetfairProviderExt, HeartbeatStrategy, MarketSubscriber};
+use betfair_stream_api::{BetfairProviderExt, MarketSubscriber};
 use betfair_stream_server_mock::{ClientState, StreamAPIBackend, SubSate};
 use futures_util::StreamExt;
 
@@ -15,12 +14,11 @@ async fn market_subscription() {
         let bf_mock = betfair_rpc_server_mock::Server::new_with_stream_url(url).await;
         let client = bf_mock.client().await;
         let authenticated = client.authenticate().await.unwrap();
-        let (stream_listener, async_task, _output) =
-            authenticated.connect_to_stream().await.unwrap();
-        let async_task_handle = tokio::spawn(async_task);
+        let mut stream_api_abi = authenticated.connect_to_stream().await;
+        let mut stream = stream_api_abi.run_with_default_runtime();
 
         let mut ms = MarketSubscriber::new(
-            stream_listener,
+            &stream,
             betfair_stream_types::request::market_subscription_message::MarketFilter::default(),
             vec![betfair_stream_types::request::market_subscription_message::Fields::ExBestOffers],
             Some(
@@ -30,11 +28,11 @@ async fn market_subscription() {
         );
 
         let market_id = MarketId("1.23456789".to_string());
-        let mut receiver = ms.subscribe_to_market(market_id).await;
+        ms.subscribe_to_market(market_id).await.unwrap();
 
-        let msg = receiver.next().await.unwrap();
-
-        async_task_handle.await.unwrap();
+        while let Some(value) = stream.next().await {
+            tracing::info!(?value, "received vaue from stream");
+        }
     });
 
     let connection = mock.process_next().await;
@@ -52,7 +50,7 @@ async fn market_subscription() {
     assert_eq!(
         *conn_state,
         ClientState::LoggedIn(SubSate {
-            keep_alive_counter: 0
+            heartbeat_counter: 0
         })
     );
 }

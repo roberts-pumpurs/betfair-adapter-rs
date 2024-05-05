@@ -16,7 +16,7 @@ use crate::StreamError;
 
 pub(crate) async fn connect(
     url: BetfairUrl<betfair_adapter::Stream>,
-    command_reader: impl futures_util::Stream<Item = Result<RequestMessage, BroadcastStreamRecvError>>
+    command_reader: impl futures_util::Stream<Item = Result<RequestMessage, eyre::Error>>
         + std::marker::Unpin
         + Send
         + 'static,
@@ -51,7 +51,7 @@ pub(crate) async fn connect(
 pub(crate) async fn connect_tls(
     domain: &str,
     socket_addr: SocketAddr,
-    incoming_commands: impl futures_util::Stream<Item = Result<RequestMessage, BroadcastStreamRecvError>>
+    incoming_commands: impl futures_util::Stream<Item = Result<RequestMessage, eyre::Error>>
         + std::marker::Unpin
         + 'static,
 ) -> Result<
@@ -72,7 +72,7 @@ pub(crate) async fn connect_tls(
 
 pub(crate) async fn connect_non_tls(
     socket_addr: SocketAddr,
-    incoming_commands: impl futures_util::Stream<Item = Result<RequestMessage, BroadcastStreamRecvError>>
+    incoming_commands: impl futures_util::Stream<Item = Result<RequestMessage, eyre::Error>>
         + std::marker::Unpin
         + 'static,
 ) -> Result<
@@ -94,7 +94,7 @@ async fn process<
 >(
     input: I,
     output: O,
-    mut incoming_commands: impl futures_util::Stream<Item = Result<RequestMessage, BroadcastStreamRecvError>>
+    mut incoming_commands: impl futures_util::Stream<Item = Result<RequestMessage, eyre::Error>>
         + std::marker::Unpin
         + 'static,
 ) -> Result<
@@ -139,16 +139,25 @@ impl Decoder for StreamAPIClientCodec {
     type Item = ResponseMessage;
     type Error = StreamError;
 
+    // todo: write a test that checks the behaviour when we have more than 2 msgs in the source
+    // bytes
     fn decode(&mut self, src: &mut bytes::BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+        use itertools::*;
+
         // Check if there is a newline character in the buffer
-        if let Some(newline_index) = src.iter().position(|&b| b == b'\n') {
-            // Extract the message up to the newline character
-            let line = src.split_to(newline_index + 1);
+        if let Some(line) = src
+            .iter()
+            .tuple_windows::<(_, _)>()
+            .position(|(a, b)| a == &b'\r' && b == &b'\n')
+            .map(|idx| src.split_to(idx + 2))
+        {
+            if let Some((json, _delimiters)) = line.split_last_chunk::<2>() {
+                // Deserialize the JSON data
+                let data = serde_json::from_slice::<Self::Item>(&json)?;
+                return Ok(Some(data))
+            }
 
-            // Deserialize the JSON data
-            let data = serde_json::from_slice::<Self::Item>(&line[..line.len() - 1])?;
-
-            Ok(Some(data))
+            Ok(None)
         } else {
             // Not enough data to read a complete line
             Ok(None)
@@ -192,6 +201,8 @@ fn tls_connector() -> tokio_rustls::TlsConnector {
 #[cfg(test)]
 mod tests {
 
+    use std::fmt::Write;
+
     use super::*;
 
     #[tokio::test]
@@ -208,5 +219,100 @@ mod tests {
             .unwrap();
         assert!(socket_addr.ip().is_ipv4());
         assert_eq!(socket_addr.port(), 443);
+    }
+
+    #[test]
+    fn can_decode_single_message() {
+        let msg = r#"{"op":"connection","connectionId":"002-051134157842-432409"}"#;
+        let separator = "\r\n";
+        let data = format!("{}{}", msg, separator);
+
+        let mut codec = StreamAPIClientCodec;
+        let mut buf = bytes::BytesMut::from(data.as_bytes());
+        let msg = codec.decode(&mut buf).unwrap().unwrap();
+
+        assert!(matches!(msg, ResponseMessage::Connection(_)));
+    }
+
+    #[test]
+    fn can_decode_multiple_messages() {
+        // contains two messages
+        let msg_one = r#"{"op":"connection","connectionId":"002-051134157842-432409"}"#;
+        let msg_two = r#"{"op":"ocm","id":3,"clk":"AAAAAAAA","status":503,"pt":1498137379766,"ct":"HEARTBEAT"}"#;
+        let separator = "\r\n";
+        let data = format!("{}{}{}{}", msg_one, separator, msg_two, separator);
+
+        let mut codec = StreamAPIClientCodec;
+        let mut buf = bytes::BytesMut::from(data.as_bytes());
+        let msg_one = codec.decode(&mut buf).unwrap().unwrap();
+        let msg_two = codec.decode(&mut buf).unwrap().unwrap();
+
+        assert!(matches!(msg_one, ResponseMessage::Connection(_)));
+        assert!(matches!(msg_two, ResponseMessage::OrderChange(_)));
+    }
+
+    #[test]
+    fn can_decode_multiple_partial_messages() {
+        // contains two messages
+        let msg_one = r#"{"op":"connection","connectionId":"002-051134157842-432409"}"#;
+        let msg_two_pt_one = r#"{"op":"ocm","id":3,"clk""#;
+        let msg_two_pt_two = r#":"AAAAAAAA","status":503,"pt":1498137379766,"ct":"HEARTBEAT"}"#;
+        let separator = "\r\n";
+        let data = format!("{}{}{}", msg_one, separator, msg_two_pt_one);
+
+        let mut codec = StreamAPIClientCodec;
+        let mut buf = bytes::BytesMut::from(data.as_bytes());
+        let msg_one = codec.decode(&mut buf).unwrap().unwrap();
+        let msg_two_attempt = codec.decode(&mut buf).unwrap();
+        assert!(msg_two_attempt.is_none());
+        buf.write_str(msg_two_pt_two).unwrap();
+        buf.write_str(separator).unwrap();
+        let msg_two = codec.decode(&mut buf).unwrap().unwrap();
+
+        assert!(matches!(msg_one, ResponseMessage::Connection(_)));
+        assert!(matches!(msg_two, ResponseMessage::OrderChange(_)));
+    }
+
+    #[test]
+    fn can_decode_subsequent_messages() {
+        // contains two messages
+        let msg_one = r#"{"op":"connection","connectionId":"002-051134157842-432409"}"#;
+        let msg_two = r#"{"op":"ocm","id":3,"clk":"AAAAAAAA","status":503,"pt":1498137379766,"ct":"HEARTBEAT"}"#;
+        let separator = "\r\n";
+        let data = format!("{}{}", msg_one, separator);
+
+        let mut codec = StreamAPIClientCodec;
+        let mut buf = bytes::BytesMut::from(data.as_bytes());
+        let msg_one = codec.decode(&mut buf).unwrap().unwrap();
+        let msg_two_attempt = codec.decode(&mut buf).unwrap();
+        assert!(msg_two_attempt.is_none());
+        let data = format!("{}{}", msg_two, separator);
+        buf.write_str(data.as_str()).unwrap();
+        let msg_two = codec.decode(&mut buf).unwrap().unwrap();
+
+        assert!(matches!(msg_one, ResponseMessage::Connection(_)));
+        assert!(matches!(msg_two, ResponseMessage::OrderChange(_)));
+    }
+
+    #[test]
+    fn can_encode_message() {
+        let msg = RequestMessage::Authentication(
+            betfair_stream_types::request::authentication_message::AuthenticationMessage {
+                id: Some(1),
+                session: "sss".to_string(),
+                app_key: "aaaa".to_string(),
+            },
+        );
+        let mut codec = StreamAPIClientCodec;
+        let mut buf = bytes::BytesMut::new();
+        codec.encode(msg, &mut buf).unwrap();
+
+        let data = buf.freeze();
+        let data = std::str::from_utf8(&data).unwrap();
+
+        // assert that we have the suffix \r\n
+        assert!(data.ends_with("\r\n"));
+        // assert that we have the prefix {"op":"authentication"
+        assert!(data.starts_with("{\"op\":\"authentication\""));
     }
 }

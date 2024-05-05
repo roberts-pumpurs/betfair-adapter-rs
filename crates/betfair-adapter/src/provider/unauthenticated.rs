@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use betfair_types::bot_login::BotLoginResponse;
 use reqwest::{header, Client};
 

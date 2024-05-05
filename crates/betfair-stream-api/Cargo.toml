@@ -25,6 +25,7 @@ chrono.workspace = true
 eyre.workspace = true
 rustls-native-certs.workspace = true
 trait-variant.workspace = true
+itertools.workspace = true
 
 [dev-dependencies]
 rust_decimal_macros.workspace = true

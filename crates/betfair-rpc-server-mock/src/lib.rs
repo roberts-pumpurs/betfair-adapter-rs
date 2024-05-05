@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use betfair_adapter::jurisdiction::CustomUrl;
 use betfair_adapter::{
     ApplicationKey, BetfairConfigBuilder, BotLogin, Identity, InteractiveLogin, KeepAlive, Logout,
@@ -91,13 +89,12 @@ impl Server {
     pub fn secrets_provider(&self) -> SecretProvider {
         let identity = reqwest::Identity::from_pem(CERTIFICATE.as_bytes()).unwrap();
 
-        let secrets_provider = SecretProvider {
+        SecretProvider {
             application_key: ApplicationKey::new(APP_KEY.to_string()),
             identity: Identity::new(identity),
             password: Password::new(PASSWORD.to_string()),
             username: Username::new(USERNAME.to_string()),
-        };
-        secrets_provider
+        }
     }
 
     pub fn betfair_config<'a>(

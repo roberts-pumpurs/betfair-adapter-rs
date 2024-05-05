@@ -1,33 +1,24 @@
-use std::collections::HashMap;
-use std::ops::{Deref, DerefMut};
-
 use betfair_adapter::betfair_types::customer_strategy_ref::CustomerStrategyRef;
 use betfair_stream_types::request::order_subscription_message::{
     OrderFilter, OrderSubscriptionMessage,
 };
 use betfair_stream_types::request::RequestMessage;
-use betfair_stream_types::response::market_change_message::MarketChangeMessage;
 
-use crate::StreamListener;
+use crate::StreamApiConnection;
 
 /// A warpper around a `StreamListener` that allows subscribing to order updates with a somewhat
 /// ergonomic API.
 pub struct OrderSubscriber {
-    stream_listener: std::sync::Arc<tokio::sync::RwLock<StreamListener>>,
+    command_sender: tokio::sync::broadcast::Sender<RequestMessage>,
     filter: OrderFilter,
-    order_mpsc:
-        HashMap<CustomerStrategyRef, futures::channel::mpsc::UnboundedSender<MarketChangeMessage>>,
 }
 
 impl OrderSubscriber {
-    pub fn new(
-        stream_listener: std::sync::Arc<tokio::sync::RwLock<StreamListener>>,
-        filter: OrderFilter,
-    ) -> Self {
+    pub fn new<T>(stream_api_connection: &StreamApiConnection<T>, filter: OrderFilter) -> Self {
+        let command_sender = stream_api_connection.command_sender().clone();
         Self {
-            stream_listener,
+            command_sender,
             filter,
-            order_mpsc: HashMap::new(),
         }
     }
 
@@ -35,22 +26,36 @@ impl OrderSubscriber {
     pub async fn subscribe_to_strategy_updates(
         &mut self,
         strategy_ref: CustomerStrategyRef,
-    ) -> futures::channel::mpsc::UnboundedReceiver<MarketChangeMessage> {
-        let (tx, rx) = futures::channel::mpsc::unbounded();
-        self.order_mpsc.insert(strategy_ref, tx);
+    ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
+        self.filter
+            .customer_strategy_refs
+            .as_mut()
+            .map(|x| x.push(strategy_ref));
 
-        self.resubscribe().await;
-
-        rx
+        self.resubscribe().await
     }
 
     /// Unsubscribe from a market.
-    pub async fn unsubscribe_from_strategy_updates(&mut self, strategy_ref: CustomerStrategyRef) {
-        let _value = self.order_mpsc.remove(&strategy_ref);
+    pub async fn unsubscribe_from_strategy_updates(
+        &mut self,
+        strategy_ref: CustomerStrategyRef,
+    ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
+        self.filter
+            .customer_strategy_refs
+            .as_mut()
+            .map(|x| x.retain(|x| x != &strategy_ref));
 
-        if self.order_mpsc.is_empty() {
-            self.unsubscribe_from_all_markets().await;
+        if self
+            .filter
+            .customer_strategy_refs
+            .as_ref()
+            .map(|x| x.is_empty())
+            .unwrap_or(true)
+        {
+            self.unsubscribe_from_all_markets().await?;
         }
+
+        Ok(())
     }
 
     /// Unsubscribe from all markets.
@@ -58,7 +63,9 @@ impl OrderSubscriber {
     /// Internally it uses a weird trick of subscribing to a market that does not exist to simulate
     /// unsubscribing from all markets.
     /// https://forum.developer.betfair.com/forum/sports-exchange-api/exchange-api/34555-stream-api-unsubscribe-from-all-markets
-    pub async fn unsubscribe_from_all_markets(&mut self) {
+    pub async fn unsubscribe_from_all_markets(
+        &mut self,
+    ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
         let strategy_that_does_not_exist = CustomerStrategyRef::new([
             'd', 'o', 's', 'e', 'n', 't', ' ', 'e', 'x', 'i', 's', 't', ' ', ' ', ' ',
         ]);
@@ -78,15 +85,14 @@ impl OrderSubscriber {
             })),
             conflate_ms: None,
         });
-        let mut w = self.stream_listener.write().await;
-        w.send_message(req).unwrap();
-        drop(w);
+        self.command_sender.send(req)?;
+
+        Ok(())
     }
 
-    async fn resubscribe(&mut self) {
-        let all_strategy_refs = self.order_mpsc.keys().cloned().collect::<Vec<_>>();
-        self.filter.customer_strategy_refs = Some(all_strategy_refs);
-
+    pub async fn resubscribe(
+        &mut self,
+    ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
         let req = RequestMessage::OrderSubscription(OrderSubscriptionMessage {
             id: None,
             clk: None,         // empty to reset the clock
@@ -96,31 +102,20 @@ impl OrderSubscriber {
             order_filter: Some(Box::new(self.filter.clone())),
             conflate_ms: None,
         });
-        let mut w = self.stream_listener.write().await;
-        w.send_message(req).unwrap();
-        drop(w);
+        self.command_sender.send(req)?;
+
+        Ok(())
     }
 
     pub fn filter(&self) -> &OrderFilter {
         &self.filter
     }
 
-    pub async fn set_filter(&mut self, filter: OrderFilter) {
+    pub async fn set_filter(
+        &mut self,
+        filter: OrderFilter,
+    ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
         self.filter = filter;
-        self.resubscribe().await;
-    }
-}
-
-impl Deref for OrderSubscriber {
-    type Target = std::sync::Arc<tokio::sync::RwLock<StreamListener>>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.stream_listener
-    }
-}
-
-impl DerefMut for OrderSubscriber {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.stream_listener
+        self.resubscribe().await
     }
 }

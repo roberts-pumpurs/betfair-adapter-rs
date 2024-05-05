@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 #[derive(Debug, Clone)]
 pub struct SecretProvider {
     pub application_key: ApplicationKey,
