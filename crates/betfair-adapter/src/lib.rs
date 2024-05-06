@@ -13,7 +13,7 @@ mod urls;
 
 pub use betfair_types;
 pub use betfair_types::rust_decimal;
-pub use config::{new_global_config, BetfairConfigBuilder};
+pub use config::BetfairConfigBuilder;
 pub use error::ApiError;
 pub use provider::{AuthenticatedBetfairRpcProvider, UnauthenticatedBetfairRpcProvider};
 pub use secret::{ApplicationKey, Identity, Password, SecretProvider, SessionToken, Username};

@@ -1,3 +1,4 @@
 target
 /coverage
 lcov.*
+example_config.toml

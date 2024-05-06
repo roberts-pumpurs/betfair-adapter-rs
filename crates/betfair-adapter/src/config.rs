@@ -18,23 +18,34 @@ pub struct BetfairConfigBuilder<
     pub secrets_provider: secret::SecretProvider,
 }
 
-pub fn new_global_config(
-    secret_provider: secret::SecretProvider,
-) -> BetfairConfigBuilder<
-    urls::jurisdiction::Global,
-    urls::jurisdiction::Global,
-    urls::jurisdiction::Global,
-    urls::jurisdiction::Global,
-    urls::jurisdiction::Global,
-    urls::jurisdiction::Global,
-> {
-    BetfairConfigBuilder {
-        rest: urls::jurisdiction::Global,
-        keep_alive: urls::jurisdiction::Global,
-        bot_login: urls::jurisdiction::Global,
-        logout: urls::jurisdiction::Global,
-        login: urls::jurisdiction::Global,
-        stream: urls::jurisdiction::Global,
-        secrets_provider: secret_provider,
+impl
+    BetfairConfigBuilder<
+        urls::jurisdiction::Global,
+        urls::jurisdiction::Global,
+        urls::jurisdiction::Global,
+        urls::jurisdiction::Global,
+        urls::jurisdiction::Global,
+        urls::jurisdiction::Global,
+    >
+{
+    pub fn new_with_global_jurisdiction(
+        secret_provider: secret::SecretProvider,
+    ) -> BetfairConfigBuilder<
+        urls::jurisdiction::Global,
+        urls::jurisdiction::Global,
+        urls::jurisdiction::Global,
+        urls::jurisdiction::Global,
+        urls::jurisdiction::Global,
+        urls::jurisdiction::Global,
+    > {
+        BetfairConfigBuilder {
+            rest: urls::jurisdiction::Global,
+            keep_alive: urls::jurisdiction::Global,
+            bot_login: urls::jurisdiction::Global,
+            logout: urls::jurisdiction::Global,
+            login: urls::jurisdiction::Global,
+            stream: urls::jurisdiction::Global,
+            secrets_provider: secret_provider,
+        }
     }
 }

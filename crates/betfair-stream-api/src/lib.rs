@@ -14,4 +14,4 @@ pub use provider::{
     MetadataUpdates, PostAuthMessages, StreamApiBuilder, StreamApiConnection,
 };
 pub use specialization::{MarketSubscriber, OrderSubscriber};
-pub use {betfair_adapter, betfair_stream_types as types};
+pub use {betfair_adapter, betfair_stream_types as types, futures};

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/*", "xtask"]
+members = ["crates/*", "examples/*", "xtask"]
 
 [workspace.dependencies]
 # Our crates
@@ -8,6 +8,7 @@ betfair-adapter = { path = "crates/betfair-adapter" }
 betfair-types = { path = "crates/betfair-types" }
 betfair-stream-types = { path = "crates/betfair-stream-types" }
 betfair-stream-server-mock = { path = "crates/betfair-stream-server-mock" }
+betfair-stream-api = { path = "crates/betfair-stream-api" }
 betfair-xml-parser = { path = "crates/betfair-xml-parser" }
 betfair-rpc-server-mock = { path = "crates/betfair-rpc-server-mock" }
 betfair-typegen = { path = "crates/betfair-typegen" }
@@ -83,4 +84,8 @@ tracing-subscriber = { version = "0.3", features = [
     "tracing",
 ] }
 
-# xtask
+# xtask & examples
+clap = { version = "4", features = ["derive"] }
+xshell = "0.2"
+color-eyre = "0.6"
+toml = "0.8"

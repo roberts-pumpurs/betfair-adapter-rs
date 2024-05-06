@@ -4,13 +4,13 @@ use reqwest::{header, Client};
 use super::BetfairRpcProviderBase;
 use crate::secret::{self, SessionToken};
 use crate::{
-    new_global_config, urls, ApiError, ApplicationKey, AuthenticatedBetfairRpcProvider,
-    BetfairConfigBuilder, Identity, UnauthenticatedBetfairRpcProvider,
+    urls, ApiError, ApplicationKey, AuthenticatedBetfairRpcProvider, BetfairConfigBuilder,
+    Identity, UnauthenticatedBetfairRpcProvider,
 };
 
 impl UnauthenticatedBetfairRpcProvider {
     pub fn new(secret_provider: secret::SecretProvider) -> Result<Self, ApiError> {
-        let config = new_global_config(secret_provider);
+        let config = BetfairConfigBuilder::new_with_global_jurisdiction(secret_provider);
         Self::new_with_config(config)
     }
 
