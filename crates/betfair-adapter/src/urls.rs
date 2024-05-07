@@ -81,7 +81,7 @@ mod rest_url {
     impl RetrieveUrl<RestBase> for jurisdiction::Global {
         fn url(&self) -> BetfairUrl<RestBase> {
             BetfairUrl::new(
-                url::Url::parse("https://api.betfair.com/exchange/betting/rest/v1.0").unwrap(),
+                url::Url::parse("https://api.betfair.com/exchange/betting/rest/v1.0/").unwrap(),
             )
         }
     }
@@ -89,7 +89,7 @@ mod rest_url {
     impl RetrieveUrl<RestBase> for jurisdiction::Italy {
         fn url(&self) -> BetfairUrl<RestBase> {
             BetfairUrl::new(
-                url::Url::parse("https://api.betfair.it/exchange/betting/rest/v1.0").unwrap(),
+                url::Url::parse("https://api.betfair.it/exchange/betting/rest/v1.0/").unwrap(),
             )
         }
     }
@@ -97,7 +97,7 @@ mod rest_url {
     impl RetrieveUrl<RestBase> for jurisdiction::Spain {
         fn url(&self) -> BetfairUrl<RestBase> {
             BetfairUrl::new(
-                url::Url::parse("https://api.betfair.com/exchange/betting/rest/v1.0").unwrap(),
+                url::Url::parse("https://api.betfair.com/exchange/betting/rest/v1.0/").unwrap(),
             )
         }
     }

@@ -1,14 +1,18 @@
 use std::convert::Infallible as Never;
 use std::marker::PhantomData;
+use std::pin::Pin;
 use std::time::Duration;
 
+use betfair_adapter::betfair_types::types::heartbeat_aping::heartbeat;
 use betfair_adapter::{ApplicationKey, BetfairUrl, SessionToken};
 use betfair_stream_types::request::{authentication_message, RequestMessage};
 use betfair_stream_types::response::connection_message::ConnectionMessage;
 use betfair_stream_types::response::market_change_message::MarketChangeMessage;
 use betfair_stream_types::response::order_change_message::OrderChangeMessage;
-use betfair_stream_types::response::status_message::StatusMessage;
+use betfair_stream_types::response::status_message::{StatusCode, StatusMessage};
 use betfair_stream_types::response::{self, ResponseMessage};
+use futures::stream::FuturesUnordered;
+use futures::task::SpawnExt;
 use futures::{Future, FutureExt, Stream, TryFutureExt, TryStreamExt};
 use futures_concurrency::prelude::*;
 use tokio::runtime::Handle;
@@ -47,7 +51,7 @@ pub enum ExternalUpdates<T> {
 }
 
 #[derive(Debug, Clone)]
-pub enum BaseLayer {
+pub enum BetfairData {
     MarketChangeMessage(MarketChangeMessage),
     OrderChangeMessage(OrderChangeMessage),
     StatusMessage(StatusMessage),
@@ -61,7 +65,7 @@ pub enum MetadataUpdates {
     FailedToConnect,
     Authenticated {
         connections_available: i32,
-        connection_id: String,
+        connection_id: Option<String>,
     },
     FailedToAuthenticate,
 }
@@ -91,14 +95,11 @@ impl StreamApiBuilder {
         }
     }
 
-    pub fn run_with_default_runtime(&mut self) -> StreamApiConnection<PostAuthMessages> {
+    pub fn run_with_default_runtime(&mut self) -> StreamApiConnection<BetfairData> {
         self.run(&Handle::current())
     }
 
-    pub fn run(
-        &mut self,
-        rt_handle: &tokio::runtime::Handle,
-    ) -> StreamApiConnection<PostAuthMessages> {
+    pub fn run(&mut self, rt_handle: &tokio::runtime::Handle) -> StreamApiConnection<BetfairData> {
         let (join_set, data_feed) = self.run_internal(&rt_handle);
         StreamApiConnection::new(
             join_set,
@@ -128,7 +129,7 @@ impl StreamApiBuilder {
         rt_handle: &tokio::runtime::Handle,
     ) -> (
         JoinSet<Result<Never, AsyncTaskStopReason>>,
-        tokio::sync::mpsc::Receiver<ExternalUpdates<PostAuthMessages>>,
+        tokio::sync::mpsc::Receiver<ExternalUpdates<BetfairData>>,
     ) {
         let (output_queue_sender, output_queue_reader) = tokio::sync::mpsc::channel(3);
         let (updates_sender, updates_receiver) = tokio::sync::broadcast::channel(3);
@@ -143,40 +144,23 @@ impl StreamApiBuilder {
                 self.url.clone(),
                 output_queue_sender,
                 self.command_reader.resubscribe(),
-                updates_sender.clone(),
-            ),
-            &rt_handle,
-        );
-        join_set.spawn_on(
-            heartbeat_loop(
-                self.hb.clone(),
-                updates_receiver.resubscribe(),
-                self.command_sender.clone(),
-            ),
-            &rt_handle,
-        );
-
-        let (output_queue_sender_post_auth, output_queue_reader_post_auth) =
-            tokio::sync::mpsc::channel(3);
-
-        join_set.spawn_on(
-            authentication_loop(
-                output_queue_reader,
-                output_queue_sender_post_auth,
                 self.command_sender.clone(),
                 updates_sender.clone(),
                 self.session_token.clone(),
                 self.application_key.clone(),
+                rt_handle.clone(),
+                self.hb.clone(),
             ),
             &rt_handle,
         );
-        (join_set, output_queue_reader_post_auth)
+
+        (join_set, output_queue_reader)
     }
 }
 
 fn wrap_with_cache_layer(
     join_set: &mut JoinSet<Result<Never, AsyncTaskStopReason>>,
-    data_feed: tokio::sync::mpsc::Receiver<ExternalUpdates<PostAuthMessages>>,
+    data_feed: tokio::sync::mpsc::Receiver<ExternalUpdates<BetfairData>>,
     rt_handle: &tokio::runtime::Handle,
 ) -> tokio::sync::mpsc::Receiver<ExternalUpdates<CacheEnabledMessages>> {
     let (output_queue_sender_post_cache, output_queue_reader_post_cache) =
@@ -220,7 +204,7 @@ impl<T> StreamApiConnection<T> {
     }
 }
 
-impl StreamApiConnection<PostAuthMessages> {
+impl StreamApiConnection<BetfairData> {
     pub async fn enable_cache(mut self) -> StreamApiConnection<CacheEnabledMessages> {
         let output_queue_reader_post_cache =
             wrap_with_cache_layer(&mut self.join_set, self.data_feed, &self.rt_handle);
@@ -243,6 +227,7 @@ impl<T> Stream for StreamApiConnection<T> {
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         if self.join_set.is_empty() && self.is_shutting_down {
+            tracing::warn!("StreamApiConnection shut down");
             self.completed = true;
             return std::task::Poll::Ready(None);
         }
@@ -252,6 +237,7 @@ impl<T> Stream for StreamApiConnection<T> {
         if let Some(_task_return) = response {
             self.join_set.abort_all();
             self.is_shutting_down = true;
+            tracing::warn!("StreamApiConnection shutting down");
             return std::task::Poll::Pending;
         }
 
@@ -264,7 +250,7 @@ impl<T> Unpin for StreamApiConnection<T> {}
 
 async fn broadcast_internal_updates(
     mut updates_receiver: tokio::sync::broadcast::Receiver<MetadataUpdates>,
-    output_queue_sender: tokio::sync::mpsc::Sender<ExternalUpdates<BaseLayer>>,
+    output_queue_sender: tokio::sync::mpsc::Sender<ExternalUpdates<BetfairData>>,
 ) -> Result<Never, AsyncTaskStopReason> {
     while let Ok(msg) = updates_receiver.recv().await {
         output_queue_sender
@@ -278,9 +264,14 @@ async fn broadcast_internal_updates(
 
 async fn connect_and_process(
     url: BetfairUrl<betfair_adapter::Stream>,
-    sender: tokio::sync::mpsc::Sender<ExternalUpdates<BaseLayer>>,
+    sender: tokio::sync::mpsc::Sender<ExternalUpdates<BetfairData>>,
     command_reader: tokio::sync::broadcast::Receiver<RequestMessage>,
+    command_sender: tokio::sync::broadcast::Sender<RequestMessage>,
     updates_sender: tokio::sync::broadcast::Sender<MetadataUpdates>,
+    session_token: SessionToken,
+    application_key: ApplicationKey,
+    runtime_handle: tokio::runtime::Handle,
+    hb: HeartbeatStrategy,
 ) -> Result<Never, AsyncTaskStopReason> {
     loop {
         let connection = raw_stream_connection::connect(
@@ -301,36 +292,94 @@ async fn connect_and_process(
             continue;
         };
 
-        let mut h1 = tokio::spawn(write_to_socket.map_err(|_x| AsyncTaskStopReason::NeedsRestart));
-        let mut h2 = tokio::spawn(parse_stream_api_messagse(sender.clone(), read).map(|_| Ok(())));
+        let mut h1 =
+            runtime_handle.spawn(write_to_socket.map_err(|_x| AsyncTaskStopReason::NeedsRestart));
+        let (auth_sender, auth_recv) = futures::channel::oneshot::channel();
+        let mut h2 = runtime_handle.spawn(
+            parse_stream_api_messagse(
+                sender.clone(),
+                command_sender.clone(),
+                read,
+                session_token.clone(),
+                application_key.clone(),
+                auth_sender,
+            )
+            .map(|_| Ok(())),
+        );
+        if auth_recv.await.is_err() {
+            h1.abort();
+            h2.abort();
+            continue;
+        }
 
-        let result = (&mut h1).race(&mut h2).await;
+        let mut h3 = runtime_handle
+            .spawn(heartbeat_loop(hb.clone(), command_sender.clone()).map(|_| Ok(())));
+
+        let result = (&mut h1).race(&mut h2).race(&mut h3).await;
         h1.abort();
         h2.abort();
+        h3.abort();
         if let Ok(Err(AsyncTaskStopReason::FatalError)) = result {
             return Err(AsyncTaskStopReason::FatalError);
         }
-        updates_sender
-            .send(MetadataUpdates::Disconnected)
-            .map_err(|_| AsyncTaskStopReason::FatalError)?;
     }
 }
 
 /// Read from the Betfair stream and process the messages, send them away!
 async fn parse_stream_api_messagse(
-    sender: tokio::sync::mpsc::Sender<ExternalUpdates<BaseLayer>>,
+    sender: tokio::sync::mpsc::Sender<ExternalUpdates<BetfairData>>,
+    command_sender: tokio::sync::broadcast::Sender<RequestMessage>,
     read: impl Stream<Item = Result<ResponseMessage, StreamError>>,
+    session_token: SessionToken,
+    application_key: ApplicationKey,
+    authenticated: futures::channel::oneshot::Sender<()>,
 ) -> Result<Never, AsyncTaskStopReason> {
     tokio::pin!(read);
+    {
+        // do handshake
+        match handshake(
+            session_token,
+            application_key,
+            &mut read,
+            sender.clone(),
+            command_sender,
+        )
+        .await
+        {
+            Ok(status_message) => {
+                sender
+                    .send(ExternalUpdates::Metadata(MetadataUpdates::Authenticated {
+                        connections_available: status_message.connections_available.unwrap_or(-1),
+                        connection_id: status_message.connection_id,
+                    }))
+                    .await
+                    .map_err(|_| AsyncTaskStopReason::FatalError)?;
+            }
+            Err(_) => {
+                sender
+                    .send(ExternalUpdates::Metadata(
+                        MetadataUpdates::FailedToAuthenticate,
+                    ))
+                    .await
+                    .map_err(|_| AsyncTaskStopReason::FatalError)?;
+                return Err(AsyncTaskStopReason::FatalError);
+            }
+        }
+        authenticated
+            .send(())
+            .map_err(|_| AsyncTaskStopReason::NeedsRestart)?;
+    }
+
+    // process the rest of the messages
     while let Some(msg) = read.next().await {
         match msg {
             Ok(msg) => {
                 tracing::debug!(msg = ?msg, "Received message");
                 let msg = match msg {
-                    ResponseMessage::Connection(msg) => BaseLayer::ConnectionMessage(msg),
-                    ResponseMessage::MarketChange(msg) => BaseLayer::MarketChangeMessage(msg),
-                    ResponseMessage::OrderChange(msg) => BaseLayer::OrderChangeMessage(msg),
-                    ResponseMessage::StatusMessage(msg) => BaseLayer::StatusMessage(msg),
+                    ResponseMessage::Connection(msg) => BetfairData::ConnectionMessage(msg),
+                    ResponseMessage::MarketChange(msg) => BetfairData::MarketChangeMessage(msg),
+                    ResponseMessage::OrderChange(msg) => BetfairData::OrderChangeMessage(msg),
+                    ResponseMessage::StatusMessage(msg) => BetfairData::StatusMessage(msg),
                 };
                 sender
                     .send(ExternalUpdates::Layer(msg))
@@ -347,9 +396,83 @@ async fn parse_stream_api_messagse(
     Err(AsyncTaskStopReason::NeedsRestart)
 }
 
+async fn handshake<'a, S: Stream<Item = Result<ResponseMessage, StreamError>>>(
+    session_token: SessionToken,
+    application_key: ApplicationKey,
+    mut read: &mut Pin<&'a mut S>,
+    sender: tokio::sync::mpsc::Sender<ExternalUpdates<BetfairData>>,
+    command_sender: tokio::sync::broadcast::Sender<RequestMessage>,
+) -> Result<StatusMessage, AsyncTaskStopReason> {
+    async fn read_next<'a, S: Stream<Item = Result<ResponseMessage, StreamError>>>(
+        read: &mut Pin<&'a mut S>,
+    ) -> Result<ResponseMessage, AsyncTaskStopReason> {
+        read.next()
+            .await
+            .ok_or(AsyncTaskStopReason::NeedsRestart)?
+            .map_err(|_| AsyncTaskStopReason::NeedsRestart)
+    }
+
+    // get connection message
+    let connection_message = read_next(&mut read).await?;
+    let ResponseMessage::Connection(connection_message) = connection_message else {
+        tracing::error!(
+            msg =? connection_message,
+            "Expected connection message, got something else"
+        );
+        return Err(AsyncTaskStopReason::NeedsRestart);
+    };
+    sender
+        .send(ExternalUpdates::Layer(BetfairData::ConnectionMessage(
+            connection_message.clone(),
+        )))
+        .await
+        .map_err(|_| AsyncTaskStopReason::FatalError)?;
+
+    // send authentication message
+    let authorization_message = authentication_message::AuthenticationMessage {
+        id: Some(-1),
+        session: session_token.0.expose_secret().clone(),
+        app_key: application_key.0.expose_secret().clone(),
+    };
+    command_sender
+        .send(RequestMessage::Authentication(authorization_message))
+        .map_err(|_| AsyncTaskStopReason::FatalError)?;
+
+    // get status message
+    let status_message = read_next(&mut read).await?;
+    let ResponseMessage::StatusMessage(status_message) = status_message else {
+        tracing::error!(
+            msg =? status_message,
+            "Expected status message, got something else"
+        );
+        return Err(AsyncTaskStopReason::NeedsRestart);
+    };
+    sender
+        .send(ExternalUpdates::Layer(BetfairData::StatusMessage(
+            status_message.clone(),
+        )))
+        .await
+        .map_err(|_| AsyncTaskStopReason::FatalError)?;
+
+    // parse status message
+    if status_message
+        .status_code
+        .map(|x| x == StatusCode::Success)
+        .unwrap_or(false)
+    {
+        tracing::info!("Successfully authenticated");
+    } else {
+        tracing::error!(
+            msg =? status_message,
+            "Failed to authenticate, got status message"
+        );
+        return Err(AsyncTaskStopReason::NeedsRestart);
+    }
+    Ok(status_message)
+}
+
 async fn heartbeat_loop(
     hb: HeartbeatStrategy,
-    mut updates_receiver: tokio::sync::broadcast::Receiver<MetadataUpdates>,
     command_sender: tokio::sync::broadcast::Sender<RequestMessage>,
 ) -> Result<Never, AsyncTaskStopReason> {
     match hb {
@@ -360,13 +483,11 @@ async fn heartbeat_loop(
             let mut interval = tokio::time::interval(period);
             interval.reset();
             let mut id: i32 = 0;
-            let mut is_connected = false;
 
             loop {
                 tokio::select! {
                     _ = interval.tick() => {
                         id = id.wrapping_add(1);
-                        if !is_connected {continue}
                         command_sender
                             .send(RequestMessage::Heartbeat(
                                 betfair_stream_types::request::heartbeat_message::HeartbeatMessage {
@@ -374,14 +495,6 @@ async fn heartbeat_loop(
                                 },
                             ))
                             .map_err(|_| AsyncTaskStopReason::FatalError)?;
-                    }
-                    Ok(msg) = updates_receiver.recv() => {
-                        if matches!(msg, MetadataUpdates::Authenticated {connections_available: _, connection_id: _,}) {
-                            is_connected = true;
-                        }
-                        if matches!(msg, MetadataUpdates::Disconnected) {
-                            is_connected = false;
-                        }
                     }
                     else => {
                         break;
@@ -395,109 +508,15 @@ async fn heartbeat_loop(
 }
 
 #[derive(Debug, Clone)]
-pub enum PostAuthMessages {
-    MarketChangeMessage(MarketChangeMessage),
-    OrderChangeMessage(OrderChangeMessage),
-    ConnectionMessage(ConnectionMessage),
-}
-
-async fn authentication_loop(
-    mut receiver: tokio::sync::mpsc::Receiver<ExternalUpdates<BaseLayer>>,
-    external_sender: tokio::sync::mpsc::Sender<ExternalUpdates<PostAuthMessages>>,
-    command_sender: tokio::sync::broadcast::Sender<RequestMessage>,
-    updates_sender: tokio::sync::broadcast::Sender<MetadataUpdates>,
-    session_token: SessionToken,
-    application_key: ApplicationKey,
-) -> Result<Never, AsyncTaskStopReason> {
-    let mut id = 1;
-    while let Some(msg) = receiver.recv().await {
-        let processed_msg = if let ExternalUpdates::Layer(msg) = msg {
-            let post_auth_msg =
-                match msg {
-                    BaseLayer::StatusMessage(msg) => {
-                        let span = tracing::info_span!("received status message", msg =? msg);
-                        let _guard = span.enter();
-
-                        let could_not_authenticate = || {
-                            updates_sender
-                                .send(MetadataUpdates::FailedToAuthenticate)
-                                .map_err(|_| AsyncTaskStopReason::FatalError)
-                        };
-                        if matches!(msg.connection_closed, Some(true)) ||
-                            msg.error_code.is_some() ||
-                            matches!(msg.status_code, Some(
-                            betfair_stream_types::response::status_message::StatusCode::Failure,
-                        )) {
-                            tracing::warn!("error code present or connection closed");
-                            could_not_authenticate()?;
-                            continue;
-                        }
-
-                        let Some(connections_available) = msg.connections_available else {
-                            tracing::warn!("connections not available");
-                            could_not_authenticate()?;
-                            continue;
-                        };
-                        let Some(connection_id) = msg.connection_id.clone() else {
-                            tracing::warn!("connections id not available");
-                            could_not_authenticate()?;
-                            continue;
-                        };
-
-                        updates_sender
-                            .send(MetadataUpdates::Authenticated {
-                                connections_available,
-                                connection_id,
-                            })
-                            .map_err(|_| AsyncTaskStopReason::FatalError)?;
-
-                        None
-                    }
-                    BaseLayer::ConnectionMessage(msg) => {
-                        let authorization_message = authentication_message::AuthenticationMessage {
-                            id: Some(id),
-                            session: session_token.0.expose_secret().clone(),
-                            app_key: application_key.0.expose_secret().clone(),
-                        };
-                        id = id.wrapping_add(1);
-                        command_sender
-                            .send(RequestMessage::Authentication(authorization_message))
-                            .map_err(|_| AsyncTaskStopReason::FatalError)?;
-
-                        Some(PostAuthMessages::ConnectionMessage(msg))
-                    }
-                    BaseLayer::MarketChangeMessage(msg) => {
-                        Some(PostAuthMessages::MarketChangeMessage(msg))
-                    }
-                    BaseLayer::OrderChangeMessage(msg) => {
-                        Some(PostAuthMessages::OrderChangeMessage(msg))
-                    }
-                };
-
-            post_auth_msg.map(ExternalUpdates::Layer)
-        } else {
-            map_update(msg)
-        };
-
-        if let Some(processed_msg) = processed_msg {
-            external_sender
-                .send(processed_msg)
-                .await
-                .map_err(|_| AsyncTaskStopReason::FatalError)?;
-        }
-    }
-    Err(AsyncTaskStopReason::FatalError)
-}
-
-#[derive(Debug, Clone)]
 pub enum CacheEnabledMessages {
     MarketChangeMessage(Vec<MarketBookCache>),
     OrderChangeMessage(Vec<OrderBookCache>),
     ConnectionMessage(ConnectionMessage),
+    StatusMessage(StatusMessage),
 }
 
 async fn cache_loop(
-    mut receiver: tokio::sync::mpsc::Receiver<ExternalUpdates<PostAuthMessages>>,
+    mut receiver: tokio::sync::mpsc::Receiver<ExternalUpdates<BetfairData>>,
     external_sender: tokio::sync::mpsc::Sender<ExternalUpdates<CacheEnabledMessages>>,
 ) -> Result<Never, AsyncTaskStopReason> {
     let mut state = StreamStateTracker::new();
@@ -505,15 +524,32 @@ async fn cache_loop(
         let mut publish_time = None;
         if let ExternalUpdates::Layer(msg) = msg {
             let updates = match msg {
-                PostAuthMessages::MarketChangeMessage(msg) => {
+                BetfairData::MarketChangeMessage(msg) => {
                     publish_time = msg.publish_time;
                     state.calculate_updates(IncomingMessage::Market(msg))
                 }
-                PostAuthMessages::OrderChangeMessage(msg) => {
+                BetfairData::OrderChangeMessage(msg) => {
                     publish_time = msg.publish_time;
                     state.calculate_updates(IncomingMessage::Order(msg))
                 }
-                PostAuthMessages::ConnectionMessage(_msg) => None,
+                BetfairData::ConnectionMessage(msg) => {
+                    external_sender
+                        .send(ExternalUpdates::Layer(
+                            CacheEnabledMessages::ConnectionMessage(msg),
+                        ))
+                        .await
+                        .map_err(|_| AsyncTaskStopReason::FatalError)?;
+                    None
+                }
+                BetfairData::StatusMessage(msg) => {
+                    external_sender
+                        .send(ExternalUpdates::Layer(CacheEnabledMessages::StatusMessage(
+                            msg,
+                        )))
+                        .await
+                        .map_err(|_| AsyncTaskStopReason::FatalError)?;
+                    None
+                }
             };
             let Some(updates) = updates else {
                 continue;

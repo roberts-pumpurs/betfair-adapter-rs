@@ -27,18 +27,28 @@ pub(crate) async fn connect(
     ),
     StreamError,
 > {
-    // TODO get rid of the unwraps
-    let host = url.url().host_str().unwrap();
-    let is_tls = url.url().scheme() == "https";
-    let port = url.url().port().unwrap_or(if is_tls { 443 } else { 80 });
-    let socket_addr = tokio::net::lookup_host((host, port)).await.unwrap().next();
-    let domain = url.url().domain();
+    let url = url.url();
+    tracing::debug!(?url, "connecting to stream");
+
+    let host = url.host_str().ok_or(StreamError::HostStringNotPresent)?;
+    let is_tls = url.scheme() == "tcptls";
+    let port = url.port().unwrap_or(if is_tls { 443 } else { 80 });
+    let socket_addr = tokio::net::lookup_host((host, port))
+        .await
+        .map_err(|_| StreamError::UnableToLookUpHost {
+            host: host.to_string(),
+            port,
+        })?
+        .next();
+    let domain = url.domain();
     let result = match (is_tls, domain, socket_addr) {
         (true, Some(domain), Some(socket_addr)) => {
+            tracing::debug!("connecting to tls stream");
             let (write_to_wire, read) = connect_tls(domain, socket_addr, command_reader).await?;
             Ok((write_to_wire.boxed(), read.boxed()))
         }
         (false, _, Some(socket_addr)) => {
+            tracing::debug!("connecting to non-tls stream");
             let (write_to_wire, read) = connect_non_tls(socket_addr, command_reader).await?;
             Ok((write_to_wire.boxed(), read.boxed()))
         }
@@ -48,6 +58,7 @@ pub(crate) async fn connect(
     Ok(result)
 }
 
+#[tracing::instrument(skip(incoming_commands), err)]
 pub(crate) async fn connect_tls(
     domain: &str,
     socket_addr: SocketAddr,
@@ -61,10 +72,14 @@ pub(crate) async fn connect_tls(
     ),
     StreamError,
 > {
-    let domain = rustls::pki_types::ServerName::try_from(domain.to_string()).unwrap();
+    let domain = rustls::pki_types::ServerName::try_from(domain.to_string())
+        .map_err(|_| StreamError::UnableConvertDomainToServerName)?;
     let stream = TcpStream::connect(&socket_addr).await?;
     let connector = tls_connector();
-    let stream = connector.connect(domain, stream).await.unwrap();
+    let stream = connector
+        .connect(domain, stream)
+        .await
+        .map_err(|_| StreamError::UnableConnectToTlsStream)?;
     let (read, write) = tokio::io::split(stream);
     let (write_to_wire, output) = process(write, read, incoming_commands).await?;
     Ok((write_to_wire, output))
@@ -112,7 +127,7 @@ async fn process<
         loop {
             tracing::trace!("Waiting for command");
             let command = incoming_commands.next().await;
-            tracing::info!(command = ?command, "Sending command");
+            tracing::debug!(?command, "Sending command");
             match command {
                 Some(Ok(command)) => {
                     let _ = writer.send(command).await;

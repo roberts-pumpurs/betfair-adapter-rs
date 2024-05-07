@@ -27,10 +27,11 @@ impl OrderSubscriber {
         &mut self,
         strategy_ref: CustomerStrategyRef,
     ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
-        self.filter
-            .customer_strategy_refs
-            .as_mut()
-            .map(|x| x.push(strategy_ref));
+        if let Some(strategy_refs) = &mut self.filter.customer_strategy_refs {
+            strategy_refs.push(strategy_ref);
+        } else {
+            self.filter.customer_strategy_refs = Some(vec![strategy_ref]);
+        }
 
         self.resubscribe().await
     }

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use betfair_stream_api::{BetfairProviderExt, ExternalUpdates, MetadataUpdates, PostAuthMessages};
+use betfair_stream_api::{BetfairData, BetfairProviderExt, ExternalUpdates, MetadataUpdates};
 use betfair_stream_server_mock::{ClientState, StreamAPIBackend, SubSate};
 use futures::StreamExt;
 use futures_concurrency::stream::IntoStream;
@@ -15,7 +15,7 @@ async fn successful_handshake() {
 
     let messages = Arc::new(Mutex::new(Vec::new()));
     let client_task = tokio::spawn({
-        let mut messages = Arc::clone(&messages);
+        let messages = Arc::clone(&messages);
         async move {
             let bf_mock = betfair_rpc_server_mock::Server::new_with_stream_url(url).await;
             let client = bf_mock.client().await;
@@ -56,16 +56,21 @@ async fn successful_handshake() {
         })
     );
     let messages = messages.lock().await;
+    dbg!(&messages);
     assert!(matches!(
         messages.get(0).unwrap().clone(),
         ExternalUpdates::Metadata(MetadataUpdates::TcpConnected)
     ));
     assert!(matches!(
         messages.get(1).unwrap().clone(),
-        ExternalUpdates::Layer(PostAuthMessages::ConnectionMessage(..))
+        ExternalUpdates::Layer(BetfairData::ConnectionMessage(..))
     ));
     assert!(matches!(
         messages.get(2).unwrap().clone(),
+        ExternalUpdates::Layer(BetfairData::StatusMessage(..))
+    ));
+    assert!(matches!(
+        messages.get(3).unwrap().clone(),
         ExternalUpdates::Metadata(MetadataUpdates::Authenticated { .. })
     ));
 }

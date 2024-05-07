@@ -14,4 +14,12 @@ pub enum StreamError {
     MisconfiguredStreamURL,
     #[error("Stream processor malfunctioned")]
     StreamProcessorMalfunction,
+    #[error("Host string not present in the Stream URL")]
+    HostStringNotPresent,
+    #[error("Unable to look up host {host}:{port}")]
+    UnableToLookUpHost { host: String, port: u16 },
+    #[error("Unable to convert domain to server name")]
+    UnableConvertDomainToServerName,
+    #[error("Unable to connect to TLS stream")]
+    UnableConnectToTlsStream,
 }

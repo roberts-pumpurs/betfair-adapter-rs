@@ -1,7 +1,12 @@
+use betfair_adapter::betfair_types::types::sports_aping::{
+    list_market_book, list_market_catalogue, MarketFilter, MarketProjection, MarketSort,
+};
 use betfair_adapter::{
     ApplicationKey, BetfairConfigBuilder, Identity, Password, SecretProvider,
     UnauthenticatedBetfairRpcProvider, Username,
 };
+use betfair_stream_api::types::request::RequestMessage;
+use betfair_stream_api::MarketSubscriber;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
@@ -33,6 +38,23 @@ async fn main() -> eyre::Result<()> {
         .authenticate()
         .await?;
 
+    // get market id
+    let market_book = bf_provider
+        .send_request(list_market_catalogue::Parameters {
+            filter: MarketFilter::builder().in_play_only(true).build(),
+            market_projection: Some(vec![
+                MarketProjection::Event,
+                MarketProjection::Competition,
+                MarketProjection::EventType,
+                MarketProjection::MarketDescription,
+            ]),
+            sort: Some(MarketSort::MaximumTraded),
+            max_results: 1,
+            locale: None,
+        })
+        .await?;
+    let market_id = market_book[0].market_id.clone();
+
     // connect to stream
     let mut stream = {
         use betfair_stream_api::BetfairProviderExt;
@@ -46,6 +68,31 @@ async fn main() -> eyre::Result<()> {
     // start processing stream
     {
         use betfair_stream_api::futures::StreamExt;
+        use betfair_stream_api::types::request::market_subscription_message::{
+            Fields, MarketDataFilter, MarketFilter,
+        };
+        let mut ms = MarketSubscriber::new(
+            &stream,
+            MarketFilter::default(),
+            vec![
+                Fields::ExAllOffers,
+                Fields::ExBestOffers,
+                Fields::ExBestOffersDisp,
+                Fields::ExLtp,
+                Fields::ExMarketDef,
+                Fields::ExTraded,
+                Fields::ExTradedVol,
+                Fields::SpProjected,
+                Fields::SpTraded,
+            ],
+            None,
+        );
+
+        tokio::spawn(async move {
+            // sleep for a bit to allow the stream to connect
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            ms.subscribe_to_market(market_id).await.unwrap();
+        });
 
         while let Some(value) = stream.next().await {
             tracing::info!(?value, "received vaue from stream");

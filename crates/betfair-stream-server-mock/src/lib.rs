@@ -103,7 +103,9 @@ impl ClientStateW {
                             connections_available: Some(42),
                             error_code: None,
                             error_message: None,
-                            status_code: None,
+                            status_code: Some(
+                                betfair_stream_types::response::status_message::StatusCode::Success,
+                            ),
                         }))
                         .await
                         .unwrap();

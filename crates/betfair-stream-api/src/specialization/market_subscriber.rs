@@ -43,8 +43,11 @@ impl MarketSubscriber {
         &mut self,
         market_id: MarketId,
     ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
-        self.filter.market_ids.as_mut().map(|x| x.push(market_id));
-
+        if let Some(market_ids) = &mut self.filter.market_ids {
+            market_ids.push(market_id);
+        } else {
+            self.filter.market_ids = Some(vec![market_id]);
+        }
         self.resubscribe().await
     }
 
@@ -112,7 +115,7 @@ impl MarketSubscriber {
         Ok(())
     }
 
-    async fn resubscribe(
+    pub async fn resubscribe(
         &mut self,
     ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
         let req = RequestMessage::MarketSubscription(MarketSubscriptionMessage {

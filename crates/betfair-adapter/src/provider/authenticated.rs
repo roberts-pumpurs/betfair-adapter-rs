@@ -13,7 +13,6 @@ impl AuthenticatedBetfairRpcProvider {
         ApiError: From<<T as BetfairRpcRequest>::Error>,
     {
         let endpoint = self.base.rest_base.url().join(T::method())?;
-        tracing::debug!(endpoint = ?endpoint.to_string(), "Sending request");
         let full = self
             .authenticated_client
             .post(endpoint.as_str())
