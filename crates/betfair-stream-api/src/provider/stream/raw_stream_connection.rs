@@ -1,32 +1,24 @@
 use std::net::SocketAddr;
 use std::pin::Pin;
+use std::task::{Context, Poll};
 
 use betfair_adapter::BetfairUrl;
 use betfair_stream_types::request::RequestMessage;
 use betfair_stream_types::response::ResponseMessage;
+use futures::Sink;
 use futures_util::sink::SinkExt;
 use futures_util::{Future, FutureExt, Stream, StreamExt};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
 use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
 use tokio_util::bytes;
-use tokio_util::codec::{Decoder, Encoder, FramedRead, FramedWrite};
+use tokio_util::codec::{Decoder, Encoder, Framed, FramedRead, FramedWrite};
 
 use crate::StreamError;
 
 pub(crate) async fn connect(
     url: BetfairUrl<betfair_adapter::Stream>,
-    command_reader: impl futures_util::Stream<Item = Result<RequestMessage, eyre::Error>>
-        + std::marker::Unpin
-        + Send
-        + 'static,
-) -> Result<
-    (
-        Pin<Box<dyn Future<Output = Result<(), StreamError>> + Send>>,
-        Pin<Box<dyn Stream<Item = Result<ResponseMessage, StreamError>> + Send>>,
-    ),
-    StreamError,
-> {
+) -> Result<RawStreamApiConnection, StreamError> {
     let url = url.url();
     tracing::debug!(?url, "connecting to stream");
 
@@ -41,37 +33,20 @@ pub(crate) async fn connect(
         })?
         .next();
     let domain = url.domain();
-    let result = match (is_tls, domain, socket_addr) {
-        (true, Some(domain), Some(socket_addr)) => {
-            tracing::debug!("connecting to tls stream");
-            let (write_to_wire, read) = connect_tls(domain, socket_addr, command_reader).await?;
-            Ok((write_to_wire.boxed(), read.boxed()))
+    match (domain, socket_addr) {
+        (Some(domain), Some(socket_addr)) => {
+            let connecton = connect_tls(domain, socket_addr).await?;
+            tracing::debug!("connecting to Stream API");
+            return Ok(connecton)
         }
-        (false, _, Some(socket_addr)) => {
-            tracing::debug!("connecting to non-tls stream");
-            let (write_to_wire, read) = connect_non_tls(socket_addr, command_reader).await?;
-            Ok((write_to_wire.boxed(), read.boxed()))
-        }
-        _ => Err(StreamError::MisconfiguredStreamURL),
-    }?;
-
-    Ok(result)
+        _ => return Err(StreamError::MisconfiguredStreamURL),
+    };
 }
 
-#[tracing::instrument(skip(incoming_commands), err)]
-pub(crate) async fn connect_tls(
+async fn connect_tls(
     domain: &str,
     socket_addr: SocketAddr,
-    incoming_commands: impl futures_util::Stream<Item = Result<RequestMessage, eyre::Error>>
-        + std::marker::Unpin
-        + 'static,
-) -> Result<
-    (
-        impl Future<Output = Result<(), StreamError>>,
-        impl futures_util::Stream<Item = Result<ResponseMessage, StreamError>>,
-    ),
-    StreamError,
-> {
+) -> Result<RawStreamApiConnection, StreamError> {
     let domain = rustls::pki_types::ServerName::try_from(domain.to_string())
         .map_err(|_| StreamError::UnableConvertDomainToServerName)?;
     let stream = TcpStream::connect(&socket_addr).await?;
@@ -80,73 +55,60 @@ pub(crate) async fn connect_tls(
         .connect(domain, stream)
         .await
         .map_err(|_| StreamError::UnableConnectToTlsStream)?;
-    let (read, write) = tokio::io::split(stream);
-    let (write_to_wire, output) = process(write, read, incoming_commands).await?;
-    Ok((write_to_wire, output))
+    let framed = Framed::new(stream, StreamAPIClientCodec);
+    Ok(internal::RawStreamApiConnection { io: framed })
 }
 
-pub(crate) async fn connect_non_tls(
-    socket_addr: SocketAddr,
-    incoming_commands: impl futures_util::Stream<Item = Result<RequestMessage, eyre::Error>>
-        + std::marker::Unpin
-        + 'static,
-) -> Result<
-    (
-        impl Future<Output = Result<(), StreamError>>,
-        impl futures_util::Stream<Item = Result<ResponseMessage, StreamError>>,
-    ),
-    StreamError,
-> {
-    let stream = TcpStream::connect(&socket_addr).await.unwrap();
-    let (read, write) = stream.into_split();
-    let (write_to_wire, output) = process(write, read, incoming_commands).await.unwrap();
-    Ok((write_to_wire, output))
-}
+pub type RawStreamApiConnection =
+    internal::RawStreamApiConnection<tokio_rustls::client::TlsStream<TcpStream>>;
 
-async fn process<
-    I: AsyncWrite + std::fmt::Debug + Send + Unpin,
-    O: AsyncRead + std::fmt::Debug + Send + Unpin,
->(
-    input: I,
-    output: O,
-    mut incoming_commands: impl futures_util::Stream<Item = Result<RequestMessage, eyre::Error>>
-        + std::marker::Unpin
-        + 'static,
-) -> Result<
-    (
-        impl Future<Output = Result<(), StreamError>>,
-        impl futures_util::Stream<Item = Result<ResponseMessage, StreamError>>,
-    ),
-    StreamError,
-> {
-    let mut writer = FramedWrite::new(input, StreamAPIClientCodec);
-    let reader = FramedRead::new(output, StreamAPIClientCodec);
+mod internal {
+    use super::*;
 
-    // read commands and send them to the writer
-    let write_task = async move {
-        loop {
-            tracing::trace!("Waiting for command");
-            let command = incoming_commands.next().await;
-            tracing::debug!(?command, "Sending command");
-            match command {
-                Some(Ok(command)) => {
-                    let _ = writer.send(command).await;
-                }
-                _ => break,
-            }
+    pub struct RawStreamApiConnection<IO: AsyncRead + AsyncWrite + std::fmt::Debug + Send + Unpin> {
+        pub(super) io: Framed<IO, StreamAPIClientCodec>,
+    }
+
+    impl<IO: AsyncRead + AsyncWrite + std::fmt::Debug + Send + Unpin> Stream
+        for RawStreamApiConnection<IO>
+    {
+        type Item = Result<ResponseMessage, StreamError>;
+
+        fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+            self.io.poll_next_unpin(cx)
         }
-        tracing::error!("Done sending commands");
-        Err(StreamError::StreamProcessorMalfunction)
-    };
+    }
 
-    Ok((
-        async move {
-            let res = write_task.await;
-            tracing::error!("Write task finished");
-            res
-        },
-        reader,
-    ))
+    impl<IO: AsyncRead + AsyncWrite + std::fmt::Debug + Send + Unpin> Sink<RequestMessage>
+        for RawStreamApiConnection<IO>
+    {
+        type Error = StreamError;
+
+        fn poll_ready(
+            mut self: Pin<&mut Self>,
+            cx: &mut Context<'_>,
+        ) -> Poll<Result<(), Self::Error>> {
+            self.io.poll_ready_unpin(cx)
+        }
+
+        fn start_send(mut self: Pin<&mut Self>, item: RequestMessage) -> Result<(), Self::Error> {
+            self.io.start_send_unpin(item)
+        }
+
+        fn poll_flush(
+            mut self: Pin<&mut Self>,
+            cx: &mut Context<'_>,
+        ) -> Poll<Result<(), Self::Error>> {
+            self.io.poll_flush_unpin(cx)
+        }
+
+        fn poll_close(
+            mut self: Pin<&mut Self>,
+            cx: &mut Context<'_>,
+        ) -> Poll<Result<(), Self::Error>> {
+            self.io.poll_close_unpin(cx)
+        }
+    }
 }
 pub(crate) struct StreamAPIClientCodec;
 

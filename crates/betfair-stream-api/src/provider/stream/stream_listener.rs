@@ -13,14 +13,14 @@ use betfair_stream_types::response::status_message::{StatusCode, StatusMessage};
 use betfair_stream_types::response::{self, ResponseMessage};
 use futures::stream::FuturesUnordered;
 use futures::task::SpawnExt;
-use futures::{Future, FutureExt, Stream, TryFutureExt, TryStreamExt};
+use futures::{pin_mut, Future, FutureExt, SinkExt, Stream, TryFutureExt, TryStreamExt};
 use futures_concurrency::prelude::*;
 use tokio::runtime::Handle;
 use tokio::task::JoinSet;
 use tokio_stream::wrappers::{BroadcastStream, ReceiverStream};
 use tokio_stream::StreamExt;
 
-use super::raw_stream_connection;
+use super::raw_stream_connection::{self, RawStreamApiConnection};
 use crate::cache::primitives::{MarketBookCache, OrderBookCache};
 use crate::cache::tracker::{IncomingMessage, StreamStateTracker};
 use crate::StreamError;
@@ -265,6 +265,7 @@ async fn broadcast_internal_updates(
 async fn connect_and_process(
     url: BetfairUrl<betfair_adapter::Stream>,
     sender: tokio::sync::mpsc::Sender<ExternalUpdates<BetfairData>>,
+    // todo replace all broadcasts with mpsc
     command_reader: tokio::sync::broadcast::Receiver<RequestMessage>,
     command_sender: tokio::sync::broadcast::Sender<RequestMessage>,
     updates_sender: tokio::sync::broadcast::Sender<MetadataUpdates>,
@@ -274,75 +275,64 @@ async fn connect_and_process(
     hb: HeartbeatStrategy,
 ) -> Result<Never, AsyncTaskStopReason> {
     loop {
-        let connection = raw_stream_connection::connect(
-            url.clone(),
-            BroadcastStream::new(command_reader.resubscribe())
-                .map_err(|_| eyre::eyre!("Failed to read command")),
-        )
-        .await;
+        let connection = raw_stream_connection::connect(url.clone()).await;
 
         updates_sender
             .send(MetadataUpdates::TcpConnected)
             .map_err(|_| AsyncTaskStopReason::FatalError)?;
 
-        let Ok((write_to_socket, read)) = connection else {
+        let Ok(connection) = connection else {
             let _res = updates_sender
                 .send(MetadataUpdates::FailedToConnect)
                 .map_err(|_| AsyncTaskStopReason::FatalError)?;
             continue;
         };
 
-        let mut h1 =
-            runtime_handle.spawn(write_to_socket.map_err(|_x| AsyncTaskStopReason::NeedsRestart));
         let (auth_sender, auth_recv) = futures::channel::oneshot::channel();
-        let mut h2 = runtime_handle.spawn(
-            parse_stream_api_messagse(
-                sender.clone(),
-                command_sender.clone(),
-                read,
-                session_token.clone(),
-                application_key.clone(),
-                auth_sender,
-            )
-            .map(|_| Ok(())),
-        );
+        let mut process = runtime_handle.spawn(handle_stream_connection(
+            connection,
+            sender.clone(),
+            command_reader.resubscribe(),
+            session_token.clone(),
+            application_key.clone(),
+            auth_sender,
+        ));
+
         if auth_recv.await.is_err() {
-            h1.abort();
-            h2.abort();
+            process.abort();
             continue;
         }
 
-        let mut h3 = runtime_handle
-            .spawn(heartbeat_loop(hb.clone(), command_sender.clone()).map(|_| Ok(())));
+        let mut heartbeat =
+            runtime_handle.spawn(heartbeat_loop(hb.clone(), command_sender.clone()));
 
-        let result = (&mut h1).race(&mut h2).race(&mut h3).await;
-        h1.abort();
-        h2.abort();
-        h3.abort();
+        let result = (&mut heartbeat).race(&mut process).await;
+        heartbeat.abort();
+        process.abort();
+
         if let Ok(Err(AsyncTaskStopReason::FatalError)) = result {
             return Err(AsyncTaskStopReason::FatalError);
         }
     }
 }
 
-/// Read from the Betfair stream and process the messages, send them away!
-async fn parse_stream_api_messagse(
+async fn handle_stream_connection(
+    connection: RawStreamApiConnection,
     sender: tokio::sync::mpsc::Sender<ExternalUpdates<BetfairData>>,
-    command_sender: tokio::sync::broadcast::Sender<RequestMessage>,
-    read: impl Stream<Item = Result<ResponseMessage, StreamError>>,
+    mut command_reader: tokio::sync::broadcast::Receiver<RequestMessage>,
     session_token: SessionToken,
     application_key: ApplicationKey,
     authenticated: futures::channel::oneshot::Sender<()>,
 ) -> Result<Never, AsyncTaskStopReason> {
-    tokio::pin!(read);
+    pin_mut!(connection);
+
     {
         // do handshake
         match handshake(
             session_token,
             application_key,
-            &mut read,
+            &mut connection,
             sender.clone(),
-            command_sender,
         )
         .await
         {
@@ -362,7 +352,7 @@ async fn parse_stream_api_messagse(
                     ))
                     .await
                     .map_err(|_| AsyncTaskStopReason::FatalError)?;
-                return Err(AsyncTaskStopReason::FatalError);
+                return Err(AsyncTaskStopReason::NeedsRestart);
             }
         }
         authenticated
@@ -370,38 +360,47 @@ async fn parse_stream_api_messagse(
             .map_err(|_| AsyncTaskStopReason::NeedsRestart)?;
     }
 
-    // process the rest of the messages
-    while let Some(msg) = read.next().await {
-        match msg {
-            Ok(msg) => {
-                tracing::debug!(msg = ?msg, "Received message");
-                let msg = match msg {
-                    ResponseMessage::Connection(msg) => BetfairData::ConnectionMessage(msg),
-                    ResponseMessage::MarketChange(msg) => BetfairData::MarketChangeMessage(msg),
-                    ResponseMessage::OrderChange(msg) => BetfairData::OrderChangeMessage(msg),
-                    ResponseMessage::StatusMessage(msg) => BetfairData::StatusMessage(msg),
-                };
-                sender
-                    .send(ExternalUpdates::Layer(msg))
-                    .await
-                    .map_err(|_| AsyncTaskStopReason::FatalError)?;
-            }
-            Err(err) => {
-                tracing::error!(err = ?err, "Error reading from stream!");
-                break;
+    loop {
+        futures::select! {
+            msg = command_reader.recv().fuse() => {
+                match msg {
+                    Ok(msg) => {
+                        connection.send(msg).await.map_err(|_| AsyncTaskStopReason::NeedsRestart)?;
+                    }
+                    Err(_) => {
+                        return Err(AsyncTaskStopReason::FatalError);
+                    },
+                }
+            },
+            read = connection.next().fuse() => {
+                match read {
+                    Some(Ok(msg)) => {
+                        tracing::debug!(msg = ?msg, "Received message");
+                            let msg = match msg {
+                                ResponseMessage::Connection(msg) => BetfairData::ConnectionMessage(msg),
+                                ResponseMessage::MarketChange(msg) => BetfairData::MarketChangeMessage(msg),
+                                ResponseMessage::OrderChange(msg) => BetfairData::OrderChangeMessage(msg),
+                                ResponseMessage::StatusMessage(msg) => BetfairData::StatusMessage(msg),
+                            };
+                        sender
+                            .send(ExternalUpdates::Layer(msg))
+                            .await
+                            .map_err(|_| AsyncTaskStopReason::FatalError)?;
+                    }
+                    _ => {
+                        return Err(AsyncTaskStopReason::NeedsRestart);
+                    },
+                }
             }
         }
     }
-
-    Err(AsyncTaskStopReason::NeedsRestart)
 }
 
-async fn handshake<'a, S: Stream<Item = Result<ResponseMessage, StreamError>>>(
+async fn handshake<'a>(
     session_token: SessionToken,
     application_key: ApplicationKey,
-    mut read: &mut Pin<&'a mut S>,
+    mut connection: &mut Pin<&'a mut RawStreamApiConnection>,
     sender: tokio::sync::mpsc::Sender<ExternalUpdates<BetfairData>>,
-    command_sender: tokio::sync::broadcast::Sender<RequestMessage>,
 ) -> Result<StatusMessage, AsyncTaskStopReason> {
     async fn read_next<'a, S: Stream<Item = Result<ResponseMessage, StreamError>>>(
         read: &mut Pin<&'a mut S>,
@@ -413,7 +412,7 @@ async fn handshake<'a, S: Stream<Item = Result<ResponseMessage, StreamError>>>(
     }
 
     // get connection message
-    let connection_message = read_next(&mut read).await?;
+    let connection_message = read_next(&mut connection).await?;
     let ResponseMessage::Connection(connection_message) = connection_message else {
         tracing::error!(
             msg =? connection_message,
@@ -434,12 +433,13 @@ async fn handshake<'a, S: Stream<Item = Result<ResponseMessage, StreamError>>>(
         session: session_token.0.expose_secret().clone(),
         app_key: application_key.0.expose_secret().clone(),
     };
-    command_sender
+    connection
         .send(RequestMessage::Authentication(authorization_message))
+        .await
         .map_err(|_| AsyncTaskStopReason::FatalError)?;
 
     // get status message
-    let status_message = read_next(&mut read).await?;
+    let status_message = read_next(&mut connection).await?;
     let ResponseMessage::StatusMessage(status_message) = status_message else {
         tracing::error!(
             msg =? status_message,
@@ -485,8 +485,8 @@ async fn heartbeat_loop(
             let mut id: i32 = 0;
 
             loop {
-                tokio::select! {
-                    _ = interval.tick() => {
+                futures::select! {
+                    _ = interval.tick().fuse() => {
                         id = id.wrapping_add(1);
                         command_sender
                             .send(RequestMessage::Heartbeat(
@@ -496,9 +496,7 @@ async fn heartbeat_loop(
                             ))
                             .map_err(|_| AsyncTaskStopReason::FatalError)?;
                     }
-                    else => {
-                        break;
-                    }
+                    complete => break,
                 }
             }
         }
