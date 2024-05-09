@@ -3,6 +3,9 @@ name = "betfair-stream-api"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+integration-test = ["dep:rustls-pemfile"]
+
 [dependencies]
 betfair-stream-types.workspace = true
 betfair-adapter.workspace = true
@@ -26,6 +29,7 @@ eyre.workspace = true
 rustls-native-certs.workspace = true
 trait-variant.workspace = true
 itertools.workspace = true
+rustls-pemfile = { workspace = true, optional = true }
 
 [dev-dependencies]
 rust_decimal_macros.workspace = true

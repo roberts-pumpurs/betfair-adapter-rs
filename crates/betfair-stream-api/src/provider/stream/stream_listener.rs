@@ -1,6 +1,7 @@
 use std::convert::Infallible as Never;
 use std::marker::PhantomData;
 use std::pin::Pin;
+use std::task::Poll;
 use std::time::Duration;
 
 use betfair_adapter::betfair_types::types::heartbeat_aping::heartbeat;
@@ -176,7 +177,6 @@ fn wrap_with_cache_layer(
 pub struct StreamApiConnection<T> {
     join_set: JoinSet<Result<Never, AsyncTaskStopReason>>,
     rt_handle: tokio::runtime::Handle,
-    completed: bool,
     is_shutting_down: bool,
     data_feed: tokio::sync::mpsc::Receiver<ExternalUpdates<T>>,
     command_sender: tokio::sync::broadcast::Sender<RequestMessage>,
@@ -190,7 +190,6 @@ impl<T> StreamApiConnection<T> {
         rt_handle: tokio::runtime::Handle,
     ) -> Self {
         Self {
-            completed: false,
             is_shutting_down: false,
             join_set,
             rt_handle: rt_handle.clone(),
@@ -210,7 +209,6 @@ impl StreamApiConnection<BetfairData> {
             wrap_with_cache_layer(&mut self.join_set, self.data_feed, &self.rt_handle);
         StreamApiConnection {
             join_set: self.join_set,
-            completed: self.completed,
             rt_handle: self.rt_handle,
             is_shutting_down: self.is_shutting_down,
             data_feed: output_queue_reader_post_cache,
@@ -225,24 +223,51 @@ impl<T> Stream for StreamApiConnection<T> {
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Option<Self::Item>> {
+    ) -> Poll<Option<Self::Item>> {
+        // only return None if we are shutting down and there are no tasks left
         if self.join_set.is_empty() && self.is_shutting_down {
-            tracing::warn!("StreamApiConnection shut down");
-            self.completed = true;
-            return std::task::Poll::Ready(None);
+            tracing::warn!("StreamApiConnection: No tasks remaining, shutting down.");
+            return Poll::Ready(None);
         }
 
-        // poll the join set to see if any child tasks have completed
-        let response = self.join_set.try_join_next();
-        if let Some(_task_return) = response {
-            self.join_set.abort_all();
-            self.is_shutting_down = true;
-            tracing::warn!("StreamApiConnection shutting down");
-            return std::task::Poll::Pending;
+        // Poll the join set to check if any child tasks have completed
+        match self.join_set.poll_join_next(cx) {
+            Poll::Ready(Some(Ok(Err(e)))) => {
+                tracing::error!("Error returned by a task: {:?}", e);
+                self.join_set.abort_all();
+                self.is_shutting_down = true;
+            }
+            Poll::Ready(Some(Ok(Ok(_e)))) => {
+                return Poll::Pending;
+            }
+            Poll::Ready(Some(Err(e))) => {
+                tracing::error!("Error in join_set: {:?}", e);
+                self.join_set.abort_all();
+                self.is_shutting_down = true;
+            }
+            Poll::Ready(None) => {
+                // All tasks have completed; commence shutdown
+                self.is_shutting_down = true;
+            }
+            Poll::Pending => {}
         }
 
-        // poll the data feed
-        self.data_feed.poll_recv(cx)
+        // Poll the data feed for new items
+        match self.data_feed.poll_recv(cx) {
+            Poll::Ready(Some(update)) => Poll::Ready(Some(update)),
+            Poll::Ready(None) => {
+                // No more data, initiate shutdown
+                tracing::warn!("StreamApiConnection: Data feed closed.");
+                self.join_set.abort_all();
+                self.is_shutting_down = true;
+                Poll::Ready(None)
+            }
+            Poll::Pending if self.is_shutting_down => {
+                // If shutting down and no data available, end the stream
+                Poll::Ready(None)
+            }
+            Poll::Pending => Poll::Pending,
+        }
     }
 }
 
@@ -285,7 +310,10 @@ async fn connect_and_process(
             let _res = updates_sender
                 .send(MetadataUpdates::FailedToConnect)
                 .map_err(|_| AsyncTaskStopReason::FatalError)?;
-            continue;
+            // continue;
+            // connection.err
+            tracing::error!(err =? connection.err(), "Failed to connect to the stream, retrying...");
+            return Err(AsyncTaskStopReason::FatalError);
         };
 
         let (auth_sender, auth_recv) = futures::channel::oneshot::channel();

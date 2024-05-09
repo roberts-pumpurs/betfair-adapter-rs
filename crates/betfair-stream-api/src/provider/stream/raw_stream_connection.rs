@@ -8,6 +8,8 @@ use betfair_stream_types::response::ResponseMessage;
 use futures::Sink;
 use futures_util::sink::SinkExt;
 use futures_util::{Future, FutureExt, Stream, StreamExt};
+use itertools::Itertools;
+use rustls::client::ResolvesClientCert;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
 use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
@@ -23,8 +25,7 @@ pub(crate) async fn connect(
     tracing::debug!(?url, "connecting to stream");
 
     let host = url.host_str().ok_or(StreamError::HostStringNotPresent)?;
-    let is_tls = url.scheme() == "tcptls";
-    let port = url.port().unwrap_or(if is_tls { 443 } else { 80 });
+    let port = url.port().unwrap_or(443);
     let socket_addr = tokio::net::lookup_host((host, port))
         .await
         .map_err(|_| StreamError::UnableToLookUpHost {
@@ -39,10 +40,21 @@ pub(crate) async fn connect(
             tracing::debug!("connecting to Stream API");
             return Ok(connecton)
         }
-        _ => return Err(StreamError::MisconfiguredStreamURL),
+        #[cfg(feature = "integration-test")]
+        (None, Some(socket_addr)) => {
+            let connecton = connect_tls("localhost", socket_addr).await?;
+            tracing::debug!("connecting to Stream API");
+            return Ok(connecton)
+        }
+        params => {
+            tracing::error!(?params, "unable to connect to Stream API");
+
+            return Err(StreamError::MisconfiguredStreamURL)
+        }
     };
 }
 
+#[tracing::instrument(err)]
 async fn connect_tls(
     domain: &str,
     socket_addr: SocketAddr,
@@ -50,7 +62,7 @@ async fn connect_tls(
     let domain = rustls::pki_types::ServerName::try_from(domain.to_string())
         .map_err(|_| StreamError::UnableConvertDomainToServerName)?;
     let stream = TcpStream::connect(&socket_addr).await?;
-    let connector = tls_connector();
+    let connector = tls_connector()?;
     let stream = connector
         .connect(domain, stream)
         .await
@@ -159,20 +171,43 @@ impl Encoder<RequestMessage> for StreamAPIClientCodec {
     }
 }
 
-fn tls_connector() -> tokio_rustls::TlsConnector {
+#[tracing::instrument(err)]
+fn tls_connector() -> Result<tokio_rustls::TlsConnector, StreamError> {
     use tokio_rustls::TlsConnector;
+
     let mut roots = rustls::RootCertStore::empty();
-    rustls_native_certs::load_native_certs()
+    let _ = rustls_native_certs::load_native_certs()
         .expect("could not load platform certs")
         .into_iter()
-        .for_each(|cert| {
-            roots.add(cert).unwrap();
-        });
+        .map(|cert| {
+            roots
+                .add(cert)
+                .map_err(|_| StreamError::CannotSetNativeCertificate)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    #[cfg(feature = "integration-test")]
+    {
+        use crate::CERTIFICATE;
+
+        let cert = rustls_pemfile::certs(
+            &mut CERTIFICATE
+                .get()
+                .ok_or(StreamError::CustomCertificateNotSet)?
+                .as_bytes(),
+        )
+        .next()
+        .ok_or(StreamError::InvalidCustomCertificate)?
+        .map_err(|_| StreamError::InvalidCustomCertificate)?;
+        roots
+            .add(cert)
+            .map_err(|_| StreamError::CustomCertificateNotSet)?;
+    }
 
     let config = rustls::ClientConfig::builder()
         .with_root_certificates(roots)
         .with_no_client_auth();
-    TlsConnector::from(std::sync::Arc::new(config))
+    Ok(TlsConnector::from(std::sync::Arc::new(config)))
 }
 
 #[cfg(test)]

@@ -22,6 +22,9 @@ async-stream.workspace = true
 rustls.workspace = true
 rustls-native-certs.workspace = true
 eyre.workspace = true
+rustls-pemfile.workspace = true
+rcgen.workspace = true
+betfair-stream-api = { workspace = true, features = ["integration-test"] }
 
 [dev-dependencies]
 chrono.workspace = true

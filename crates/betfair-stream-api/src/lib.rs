@@ -15,3 +15,6 @@ pub use provider::{
 };
 pub use specialization::{MarketSubscriber, OrderSubscriber};
 pub use {betfair_adapter, betfair_stream_types as types, futures};
+
+#[cfg(feature = "integration-test")]
+pub static CERTIFICATE: std::sync::OnceLock<String> = std::sync::OnceLock::<String>::new();

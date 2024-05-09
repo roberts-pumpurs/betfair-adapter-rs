@@ -5,9 +5,12 @@
 //     attr(deny(warnings, rust_2018_idioms), allow(dead_code, unused_variables))
 // ))]
 
+mod tls;
+
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use betfair_stream_api::CERTIFICATE;
 use betfair_stream_types::request::authentication_message::AuthenticationMessage;
 use betfair_stream_types::request::RequestMessage;
 use betfair_stream_types::response::connection_message::ConnectionMessage;
@@ -15,6 +18,8 @@ use betfair_stream_types::response::status_message::StatusMessage;
 use betfair_stream_types::response::ResponseMessage;
 use futures_util::{SinkExt, StreamExt};
 use tokio::net::{TcpListener, TcpStream};
+use tokio_rustls::server::TlsStream;
+use tokio_rustls::TlsAcceptor;
 use tokio_util::bytes;
 use tokio_util::codec::{Decoder, Encoder, Framed};
 use url::Url;
@@ -22,6 +27,8 @@ use url::Url;
 pub struct StreamAPIBackend {
     pub listener_addr: SocketAddr,
     pub listener: TcpListener,
+    pub server_config: Arc<rustls::ServerConfig>,
+    pub cert: String,
     pub url: Url,
 }
 
@@ -29,34 +36,44 @@ impl StreamAPIBackend {
     pub async fn new() -> Self {
         let listener = TcpListener::bind("0.0.0.0:0").await.unwrap();
         let listener_addr = listener.local_addr().unwrap();
+        let (cert, key) = tls::generate_cert().unwrap();
+        let server_config = tls::rustls_config(cert.as_str(), key.as_str());
 
         let url = Url::parse(&format!("http://{}", listener_addr)).unwrap();
+
+        CERTIFICATE.set(cert.clone()).unwrap();
+
         Self {
             listener_addr,
+            cert,
+            server_config,
             url,
             listener,
         }
     }
 
     pub async fn process_next(&self) -> ClientStateW {
-        let (socket, _) = self.listener.accept().await.unwrap();
+        let acceptor = TlsAcceptor::from(Arc::clone(&self.server_config));
+        let (socket, _tt) = self.listener.accept().await.unwrap();
+        let tls_stream = acceptor.accept(socket).await.unwrap();
+
         tracing::info!("Accepted connection");
 
         let client_state = Arc::new(tokio::sync::Mutex::new(ClientState::Init(
             ConnState::Connected,
         )));
 
-        ClientStateW::new(socket, client_state.clone())
+        ClientStateW::new(tls_stream, client_state.clone())
     }
 }
 
 pub struct ClientStateW {
-    socket: TcpStream,
+    socket: TlsStream<TcpStream>,
     pub state: Arc<tokio::sync::Mutex<ClientState>>,
 }
 
 impl ClientStateW {
-    pub fn new(socket: TcpStream, state: Arc<tokio::sync::Mutex<ClientState>>) -> Self {
+    pub fn new(socket: TlsStream<TcpStream>, state: Arc<tokio::sync::Mutex<ClientState>>) -> Self {
         Self { socket, state }
     }
 

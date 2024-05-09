@@ -8,16 +8,17 @@ use futures_util::StreamExt;
 #[test_log::test(tokio::test)]
 async fn market_subscription() {
     let mock = StreamAPIBackend::new().await;
-    let url = mock.url.clone().into();
 
-    let h1 = tokio::spawn(async move {
-        let bf_mock = betfair_rpc_server_mock::Server::new_with_stream_url(url).await;
-        let client = bf_mock.client().await;
-        let authenticated = client.authenticate().await.unwrap();
-        let mut stream_api_abi = authenticated.connect_to_stream().await;
-        let mut stream = stream_api_abi.run_with_default_runtime();
+    let h1 = tokio::spawn({
+        let url = mock.url.clone().into();
+        async move {
+            let bf_mock = betfair_rpc_server_mock::Server::new_with_stream_url(url).await;
+            let client = bf_mock.client().await;
+            let authenticated = client.authenticate().await.unwrap();
+            let mut stream_api_abi = authenticated.connect_to_stream().await;
+            let mut stream = stream_api_abi.run_with_default_runtime();
 
-        let mut ms = MarketSubscriber::new(
+            let mut ms = MarketSubscriber::new(
             &stream,
             betfair_stream_types::request::market_subscription_message::MarketFilter::default(),
             vec![betfair_stream_types::request::market_subscription_message::Fields::ExBestOffers],
@@ -27,11 +28,12 @@ async fn market_subscription() {
             ),
         );
 
-        let market_id = MarketId("1.23456789".to_string());
-        ms.subscribe_to_market(market_id).await.unwrap();
+            let market_id = MarketId("1.23456789".to_string());
+            ms.subscribe_to_market(market_id).await.unwrap();
 
-        while let Some(value) = stream.next().await {
-            tracing::info!(?value, "received vaue from stream");
+            while let Some(value) = stream.next().await {
+                tracing::info!(?value, "received vaue from stream");
+            }
         }
     });
 

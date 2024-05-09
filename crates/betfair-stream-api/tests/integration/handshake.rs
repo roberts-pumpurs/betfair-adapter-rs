@@ -17,11 +17,15 @@ async fn successful_handshake() {
     let client_task = tokio::spawn({
         let messages = Arc::clone(&messages);
         async move {
+            println!("here");
             let bf_mock = betfair_rpc_server_mock::Server::new_with_stream_url(url).await;
             let client = bf_mock.client().await;
             let authenticated = client.authenticate().await.unwrap();
-            let mut stream_api_abi = authenticated.connect_to_stream().await;
+            let mut stream_api_abi = authenticated
+                .connect_to_stream_with_hb(betfair_stream_api::HeartbeatStrategy::None)
+                .await;
             let mut stream = stream_api_abi.run_with_default_runtime();
+            tracing::info!("stream created");
             while let Some(value) = stream.next().await {
                 tracing::info!(?value, "received vaue from stream");
                 let mut w = messages.as_ref().lock().await;

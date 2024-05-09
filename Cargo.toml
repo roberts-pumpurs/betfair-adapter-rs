@@ -60,6 +60,10 @@ http = "1"
 rustls = "0.22"
 rustls-native-certs = "0.7"
 
+# tls
+rustls-pemfile = "2"
+rcgen = { version = "0.13", features = ["pem"] }
+
 # Type gen
 quote = "1"
 proc-macro2 = "1"

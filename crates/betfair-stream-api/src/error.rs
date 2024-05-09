@@ -22,4 +22,12 @@ pub enum StreamError {
     UnableConvertDomainToServerName,
     #[error("Unable to connect to TLS stream")]
     UnableConnectToTlsStream,
+    #[error("Unable to set native certificate")]
+    CannotSetNativeCertificate,
+    #[error("Unable to set custom certificate")]
+    CannnotSetCustomCertificate,
+    #[error("Unable to set custom certificate")]
+    CustomCertificateNotSet,
+    #[error("Invalid custom certificate")]
+    InvalidCustomCertificate,
 }
