@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
-use betfair_stream_api::{BetfairData, BetfairProviderExt, ExternalUpdates, MetadataUpdates};
+use betfair_stream_api::{BetfairProviderExt, ExternalUpdates, MetadataUpdates};
 use betfair_stream_server_mock::{ClientState, StreamAPIBackend, SubSate};
+use betfair_stream_types::response::ResponseMessage;
 use futures::StreamExt;
 use tokio::sync::Mutex;
 
@@ -66,11 +67,11 @@ async fn successful_handshake() {
     ));
     assert!(matches!(
         messages.get(1).unwrap().clone(),
-        ExternalUpdates::Layer(BetfairData::ConnectionMessage(..))
+        ExternalUpdates::Layer(ResponseMessage::Connection(..))
     ));
     assert!(matches!(
         messages.get(2).unwrap().clone(),
-        ExternalUpdates::Layer(BetfairData::StatusMessage(..))
+        ExternalUpdates::Layer(ResponseMessage::Status(..))
     ));
     assert!(matches!(
         messages.get(3).unwrap().clone(),

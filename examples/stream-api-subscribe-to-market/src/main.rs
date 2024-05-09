@@ -65,10 +65,10 @@ async fn main() -> eyre::Result<()> {
 
     // start processing stream
     {
-        use betfair_stream_api::futures::StreamExt;
         use betfair_stream_api::types::request::market_subscription_message::{
             Fields, MarketFilter,
         };
+        use betfair_stream_api::StreamExt;
         let mut ms = MarketSubscriber::new(
             &stream,
             MarketFilter::default(),

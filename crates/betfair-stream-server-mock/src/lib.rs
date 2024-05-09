@@ -113,7 +113,7 @@ impl ClientStateW {
                     };
 
                     socket
-                        .feed(ResponseMessage::StatusMessage(StatusMessage {
+                        .feed(ResponseMessage::Status(StatusMessage {
                             id,
                             connection_closed: None,
                             connection_id: Some("conn_id_fake123".to_string()),
@@ -140,7 +140,7 @@ impl ClientStateW {
                         RequestMessage::Heartbeat(_hb) => {
                             state.heartbeat_counter += 1;
                             socket
-                                .feed(ResponseMessage::StatusMessage(StatusMessage {
+                                .feed(ResponseMessage::Status(StatusMessage {
                                     id: Some(1),
                                     connection_closed: None,
                                     connection_id: Some("conn_id_fake123".to_string()),

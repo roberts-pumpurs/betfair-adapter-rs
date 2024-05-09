@@ -21,7 +21,7 @@ pub enum ResponseMessage {
     #[serde(rename = "ocm")]
     OrderChange(order_change_message::OrderChangeMessage),
     #[serde(rename = "status")]
-    StatusMessage(status_message::StatusMessage),
+    Status(status_message::StatusMessage),
 }
 
 /// Change Type - set to indicate the type of change - if null this is a delta)
