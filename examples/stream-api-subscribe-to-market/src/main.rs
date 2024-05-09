@@ -1,11 +1,9 @@
 use betfair_adapter::betfair_types::types::sports_aping::{
-    list_market_book, list_market_catalogue, MarketFilter, MarketProjection, MarketSort,
+    list_market_catalogue, MarketFilter, MarketProjection, MarketSort,
 };
 use betfair_adapter::{
-    ApplicationKey, BetfairConfigBuilder, Identity, Password, SecretProvider,
-    UnauthenticatedBetfairRpcProvider, Username,
+    ApplicationKey, Identity, Password, SecretProvider, UnauthenticatedBetfairRpcProvider, Username,
 };
-use betfair_stream_api::types::request::RequestMessage;
 use betfair_stream_api::MarketSubscriber;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -69,7 +67,7 @@ async fn main() -> eyre::Result<()> {
     {
         use betfair_stream_api::futures::StreamExt;
         use betfair_stream_api::types::request::market_subscription_message::{
-            Fields, MarketDataFilter, MarketFilter,
+            Fields, MarketFilter,
         };
         let mut ms = MarketSubscriber::new(
             &stream,

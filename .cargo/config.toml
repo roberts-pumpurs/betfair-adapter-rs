@@ -2,7 +2,8 @@
 git-fetch-with-cli = true
 
 [build]
-rustflags = ["-Z", "threads=8", "-Ctarget-cpu=native", "-Zthreads=10"]
+# for some reason, enabling this causes cargo clippy to get stuck
+# rustflags = ["-Z", "threads=8", "-Ctarget-cpu=native", "-Zthreads=10"]
 
 [alias]
 xtask = "run --package xtask --"

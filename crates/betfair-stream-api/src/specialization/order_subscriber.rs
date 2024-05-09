@@ -41,10 +41,9 @@ impl OrderSubscriber {
         &mut self,
         strategy_ref: CustomerStrategyRef,
     ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
-        self.filter
-            .customer_strategy_refs
-            .as_mut()
-            .map(|x| x.retain(|x| x != &strategy_ref));
+        if let Some(x) = self.filter.customer_strategy_refs.as_mut() {
+            x.retain(|x| x != &strategy_ref)
+        }
 
         if self
             .filter

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use rcgen::{generate_simple_self_signed, Certificate};
-use rustls::pki_types::{CertificateDer, PrivateKeyDer};
+use rcgen::generate_simple_self_signed;
+use rustls::pki_types::PrivateKeyDer;
 use rustls::ServerConfig;
 
 pub fn generate_cert() -> Result<(String, String), rcgen::RcgenError> {

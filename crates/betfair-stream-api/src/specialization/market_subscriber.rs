@@ -1,12 +1,8 @@
-use std::collections::HashMap;
-use std::ops::{Deref, DerefMut};
-
 use betfair_adapter::betfair_types::types::sports_aping::MarketId;
 use betfair_stream_types::request::market_subscription_message::{
     Fields, LadderLevel, MarketDataFilter, MarketFilter, MarketSubscriptionMessage,
 };
 use betfair_stream_types::request::RequestMessage;
-use betfair_stream_types::response::market_change_message::MarketChangeMessage;
 
 use crate::StreamApiConnection;
 
@@ -56,10 +52,9 @@ impl MarketSubscriber {
         &mut self,
         market_id: MarketId,
     ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
-        self.filter
-            .market_ids
-            .as_mut()
-            .map(|x| x.retain(|x| x != &market_id));
+        if let Some(x) = self.filter.market_ids.as_mut() {
+            x.retain(|x| x != &market_id)
+        }
 
         if self
             .filter

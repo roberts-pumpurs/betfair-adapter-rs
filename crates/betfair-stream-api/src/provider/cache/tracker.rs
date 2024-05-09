@@ -96,18 +96,15 @@ impl StreamStateTracker {
             IncomingMessage::Order(msg) => msg.publish_time,
         };
 
-        match (publish_time, self.max_latency_ms) {
-            (Some(publish_time), Some(max_latency_ms)) => {
-                let latency = chrono::Utc::now().signed_duration_since(publish_time);
-                if latency.num_milliseconds() > max_latency_ms as i64 {
-                    tracing::warn!(
-                        "High Latency! {:?}ms is greater than max_latency_ms of {:?}ms",
-                        latency.num_milliseconds(),
-                        max_latency_ms
-                    );
-                }
+        if let (Some(publish_time), Some(max_latency_ms)) = (publish_time, self.max_latency_ms) {
+            let latency = chrono::Utc::now().signed_duration_since(publish_time);
+            if latency.num_milliseconds() > max_latency_ms as i64 {
+                tracing::warn!(
+                    "High Latency! {:?}ms is greater than max_latency_ms of {:?}ms",
+                    latency.num_milliseconds(),
+                    max_latency_ms
+                );
             }
-            _ => {}
         }
         let res = match msg {
             IncomingMessage::Market(msg) => self.process_market_change(msg),

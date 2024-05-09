@@ -56,7 +56,7 @@ impl Identity {
 mod serde_utils {
     use serde::{Deserialize, Deserializer};
 
-    pub fn deserialize_identity<'de, D>(
+    pub(crate) fn deserialize_identity<'de, D>(
         deserializer: D,
     ) -> Result<redact::Secret<reqwest::Identity>, D::Error>
     where

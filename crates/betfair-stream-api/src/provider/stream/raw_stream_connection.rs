@@ -7,14 +7,12 @@ use betfair_stream_types::request::RequestMessage;
 use betfair_stream_types::response::ResponseMessage;
 use futures::Sink;
 use futures_util::sink::SinkExt;
-use futures_util::{Future, FutureExt, Stream, StreamExt};
+use futures_util::{FutureExt, Stream, StreamExt};
 use itertools::Itertools;
-use rustls::client::ResolvesClientCert;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
-use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
 use tokio_util::bytes;
-use tokio_util::codec::{Decoder, Encoder, Framed, FramedRead, FramedWrite};
+use tokio_util::codec::{Decoder, Encoder, Framed};
 
 use crate::StreamError;
 
@@ -38,20 +36,20 @@ pub(crate) async fn connect(
         (Some(domain), Some(socket_addr)) => {
             let connecton = connect_tls(domain, socket_addr).await?;
             tracing::debug!("connecting to Stream API");
-            return Ok(connecton)
+            Ok(connecton)
         }
         #[cfg(feature = "integration-test")]
         (None, Some(socket_addr)) => {
             let connecton = connect_tls("localhost", socket_addr).await?;
             tracing::debug!("connecting to Stream API");
-            return Ok(connecton)
+            Ok(connecton)
         }
         params => {
             tracing::error!(?params, "unable to connect to Stream API");
 
-            return Err(StreamError::MisconfiguredStreamURL)
+            Err(StreamError::MisconfiguredStreamURL)
         }
-    };
+    }
 }
 
 #[tracing::instrument(err)]
@@ -71,13 +69,15 @@ async fn connect_tls(
     Ok(internal::RawStreamApiConnection { io: framed })
 }
 
-pub type RawStreamApiConnection =
+pub(crate) type RawStreamApiConnection =
     internal::RawStreamApiConnection<tokio_rustls::client::TlsStream<TcpStream>>;
 
 mod internal {
     use super::*;
 
-    pub struct RawStreamApiConnection<IO: AsyncRead + AsyncWrite + std::fmt::Debug + Send + Unpin> {
+    pub(crate) struct RawStreamApiConnection<
+        IO: AsyncRead + AsyncWrite + std::fmt::Debug + Send + Unpin,
+    > {
         pub(super) io: Framed<IO, StreamAPIClientCodec>,
     }
 
@@ -142,7 +142,7 @@ impl Decoder for StreamAPIClientCodec {
         {
             if let Some((json, _delimiters)) = line.split_last_chunk::<2>() {
                 // Deserialize the JSON data
-                let data = serde_json::from_slice::<Self::Item>(&json)?;
+                let data = serde_json::from_slice::<Self::Item>(json)?;
                 return Ok(Some(data))
             }
 

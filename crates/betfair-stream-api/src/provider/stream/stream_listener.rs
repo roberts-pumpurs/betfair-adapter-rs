@@ -1,24 +1,20 @@
 use std::convert::Infallible as Never;
-use std::marker::PhantomData;
 use std::pin::Pin;
 use std::task::Poll;
 use std::time::Duration;
 
-use betfair_adapter::betfair_types::types::heartbeat_aping::heartbeat;
 use betfair_adapter::{ApplicationKey, BetfairUrl, SessionToken};
 use betfair_stream_types::request::{authentication_message, RequestMessage};
 use betfair_stream_types::response::connection_message::ConnectionMessage;
 use betfair_stream_types::response::market_change_message::MarketChangeMessage;
 use betfair_stream_types::response::order_change_message::OrderChangeMessage;
 use betfair_stream_types::response::status_message::{StatusCode, StatusMessage};
-use betfair_stream_types::response::{self, ResponseMessage};
-use futures::stream::FuturesUnordered;
+use betfair_stream_types::response::ResponseMessage;
 use futures::task::SpawnExt;
-use futures::{pin_mut, Future, FutureExt, SinkExt, Stream, TryFutureExt, TryStreamExt};
+use futures::{pin_mut, FutureExt, SinkExt, Stream, TryFutureExt, TryStreamExt};
 use futures_concurrency::prelude::*;
 use tokio::runtime::Handle;
 use tokio::task::JoinSet;
-use tokio_stream::wrappers::{BroadcastStream, ReceiverStream};
 use tokio_stream::StreamExt;
 
 use super::raw_stream_connection::{self, RawStreamApiConnection};
@@ -101,7 +97,7 @@ impl StreamApiBuilder {
     }
 
     pub fn run(&mut self, rt_handle: &tokio::runtime::Handle) -> StreamApiConnection<BetfairData> {
-        let (join_set, data_feed) = self.run_internal(&rt_handle);
+        let (join_set, data_feed) = self.run_internal(rt_handle);
         StreamApiConnection::new(
             join_set,
             data_feed,
@@ -114,7 +110,7 @@ impl StreamApiBuilder {
         &mut self,
         rt_handle: &tokio::runtime::Handle,
     ) -> StreamApiConnection<CacheEnabledMessages> {
-        let (mut join_set, data_feed) = self.run_internal(&rt_handle);
+        let (mut join_set, data_feed) = self.run_internal(rt_handle);
         let output_queue_reader_post_cache =
             wrap_with_cache_layer(&mut join_set, data_feed, rt_handle);
         StreamApiConnection::new(
@@ -138,7 +134,7 @@ impl StreamApiBuilder {
         let mut join_set = JoinSet::new();
         join_set.spawn_on(
             broadcast_internal_updates(updates_receiver.resubscribe(), output_queue_sender.clone()),
-            &rt_handle,
+            rt_handle,
         );
         join_set.spawn_on(
             connect_and_process(
@@ -152,7 +148,7 @@ impl StreamApiBuilder {
                 rt_handle.clone(),
                 self.hb.clone(),
             ),
-            &rt_handle,
+            rt_handle,
         );
 
         (join_set, output_queue_reader)
@@ -168,7 +164,7 @@ fn wrap_with_cache_layer(
         tokio::sync::mpsc::channel(3);
     join_set.spawn_on(
         cache_loop(data_feed, output_queue_sender_post_cache),
-        &rt_handle,
+        rt_handle,
     );
     output_queue_reader_post_cache
 }
@@ -427,7 +423,7 @@ async fn handle_stream_connection(
 async fn handshake<'a>(
     session_token: SessionToken,
     application_key: ApplicationKey,
-    mut connection: &mut Pin<&'a mut RawStreamApiConnection>,
+    connection: &mut Pin<&'a mut RawStreamApiConnection>,
     sender: tokio::sync::mpsc::Sender<ExternalUpdates<BetfairData>>,
 ) -> Result<StatusMessage, AsyncTaskStopReason> {
     async fn read_next<'a, S: Stream<Item = Result<ResponseMessage, StreamError>>>(
@@ -440,7 +436,7 @@ async fn handshake<'a>(
     }
 
     // get connection message
-    let connection_message = read_next(&mut connection).await?;
+    let connection_message = read_next(connection).await?;
     let ResponseMessage::Connection(connection_message) = connection_message else {
         tracing::error!(
             msg =? connection_message,
@@ -467,7 +463,7 @@ async fn handshake<'a>(
         .map_err(|_| AsyncTaskStopReason::FatalError)?;
 
     // get status message
-    let status_message = read_next(&mut connection).await?;
+    let status_message = read_next(connection).await?;
     let ResponseMessage::StatusMessage(status_message) = status_message else {
         tracing::error!(
             msg =? status_message,
@@ -593,13 +589,11 @@ async fn cache_loop(
                 .send(ExternalUpdates::Layer(update))
                 .await
                 .map_err(|_| AsyncTaskStopReason::FatalError)?;
-        } else {
-            if let Some(msg) = map_update(msg) {
-                external_sender
-                    .send(msg)
-                    .await
-                    .map_err(|_| AsyncTaskStopReason::FatalError)?;
-            }
+        } else if let Some(msg) = map_update(msg) {
+            external_sender
+                .send(msg)
+                .await
+                .map_err(|_| AsyncTaskStopReason::FatalError)?;
         }
         if let Some(publish_time) = publish_time {
             state.clear_stale_cache(publish_time);

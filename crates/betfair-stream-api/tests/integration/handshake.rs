@@ -3,7 +3,6 @@ use std::sync::Arc;
 use betfair_stream_api::{BetfairData, BetfairProviderExt, ExternalUpdates, MetadataUpdates};
 use betfair_stream_server_mock::{ClientState, StreamAPIBackend, SubSate};
 use futures::StreamExt;
-use futures_concurrency::stream::IntoStream;
 use tokio::sync::Mutex;
 
 #[rstest::rstest]
@@ -62,7 +61,7 @@ async fn successful_handshake() {
     let messages = messages.lock().await;
     dbg!(&messages);
     assert!(matches!(
-        messages.get(0).unwrap().clone(),
+        messages.first().unwrap().clone(),
         ExternalUpdates::Metadata(MetadataUpdates::TcpConnected)
     ));
     assert!(matches!(
