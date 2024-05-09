@@ -71,10 +71,14 @@ async fn successful_handshake() {
     ));
     assert!(matches!(
         messages.get(2).unwrap().clone(),
-        ExternalUpdates::Layer(ResponseMessage::Status(..))
+        ExternalUpdates::Metadata(MetadataUpdates::AuthenticationMessageSent)
     ));
     assert!(matches!(
         messages.get(3).unwrap().clone(),
+        ExternalUpdates::Layer(ResponseMessage::Status(..))
+    ));
+    assert!(matches!(
+        messages.get(4).unwrap().clone(),
         ExternalUpdates::Metadata(MetadataUpdates::Authenticated { .. })
     ));
 }

@@ -3,23 +3,14 @@ pub mod cron;
 pub mod handshake;
 
 use std::convert::Infallible as Never;
-use std::pin::Pin;
 use std::task::Poll;
-use std::time::Duration;
 
-use betfair_adapter::{ApplicationKey, BetfairUrl, SessionToken};
-use betfair_stream_types::request::{authentication_message, RequestMessage};
+use betfair_stream_types::request::RequestMessage;
 use betfair_stream_types::response::connection_message::ConnectionMessage;
-use betfair_stream_types::response::market_change_message::MarketChangeMessage;
-use betfair_stream_types::response::order_change_message::OrderChangeMessage;
-use betfair_stream_types::response::status_message::{StatusCode, StatusMessage};
+use betfair_stream_types::response::status_message::StatusMessage;
 use betfair_stream_types::response::ResponseMessage;
-use futures::task::SpawnExt;
-use futures::{pin_mut, FutureExt, SinkExt, Stream, TryFutureExt, TryStreamExt};
-use futures_concurrency::prelude::*;
-use tokio::runtime::Handle;
+use futures::Stream;
 use tokio::task::JoinSet;
-use tokio_stream::StreamExt;
 
 use self::builder::wrap_with_cache_layer;
 use self::cron::AsyncTaskStopReason;
@@ -144,6 +135,7 @@ pub enum MetadataUpdates {
     Disconnected,
     TcpConnected,
     FailedToConnect,
+    AuthenticationMessageSent,
     Authenticated {
         connections_available: i32,
         connection_id: Option<String>,

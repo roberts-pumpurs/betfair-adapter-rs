@@ -1,24 +1,14 @@
 use std::convert::Infallible as Never;
-use std::pin::Pin;
-use std::task::Poll;
-use std::time::Duration;
 
 use betfair_adapter::{ApplicationKey, BetfairUrl, SessionToken};
-use betfair_stream_types::request::{authentication_message, RequestMessage};
-use betfair_stream_types::response::connection_message::ConnectionMessage;
-use betfair_stream_types::response::market_change_message::MarketChangeMessage;
-use betfair_stream_types::response::order_change_message::OrderChangeMessage;
-use betfair_stream_types::response::status_message::{StatusCode, StatusMessage};
+use betfair_stream_types::request::RequestMessage;
 use betfair_stream_types::response::ResponseMessage;
-use futures::task::SpawnExt;
-use futures::{pin_mut, FutureExt, SinkExt, Stream, TryFutureExt, TryStreamExt};
+use futures::{pin_mut, FutureExt, SinkExt};
 use futures_concurrency::prelude::*;
-use tokio::runtime::Handle;
-use tokio::task::JoinSet;
 use tokio_stream::StreamExt;
 
 use crate::cache::tracker::{IncomingMessage, StreamStateTracker};
-use crate::connection::handshake;
+use crate::connection::handshake::{Handshake};
 use crate::tls_sream::RawStreamApiConnection;
 use crate::{CacheEnabledMessages, ExternalUpdates, HeartbeatStrategy, MetadataUpdates};
 
@@ -112,37 +102,27 @@ pub async fn handle_stream_connection(
 
     {
         // do handshake
-        match handshake::handshake(
-            session_token,
-            application_key,
-            &mut connection,
-            sender.clone(),
-        )
-        .await
-        {
-            Ok(status_message) => {
-                sender
-                    .send(ExternalUpdates::Metadata(MetadataUpdates::Authenticated {
-                        connections_available: status_message.connections_available.unwrap_or(-1),
-                        connection_id: status_message.connection_id,
-                    }))
-                    .await
-                    .map_err(|_| AsyncTaskStopReason::FatalError)?;
-            }
-            Err(_) => {
-                sender
-                    .send(ExternalUpdates::Metadata(
-                        MetadataUpdates::FailedToAuthenticate,
-                    ))
-                    .await
-                    .map_err(|_| AsyncTaskStopReason::FatalError)?;
-                return Err(AsyncTaskStopReason::NeedsRestart);
+        let mut handshake = Handshake::new(&session_token, &application_key, connection.as_mut());
+        while let Some(results) = handshake.next().await {
+            match results {
+                Ok(msg) => {
+                    sender
+                        .send(msg)
+                        .await
+                        .map_err(|_| AsyncTaskStopReason::FatalError)?;
+                }
+                Err(err) => {
+                    return Err(err);
+                }
             }
         }
-        authenticated
-            .send(())
-            .map_err(|_| AsyncTaskStopReason::NeedsRestart)?;
+        authenticated.send(()).map_err(|_| {
+            tracing::error!("Failed to commuincate with the auth one-shot channel");
+            AsyncTaskStopReason::NeedsRestart
+        })?;
     }
+
+    tracing::info!("authenticated");
 
     loop {
         futures::select! {

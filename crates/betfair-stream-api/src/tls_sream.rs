@@ -84,7 +84,7 @@ mod internal {
     impl<IO: AsyncRead + AsyncWrite + std::fmt::Debug + Send + Unpin> Stream
         for RawStreamApiConnection<IO>
     {
-        type Item = Result<ResponseMessage, StreamError>;
+        type Item = Result<ResponseMessage, CodecEror>;
 
         fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
             self.io.poll_next_unpin(cx)
@@ -94,7 +94,7 @@ mod internal {
     impl<IO: AsyncRead + AsyncWrite + std::fmt::Debug + Send + Unpin> Sink<RequestMessage>
         for RawStreamApiConnection<IO>
     {
-        type Error = StreamError;
+        type Error = CodecEror;
 
         fn poll_ready(
             mut self: Pin<&mut Self>,
@@ -124,9 +124,17 @@ mod internal {
 }
 pub(crate) struct StreamAPIClientCodec;
 
+#[derive(Debug, thiserror::Error)]
+pub enum CodecEror {
+    #[error("Serde error: {0}")]
+    Serde(#[from] serde_json::Error),
+    #[error("IO Error {0}")]
+    IoError(#[from] std::io::Error),
+}
+
 impl Decoder for StreamAPIClientCodec {
     type Item = ResponseMessage;
-    type Error = StreamError;
+    type Error = CodecEror;
 
     // todo: write a test that checks the behaviour when we have more than 2 msgs in the source
     // bytes
@@ -155,7 +163,7 @@ impl Decoder for StreamAPIClientCodec {
 }
 
 impl Encoder<RequestMessage> for StreamAPIClientCodec {
-    type Error = StreamError;
+    type Error = CodecEror;
 
     fn encode(
         &mut self,
