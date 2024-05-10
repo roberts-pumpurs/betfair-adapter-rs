@@ -1,13 +1,12 @@
 use std::convert::Infallible as Never;
 use std::time::Duration;
 
-use betfair_adapter::{ApplicationKey, BetfairUrl, SessionToken};
 use betfair_stream_types::request::RequestMessage;
 use betfair_stream_types::response::ResponseMessage;
 use tokio::runtime::Handle;
 use tokio::task::JoinSet;
 
-use super::cron::{self, AsyncTaskStopReason};
+use super::cron::{self, FatalError};
 use super::StreamApiConnection;
 use crate::{CacheEnabledMessages, ExternalUpdates};
 
@@ -22,20 +21,15 @@ pub struct StreamApiBuilder {
     /// Send data to the underlying stream
     command_sender: tokio::sync::broadcast::Sender<RequestMessage>,
     command_reader: tokio::sync::broadcast::Receiver<RequestMessage>,
-    /// Application key
-    application_key: ApplicationKey,
-    /// Session token
-    session_token: SessionToken,
-    /// Stream URL
-    url: BetfairUrl<betfair_adapter::Stream>,
+    /// Betfair provider
+    provider: betfair_adapter::UnauthenticatedBetfairRpcProvider,
+    /// heartbeat strategy
     hb: HeartbeatStrategy,
 }
 
 impl StreamApiBuilder {
     pub fn new(
-        application_key: ApplicationKey,
-        session_token: SessionToken,
-        url: BetfairUrl<betfair_adapter::Stream>,
+        provider: betfair_adapter::UnauthenticatedBetfairRpcProvider,
         hb: HeartbeatStrategy,
     ) -> Self {
         let (command_sender, command_reader) = tokio::sync::broadcast::channel(3);
@@ -43,9 +37,7 @@ impl StreamApiBuilder {
         Self {
             command_sender,
             command_reader,
-            application_key,
-            session_token,
-            url,
+            provider,
             hb,
         }
     }
@@ -86,7 +78,7 @@ impl StreamApiBuilder {
         &mut self,
         rt_handle: &tokio::runtime::Handle,
     ) -> (
-        JoinSet<Result<Never, AsyncTaskStopReason>>,
+        JoinSet<Result<Never, FatalError>>,
         tokio::sync::mpsc::Receiver<ExternalUpdates<ResponseMessage>>,
     ) {
         let (output_queue_sender, output_queue_reader) = tokio::sync::mpsc::channel(3);
@@ -101,17 +93,27 @@ impl StreamApiBuilder {
             rt_handle,
         );
         join_set.spawn_on(
-            cron::connect_and_process(
-                self.url.clone(),
-                output_queue_sender,
-                self.command_reader.resubscribe(),
-                self.command_sender.clone(),
-                updates_sender.clone(),
-                self.session_token.clone(),
-                self.application_key.clone(),
-                rt_handle.clone(),
-                self.hb.clone(),
-            ),
+            {
+                let command_reader = self.command_reader.resubscribe();
+                let command_sender = self.command_sender.clone();
+                let provider = self.provider.clone();
+                let runtime_handle = rt_handle.clone();
+                let hb = self.hb.clone();
+                async move {
+                    cron::StreamConnectioProcessor {
+                        sender: output_queue_sender,
+                        command_reader,
+                        command_sender,
+                        updates_sender,
+                        provider,
+                        runtime_handle,
+                        hb,
+                        last_time_token_refreshed: None,
+                    }
+                    .connect_and_process_loop()
+                    .await
+                }
+            },
             rt_handle,
         );
 
@@ -120,7 +122,7 @@ impl StreamApiBuilder {
 }
 
 pub fn wrap_with_cache_layer(
-    join_set: &mut JoinSet<Result<Never, AsyncTaskStopReason>>,
+    join_set: &mut JoinSet<Result<Never, FatalError>>,
     data_feed: tokio::sync::mpsc::Receiver<ExternalUpdates<ResponseMessage>>,
     rt_handle: &tokio::runtime::Handle,
 ) -> tokio::sync::mpsc::Receiver<ExternalUpdates<CacheEnabledMessages>> {

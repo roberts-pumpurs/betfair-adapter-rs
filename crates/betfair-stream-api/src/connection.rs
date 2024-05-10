@@ -13,12 +13,12 @@ use futures::Stream;
 use tokio::task::JoinSet;
 
 use self::builder::wrap_with_cache_layer;
-use self::cron::AsyncTaskStopReason;
+use self::cron::FatalError;
 use crate::cache::primitives::{MarketBookCache, OrderBookCache};
 
 #[derive(Debug)]
 pub struct StreamApiConnection<T> {
-    join_set: JoinSet<Result<Never, AsyncTaskStopReason>>,
+    join_set: JoinSet<Result<Never, FatalError>>,
     rt_handle: tokio::runtime::Handle,
     is_shutting_down: bool,
     data_feed: tokio::sync::mpsc::Receiver<ExternalUpdates<T>>,
@@ -27,7 +27,7 @@ pub struct StreamApiConnection<T> {
 
 impl<T> StreamApiConnection<T> {
     pub(crate) fn new(
-        join_set: JoinSet<Result<Never, AsyncTaskStopReason>>,
+        join_set: JoinSet<Result<Never, FatalError>>,
         data_feed: tokio::sync::mpsc::Receiver<ExternalUpdates<T>>,
         command_sender: tokio::sync::broadcast::Sender<RequestMessage>,
         rt_handle: tokio::runtime::Handle,
@@ -63,6 +63,7 @@ impl StreamApiConnection<ResponseMessage> {
 impl<T> Stream for StreamApiConnection<T> {
     type Item = ExternalUpdates<T>;
 
+    // todo write unittests for this, because therere are edge cases where we hang up
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
@@ -79,14 +80,17 @@ impl<T> Stream for StreamApiConnection<T> {
                 tracing::error!("Error returned by a task: {:?}", e);
                 self.join_set.abort_all();
                 self.is_shutting_down = true;
+                cx.waker().wake_by_ref();
             }
             Poll::Ready(Some(Ok(Ok(_e)))) => {
+                cx.waker().wake_by_ref();
                 return Poll::Pending;
             }
             Poll::Ready(Some(Err(e))) => {
                 tracing::error!("Error in join_set: {:?}", e);
                 self.join_set.abort_all();
                 self.is_shutting_down = true;
+                cx.waker().wake_by_ref();
             }
             Poll::Ready(None) => {
                 // All tasks have completed; commence shutdown
@@ -103,6 +107,7 @@ impl<T> Stream for StreamApiConnection<T> {
                 tracing::warn!("StreamApiConnection: Data feed closed.");
                 self.join_set.abort_all();
                 self.is_shutting_down = true;
+                cx.waker().wake_by_ref();
                 Poll::Ready(None)
             }
             Poll::Pending if self.is_shutting_down => {

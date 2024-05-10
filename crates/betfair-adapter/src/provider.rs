@@ -35,3 +35,9 @@ impl AuthenticatedBetfairRpcProvider {
         &self.base
     }
 }
+
+impl UnauthenticatedBetfairRpcProvider {
+    pub fn base(&self) -> &BetfairRpcProviderBase {
+        &self.0
+    }
+}

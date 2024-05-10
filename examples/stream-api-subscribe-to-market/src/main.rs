@@ -32,7 +32,7 @@ async fn main() -> eyre::Result<()> {
     };
 
     // login to betfair
-    let bf_provider = UnauthenticatedBetfairRpcProvider::new(secret_provider)?
+    let bf_provider = UnauthenticatedBetfairRpcProvider::new(secret_provider.clone())?
         .authenticate()
         .await?;
 
@@ -57,7 +57,7 @@ async fn main() -> eyre::Result<()> {
     let mut stream = {
         use betfair_stream_api::BetfairProviderExt;
 
-        bf_provider
+        UnauthenticatedBetfairRpcProvider::new(secret_provider.clone())?
             .connect_to_stream()
             .await
             .run_with_default_runtime()
@@ -88,7 +88,7 @@ async fn main() -> eyre::Result<()> {
 
         tokio::spawn(async move {
             // sleep for a bit to allow the stream to connect
-            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            tokio::time::sleep(std::time::Duration::from_secs(3)).await;
             ms.subscribe_to_market(market_id).await.unwrap();
         });
 

@@ -7,7 +7,7 @@ use betfair_stream_types::response::status_message::{StatusCode, StatusMessage};
 use betfair_stream_types::response::ResponseMessage;
 use futures::{SinkExt, Stream, StreamExt};
 
-use crate::connection::cron::AsyncTaskStopReason;
+use super::cron::NeedsRestart;
 use crate::tls_sream::RawStreamApiConnection;
 use crate::{ExternalUpdates, MetadataUpdates};
 
@@ -45,7 +45,7 @@ enum State {
 impl<'a> Unpin for Handshake<'a> {}
 
 impl<'a> Stream for Handshake<'a> {
-    type Item = Result<ExternalUpdates<ResponseMessage>, AsyncTaskStopReason>;
+    type Item = Result<ExternalUpdates<ResponseMessage>, NeedsRestart>;
 
     fn poll_next(
         mut self: Pin<&mut Self>,
@@ -69,7 +69,7 @@ impl<'a> Stream for Handshake<'a> {
                         tracing::error!("Connection closed");
                         self.state = State::Error;
                         cx.waker().wake_by_ref();
-                        Poll::Ready(Some(Err(AsyncTaskStopReason::NeedsRestart)))
+                        Poll::Ready(Some(Err(NeedsRestart)))
                     }
                     Poll::Ready(Some(msg)) => match msg {
                         Ok(ResponseMessage::Connection(connection_message)) => {
@@ -82,12 +82,12 @@ impl<'a> Stream for Handshake<'a> {
                             self.state = State::Error;
                             cx.waker().wake_by_ref();
                             tracing::error!(msg =? msg, "Expected connection message, got something else");
-                            Poll::Ready(Some(Err(AsyncTaskStopReason::NeedsRestart)))
+                            Poll::Ready(Some(Err(NeedsRestart)))
                         }
                         Err(_) => {
                             self.state = State::Error;
                             cx.waker().wake_by_ref();
-                            Poll::Ready(Some(Err(AsyncTaskStopReason::NeedsRestart)))
+                            Poll::Ready(Some(Err(NeedsRestart)))
                         }
                     },
                     Poll::Pending => Poll::Pending,
@@ -110,7 +110,7 @@ impl<'a> Stream for Handshake<'a> {
                     }
                     Err(err) => {
                         tracing::error!(error =? err, "Failed to send authentication message");
-                        Poll::Ready(Some(Err(AsyncTaskStopReason::NeedsRestart)))
+                        Poll::Ready(Some(Err(NeedsRestart)))
                     }
                 }
             }
@@ -126,7 +126,7 @@ impl<'a> Stream for Handshake<'a> {
                         self.state = State::Error;
                         cx.waker().wake_by_ref();
                         tracing::error!(error =? err, "Failed to flush authentication message");
-                        return Poll::Ready(Some(Err(AsyncTaskStopReason::NeedsRestart)));
+                        return Poll::Ready(Some(Err(NeedsRestart)));
                     }
                     Poll::Pending => Poll::Pending,
                 }
@@ -136,7 +136,7 @@ impl<'a> Stream for Handshake<'a> {
                 match status_message {
                     Poll::Ready(None) => {
                         tracing::error!("Connection closed");
-                        Poll::Ready(Some(Err(AsyncTaskStopReason::NeedsRestart)))
+                        Poll::Ready(Some(Err(NeedsRestart)))
                     }
                     Poll::Ready(Some(Ok(msg))) => match &msg {
                         ResponseMessage::Status(status_message) => {
@@ -148,21 +148,21 @@ impl<'a> Stream for Handshake<'a> {
                                 self.state = State::Error;
                                 cx.waker().wake_by_ref();
                                 tracing::error!(status_code =? status_message.status_code, "Failed to authenticate");
-                                Poll::Ready(Some(Err(AsyncTaskStopReason::NeedsRestart)))
+                                Poll::Ready(Some(Err(NeedsRestart)))
                             }
                         }
                         msg => {
                             self.state = State::Error;
                             cx.waker().wake_by_ref();
                             tracing::error!(msg =? msg, "Expected status message, got something else");
-                            Poll::Ready(Some(Err(AsyncTaskStopReason::NeedsRestart)))
+                            Poll::Ready(Some(Err(NeedsRestart)))
                         }
                     },
                     Poll::Ready(Some(Err(_))) => {
                         self.state = State::Error;
                         cx.waker().wake_by_ref();
                         tracing::error!("Failed to read status message");
-                        Poll::Ready(Some(Err(AsyncTaskStopReason::NeedsRestart)))
+                        Poll::Ready(Some(Err(NeedsRestart)))
                     }
                     Poll::Pending => Poll::Pending,
                 }
