@@ -136,8 +136,6 @@ impl Decoder for StreamAPIClientCodec {
     type Item = ResponseMessage;
     type Error = CodecEror;
 
-    // todo: write a test that checks the behaviour when we have more than 2 msgs in the source
-    // bytes
     fn decode(&mut self, src: &mut bytes::BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         use itertools::*;
 

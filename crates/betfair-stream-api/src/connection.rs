@@ -60,10 +60,36 @@ impl StreamApiConnection<ResponseMessage> {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum ExternalUpdates<T> {
+    Layer(T),
+    Metadata(MetadataUpdates),
+}
+
+#[derive(Debug, Clone)]
+pub enum CacheEnabledMessages {
+    MarketChangeMessage(Vec<MarketBookCache>),
+    OrderChangeMessage(Vec<OrderBookCache>),
+    ConnectionMessage(ConnectionMessage),
+    StatusMessage(StatusMessage),
+}
+
+#[derive(Debug, Clone)]
+pub enum MetadataUpdates {
+    Disconnected,
+    TcpConnected,
+    FailedToConnect,
+    AuthenticationMessageSent,
+    Authenticated {
+        connections_available: i32,
+        connection_id: Option<String>,
+    },
+    FailedToAuthenticate,
+}
+
 impl<T> Stream for StreamApiConnection<T> {
     type Item = ExternalUpdates<T>;
 
-    // todo write unittests for this, because therere are edge cases where we hang up
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
@@ -121,29 +147,152 @@ impl<T> Stream for StreamApiConnection<T> {
 
 impl<T> Unpin for StreamApiConnection<T> {}
 
-#[derive(Debug, Clone)]
-pub enum ExternalUpdates<T> {
-    Layer(T),
-    Metadata(MetadataUpdates),
-}
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
 
-#[derive(Debug, Clone)]
-pub enum CacheEnabledMessages {
-    MarketChangeMessage(Vec<MarketBookCache>),
-    OrderChangeMessage(Vec<OrderBookCache>),
-    ConnectionMessage(ConnectionMessage),
-    StatusMessage(StatusMessage),
-}
+    use futures::executor::block_on;
+    use futures::stream::StreamExt;
+    use tokio::runtime::Runtime;
+    use tokio::sync::{broadcast, mpsc};
+    use tokio::task::JoinSet;
+    use tokio::time::timeout;
 
-#[derive(Debug, Clone)]
-pub enum MetadataUpdates {
-    Disconnected,
-    TcpConnected,
-    FailedToConnect,
-    AuthenticationMessageSent,
-    Authenticated {
-        connections_available: i32,
-        connection_id: Option<String>,
-    },
-    FailedToAuthenticate,
+    use super::*;
+
+    #[tokio::test]
+    async fn stream_api_connection_poll_next_shuts_down_on_empty_join_set_when_shutting_down() {
+        let (_data_sender, data_receiver) = mpsc::channel(10);
+        let (command_sender, _) = broadcast::channel(10);
+        let join_set = JoinSet::new();
+        let handle = tokio::runtime::Handle::current();
+
+        let mut connection =
+            StreamApiConnection::<()>::new(join_set, data_receiver, command_sender, handle);
+        connection.is_shutting_down = true;
+
+        assert!(
+            connection.next().await.is_none(),
+            "Stream should shut down immediately when no tasks are left"
+        );
+    }
+
+    #[tokio::test]
+    async fn stream_api_connection_poll_next_shuts_down_on_empty_join_set() {
+        let (_data_sender, data_receiver) = mpsc::channel(10);
+        let (command_sender, _) = broadcast::channel(10);
+        let join_set = JoinSet::new();
+        let handle = tokio::runtime::Handle::current();
+
+        let mut connection =
+            StreamApiConnection::<()>::new(join_set, data_receiver, command_sender, handle);
+
+        assert!(
+            connection.next().await.is_none(),
+            "Stream should shut down immediately when no tasks are left"
+        );
+    }
+
+    #[tokio::test]
+    async fn stream_api_connection_receives_updates() {
+        let (data_sender, data_receiver) = mpsc::channel(10);
+        let (command_sender, _) = broadcast::channel(10);
+        let mut join_set = JoinSet::new();
+        join_set.spawn(futures::future::pending());
+        let handle = tokio::runtime::Handle::current();
+
+        let mut connection =
+            StreamApiConnection::new(join_set, data_receiver, command_sender, handle);
+
+        let expected_update = ExternalUpdates::Layer("Test".to_string());
+        data_sender.send(expected_update.clone()).await.unwrap();
+
+        match connection.next().await {
+            Some(update) => match update {
+                ExternalUpdates::Layer(content) => assert_eq!(content, "Test"),
+                _ => panic!("Unexpected update type"),
+            },
+            _ => panic!("Expected to receive an update"),
+        }
+
+        assert!(
+            timeout(Duration::from_millis(100), connection.next())
+                .await
+                .is_err(),
+            "Stream should remain pending after receiving an update"
+        );
+    }
+
+    #[tokio::test]
+    async fn stream_api_connection_receives_updates_then_closes_empty_join_set() {
+        let (data_sender, data_receiver) = mpsc::channel(10);
+        let (command_sender, _) = broadcast::channel(10);
+        let join_set = JoinSet::new();
+        let handle = tokio::runtime::Handle::current();
+
+        let mut connection =
+            StreamApiConnection::new(join_set, data_receiver, command_sender, handle);
+
+        let expected_update = ExternalUpdates::Layer("Test".to_string());
+        data_sender.send(expected_update.clone()).await.unwrap();
+
+        match connection.next().await {
+            Some(update) => match update {
+                ExternalUpdates::Layer(content) => assert_eq!(content, "Test"),
+                _ => panic!("Unexpected update type"),
+            },
+            _ => panic!("Expected to receive an update"),
+        }
+
+        assert!(
+            connection.next().await.is_none(),
+            "Stream should return None after receiving an update and closing"
+        );
+    }
+
+    #[tokio::test]
+    async fn stream_api_connection_closes_after_join_set_returns() {
+        let (data_sender, data_receiver) = mpsc::channel(10);
+        let (command_sender, _) = broadcast::channel(10);
+        let mut join_set = JoinSet::new();
+        join_set.spawn(futures::future::ready(Err(FatalError)));
+        let handle = tokio::runtime::Handle::current();
+
+        let mut connection =
+            StreamApiConnection::new(join_set, data_receiver, command_sender, handle);
+
+        let expected_update = ExternalUpdates::Layer("Test".to_string());
+        data_sender.send(expected_update.clone()).await.unwrap();
+
+        match connection.next().await {
+            Some(update) => match update {
+                ExternalUpdates::Layer(content) => assert_eq!(content, "Test"),
+                _ => panic!("Unexpected update type"),
+            },
+            _ => panic!("Expected to receive an update"),
+        }
+
+        assert!(
+            connection.next().await.is_none(),
+            "Stream should return None after receiving an update and closing"
+        );
+    }
+
+    #[tokio::test]
+    async fn stream_api_connection_shuts_down_on_data_feed_close() {
+        let (data_sender, data_receiver) = mpsc::channel::<ExternalUpdates<String>>(1);
+        let (command_sender, _) = broadcast::channel(10);
+        let join_set = JoinSet::new();
+        let handle = tokio::runtime::Handle::current();
+
+        let mut connection =
+            StreamApiConnection::new(join_set, data_receiver, command_sender, handle);
+
+        drop(data_sender); // This closes the data_feed channel
+
+        assert!(
+            connection.next().await.is_none(),
+            "Stream should have ended due to data feed close"
+        );
+    }
 }

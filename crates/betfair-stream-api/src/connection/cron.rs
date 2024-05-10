@@ -1,11 +1,13 @@
 use std::convert::Infallible as Never;
+use std::fmt::Debug;
 use std::ops::ControlFlow;
+use std::task::Poll;
 
 use betfair_adapter::{ApplicationKey, SessionToken, UnauthenticatedBetfairRpcProvider};
 use betfair_stream_types::request::RequestMessage;
 use betfair_stream_types::response::ResponseMessage;
 use chrono::DateTime;
-use futures::{pin_mut, FutureExt, SinkExt, TryFutureExt};
+use futures::{pin_mut, FutureExt, Sink, SinkExt, TryFutureExt};
 use futures_concurrency::prelude::*;
 use tokio_stream::StreamExt;
 
@@ -258,7 +260,6 @@ pub async fn handle_stream_connection(
     }
 }
 
-// todo clean this up
 pub async fn cache_loop(
     mut receiver: tokio::sync::mpsc::Receiver<ExternalUpdates<ResponseMessage>>,
     external_sender: tokio::sync::mpsc::Sender<ExternalUpdates<CacheEnabledMessages>>,
@@ -343,13 +344,6 @@ async fn process_cachable_items<'a>(
     state.clear_stale_cache(publish_time);
 
     Ok(())
-}
-
-fn map_update<T, K>(from: ExternalUpdates<T>) -> Option<ExternalUpdates<K>> {
-    match from {
-        ExternalUpdates::Layer(_old_layer) => None,
-        ExternalUpdates::Metadata(data) => Some(ExternalUpdates::Metadata(data)),
-    }
 }
 
 async fn heartbeat_loop(
