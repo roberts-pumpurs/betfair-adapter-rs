@@ -28,30 +28,11 @@ pub struct FatalError;
 #[derive(Debug, Clone)]
 pub struct NeedsRestart;
 
-pub async fn broadcast_internal_updates(
-    mut updates_receiver: tokio::sync::broadcast::Receiver<MetadataUpdates>,
-    output_queue_sender: tokio::sync::mpsc::Sender<ExternalUpdates<ResponseMessage>>,
-) -> Result<Never, FatalError> {
-    while let Ok(msg) = updates_receiver.recv().await {
-        output_queue_sender
-            .send(ExternalUpdates::Metadata(msg))
-            .await
-            .map_err(|err| {
-                tracing::error!(err =? err, "Failed to send metadata update to the output queue");
-                FatalError
-            })?;
-    }
-
-    Err(FatalError)
-}
-
 #[derive(Debug)]
 pub struct StreamConnectioProcessor {
     pub sender: tokio::sync::mpsc::Sender<ExternalUpdates<ResponseMessage>>,
-    // todo replace all broadcasts with mpsc
     pub command_reader: tokio::sync::broadcast::Receiver<RequestMessage>,
     pub command_sender: tokio::sync::broadcast::Sender<RequestMessage>,
-    pub updates_sender: tokio::sync::broadcast::Sender<MetadataUpdates>,
     pub provider: betfair_adapter::UnauthenticatedBetfairRpcProvider,
     pub runtime_handle: tokio::runtime::Handle,
     pub hb: HeartbeatStrategy,
@@ -99,8 +80,9 @@ impl StreamConnectioProcessor {
             Err(err) => {
                 tracing::error!(err =? err, "Failed to connect to the stream, retrying...");
                 let _res = self
-                    .updates_sender
-                    .send(MetadataUpdates::FailedToConnect)
+                    .sender
+                    .send(ExternalUpdates::Metadata(MetadataUpdates::FailedToConnect))
+                    .await
                     .map_err(|err| {
                         tracing::error!(err =? err, "Failed to send metadata update to the output");
                         AsyncTaskStopReason::FatalError(FatalError)
@@ -108,8 +90,9 @@ impl StreamConnectioProcessor {
                 return Err(AsyncTaskStopReason::NeedsRestart(NeedsRestart));
             }
         };
-        self.updates_sender
-            .send(MetadataUpdates::TcpConnected)
+        self.sender
+            .send(ExternalUpdates::Metadata(MetadataUpdates::TcpConnected))
+            .await
             .map_err(|err| {
                 tracing::error!(err =? err, "Failed to send metadata update to the output queue");
                 AsyncTaskStopReason::FatalError(FatalError)

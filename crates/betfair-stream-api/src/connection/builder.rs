@@ -82,16 +82,8 @@ impl StreamApiBuilder {
         tokio::sync::mpsc::Receiver<ExternalUpdates<ResponseMessage>>,
     ) {
         let (output_queue_sender, output_queue_reader) = tokio::sync::mpsc::channel(3);
-        let (updates_sender, updates_receiver) = tokio::sync::broadcast::channel(3);
 
         let mut join_set = JoinSet::new();
-        join_set.spawn_on(
-            cron::broadcast_internal_updates(
-                updates_receiver.resubscribe(),
-                output_queue_sender.clone(),
-            ),
-            rt_handle,
-        );
         join_set.spawn_on(
             {
                 let command_reader = self.command_reader.resubscribe();
@@ -104,7 +96,6 @@ impl StreamApiBuilder {
                         sender: output_queue_sender,
                         command_reader,
                         command_sender,
-                        updates_sender,
                         provider,
                         runtime_handle,
                         hb,
