@@ -52,9 +52,7 @@ impl<'a> Stream for Handshake<'a> {
         cx: &mut std::task::Context<'_>,
     ) -> Poll<Option<Self::Item>> {
         match &mut self.state {
-            State::Error => {
-                Poll::Ready(None)
-            }
+            State::Error => Poll::Ready(None),
             State::Done(msg) => {
                 let metadata_update = MetadataUpdates::Authenticated {
                     connections_available: msg.connections_available.unwrap_or(-1),

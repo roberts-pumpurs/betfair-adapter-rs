@@ -8,7 +8,7 @@ use futures_concurrency::prelude::*;
 use tokio_stream::StreamExt;
 
 use crate::cache::tracker::{IncomingMessage, StreamStateTracker};
-use crate::connection::handshake::{Handshake};
+use crate::connection::handshake::Handshake;
 use crate::tls_sream::RawStreamApiConnection;
 use crate::{CacheEnabledMessages, ExternalUpdates, HeartbeatStrategy, MetadataUpdates};
 
@@ -112,6 +112,12 @@ pub async fn handle_stream_connection(
                         .map_err(|_| AsyncTaskStopReason::FatalError)?;
                 }
                 Err(err) => {
+                    sender
+                        .send(ExternalUpdates::Metadata(
+                            MetadataUpdates::FailedToAuthenticate,
+                        ))
+                        .await
+                        .map_err(|_| AsyncTaskStopReason::FatalError)?;
                     return Err(err);
                 }
             }
