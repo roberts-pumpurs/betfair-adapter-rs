@@ -47,7 +47,7 @@ impl<T> StreamApiConnection<T> {
 }
 
 impl StreamApiConnection<ResponseMessage> {
-    pub async fn enable_cache(mut self) -> StreamApiConnection<CacheEnabledMessages> {
+    pub fn enable_cache(mut self) -> StreamApiConnection<CacheEnabledMessages> {
         let output_queue_reader_post_cache =
             wrap_with_cache_layer(&mut self.join_set, self.data_feed, &self.rt_handle);
         StreamApiConnection {

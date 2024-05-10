@@ -2267,6 +2267,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "stream-api-subscribe-to-orders"
+version = "0.1.0"
+dependencies = [
+ "betfair-adapter",
+ "betfair-stream-api",
+ "clap",
+ "color-eyre",
+ "eyre",
+ "serde",
+ "tokio",
+ "toml",
+ "tracing",
+ "tracing-subscriber",
+ "xshell",
+]
+
+[[package]]
 name = "strsim"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

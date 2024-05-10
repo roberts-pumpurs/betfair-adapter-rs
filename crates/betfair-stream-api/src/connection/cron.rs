@@ -1,13 +1,15 @@
 use std::convert::Infallible as Never;
+use std::ops::ControlFlow;
 
 use betfair_adapter::{ApplicationKey, SessionToken, UnauthenticatedBetfairRpcProvider};
 use betfair_stream_types::request::RequestMessage;
 use betfair_stream_types::response::ResponseMessage;
+use chrono::DateTime;
 use futures::{pin_mut, FutureExt, SinkExt, TryFutureExt};
 use futures_concurrency::prelude::*;
 use tokio_stream::StreamExt;
 
-use crate::cache::tracker::{IncomingMessage, StreamStateTracker};
+use crate::cache::tracker::{IncomingMessage, StreamStateTracker, Updates};
 use crate::connection::handshake::Handshake;
 use crate::tls_sream::RawStreamApiConnection;
 use crate::{CacheEnabledMessages, ExternalUpdates, HeartbeatStrategy, MetadataUpdates};
@@ -230,6 +232,7 @@ pub async fn handle_stream_connection(
             msg = command_reader.recv().fuse() => {
                 match msg {
                     Ok(msg) => {
+                        tracing::info!(msg = ?msg, "Sending message to stream");
                         connection.send(msg).await.map_err(|_| AsyncTaskStopReason::NeedsRestart(NeedsRestart))?;
                     }
                     Err(_) => {
@@ -262,61 +265,84 @@ pub async fn cache_loop(
 ) -> Result<Never, FatalError> {
     let mut state = StreamStateTracker::new();
     while let Some(msg) = receiver.recv().await {
-        let mut publish_time = None;
-        if let ExternalUpdates::Layer(msg) = msg {
-            let updates = match msg {
-                ResponseMessage::MarketChange(msg) => {
-                    publish_time = msg.publish_time;
-                    state.calculate_updates(IncomingMessage::Market(msg))
-                }
-                ResponseMessage::OrderChange(msg) => {
-                    publish_time = msg.publish_time;
-                    state.calculate_updates(IncomingMessage::Order(msg))
-                }
-                ResponseMessage::Connection(msg) => {
-                    external_sender
-                        .send(ExternalUpdates::Layer(
-                            CacheEnabledMessages::ConnectionMessage(msg),
-                        ))
-                        .await
-                        .map_err(|_| FatalError)?;
-                    None
-                }
-                ResponseMessage::Status(msg) => {
-                    external_sender
-                        .send(ExternalUpdates::Layer(CacheEnabledMessages::StatusMessage(
-                            msg,
-                        )))
-                        .await
-                        .map_err(|_| FatalError)?;
-                    None
-                }
-            };
-            let Some(updates) = updates else {
-                continue;
-            };
-            let update = match updates {
-                crate::cache::tracker::Updates::Market(msg) => {
-                    CacheEnabledMessages::MarketChangeMessage(msg.into_iter().cloned().collect())
-                }
-                crate::cache::tracker::Updates::Order(msg) => {
-                    CacheEnabledMessages::OrderChangeMessage(msg.into_iter().cloned().collect())
-                }
-            };
-
-            external_sender
-                .send(ExternalUpdates::Layer(update))
-                .await
-                .map_err(|_| FatalError)?;
-        } else if let Some(msg) = map_update(msg) {
-            external_sender.send(msg).await.map_err(|_| FatalError)?;
-        }
-        if let Some(publish_time) = publish_time {
-            state.clear_stale_cache(publish_time);
+        match msg {
+            ExternalUpdates::Layer(ResponseMessage::MarketChange(msg)) => {
+                process_cachable_items(
+                    &mut state,
+                    msg.publish_time,
+                    IncomingMessage::Market(msg),
+                    &external_sender,
+                )
+                .await?;
+            }
+            ExternalUpdates::Layer(ResponseMessage::OrderChange(msg)) => {
+                process_cachable_items(
+                    &mut state,
+                    msg.publish_time,
+                    IncomingMessage::Order(msg),
+                    &external_sender,
+                )
+                .await?;
+            }
+            ExternalUpdates::Layer(ResponseMessage::Connection(msg)) => {
+                external_sender
+                    .send(ExternalUpdates::Layer(
+                        CacheEnabledMessages::ConnectionMessage(msg),
+                    ))
+                    .await
+                    .map_err(|_| FatalError)?;
+            }
+            ExternalUpdates::Layer(ResponseMessage::Status(msg)) => {
+                external_sender
+                    .send(ExternalUpdates::Layer(CacheEnabledMessages::StatusMessage(
+                        msg,
+                    )))
+                    .await
+                    .map_err(|_| FatalError)?;
+            }
+            ExternalUpdates::Metadata(metadata) => {
+                external_sender
+                    .send(ExternalUpdates::Metadata(metadata))
+                    .await
+                    .map_err(|_| FatalError)?;
+            }
         }
     }
 
     Err(FatalError)
+}
+
+async fn process_cachable_items<'a>(
+    state: &mut StreamStateTracker,
+    publish_time: Option<DateTime<chrono::Utc>>,
+    updates: IncomingMessage,
+    external_sender: &tokio::sync::mpsc::Sender<ExternalUpdates<CacheEnabledMessages>>,
+) -> Result<(), FatalError> {
+    let updates = state.calculate_updates(updates);
+
+    let Some(updates) = updates else {
+        return Ok(())
+    };
+    let update = match updates {
+        crate::cache::tracker::Updates::Market(msg) => {
+            CacheEnabledMessages::MarketChangeMessage(msg.into_iter().cloned().collect())
+        }
+        crate::cache::tracker::Updates::Order(msg) => {
+            CacheEnabledMessages::OrderChangeMessage(msg.into_iter().cloned().collect())
+        }
+    };
+    external_sender
+        .send(ExternalUpdates::Layer(update))
+        .await
+        .map_err(|_| FatalError)?;
+
+    let Some(publish_time) = publish_time else {
+        return Ok(())
+    };
+
+    state.clear_stale_cache(publish_time);
+
+    Ok(())
 }
 
 fn map_update<T, K>(from: ExternalUpdates<T>) -> Option<ExternalUpdates<K>> {

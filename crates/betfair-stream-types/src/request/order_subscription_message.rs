@@ -1,5 +1,6 @@
 use betfair_types::customer_strategy_ref::CustomerStrategyRef;
 use serde::{Deserialize, Serialize};
+use typed_builder::TypedBuilder;
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -31,7 +32,7 @@ pub struct OrderSubscriptionMessage {
     pub conflate_ms: Option<i64>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize, TypedBuilder)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderFilter {
     /// Returns overall / net position (See: OrderRunnerChange.mb / OrderRunnerChange.ml).

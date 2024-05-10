@@ -1,11 +1,13 @@
+use std::time::Duration;
+
 use betfair_adapter::betfair_types::types::sports_aping::{
     list_market_catalogue, MarketFilter, MarketProjection, MarketSort,
 };
 use betfair_adapter::{
     ApplicationKey, Identity, Password, SecretProvider, UnauthenticatedBetfairRpcProvider, Username,
 };
-use betfair_stream_api::types::request::market_subscription_message::LadderLevel;
-use betfair_stream_api::MarketSubscriber;
+use betfair_stream_api::types::request::order_subscription_message::OrderFilter;
+use betfair_stream_api::{HeartbeatStrategy, MarketSubscriber, OrderSubscriber};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
@@ -32,34 +34,11 @@ async fn main() -> eyre::Result<()> {
         identity: config.betfair_certificate,
     };
 
-    // login to betfair
-    let bf_provider = UnauthenticatedBetfairRpcProvider::new(secret_provider.clone())?
-        .authenticate()
-        .await?;
-
-    // get market id
-    let market_book = bf_provider
-        .send_request(list_market_catalogue::Parameters {
-            filter: MarketFilter::builder().in_play_only(true).build(),
-            market_projection: Some(vec![
-                MarketProjection::Event,
-                MarketProjection::Competition,
-                MarketProjection::EventType,
-                MarketProjection::MarketDescription,
-            ]),
-            sort: Some(MarketSort::MaximumTraded),
-            max_results: 1,
-            locale: None,
-        })
-        .await?;
-    let market_id = market_book[0].market_id.clone();
-
     // connect to stream
     let mut stream = {
         use betfair_stream_api::BetfairProviderExt;
-
         UnauthenticatedBetfairRpcProvider::new(secret_provider.clone())?
-            .connect_to_stream()
+            .connect_to_stream_with_hb(HeartbeatStrategy::Interval(Duration::from_secs(5)))
             .await
             .run_with_default_runtime()
             .enable_cache()
@@ -67,31 +46,13 @@ async fn main() -> eyre::Result<()> {
 
     // start processing stream
     {
-        use betfair_stream_api::types::request::market_subscription_message::{
-            Fields, MarketFilter,
-        };
         use betfair_stream_api::StreamExt;
-        let mut ms = MarketSubscriber::new(
-            &stream,
-            MarketFilter::default(),
-            vec![
-                Fields::ExAllOffers,
-                Fields::ExBestOffers,
-                Fields::ExBestOffersDisp,
-                Fields::ExLtp,
-                Fields::ExMarketDef,
-                Fields::ExTraded,
-                Fields::ExTradedVol,
-                Fields::SpProjected,
-                Fields::SpTraded,
-            ],
-            Some(LadderLevel::new(1).unwrap()),
-        );
+        let mut os = OrderSubscriber::new(&stream, OrderFilter::default());
 
         tokio::spawn(async move {
             // sleep for a bit to allow the stream to connect
             tokio::time::sleep(std::time::Duration::from_secs(3)).await;
-            ms.subscribe_to_market(market_id).await.unwrap();
+            os.resubscribe().await.unwrap();
         });
 
         while let Some(value) = stream.next().await {
