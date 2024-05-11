@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand};
+use clap::Parser;
 use xshell::{cmd, Shell};
 
 #[derive(Parser, Debug)]
@@ -156,6 +156,11 @@ fn main() -> eyre::Result<()> {
             std::fs::create_dir_all("certs/")?;
             std::fs::write("certs/cert.pem", pem_serialized.as_bytes())?;
             std::fs::write("certs/key.pem", key_pair.serialize_pem().as_bytes())?;
+            std::fs::write("certs/identity.pem", {
+                let mut identity = pem_serialized.clone();
+                identity.push_str(&key_pair.serialize_pem());
+                identity
+            })?;
         }
     }
 

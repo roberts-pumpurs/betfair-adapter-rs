@@ -14,7 +14,7 @@ struct Config {
     betfair_username: Username,
     betfair_application_key: ApplicationKey,
     betfair_password: Password,
-    betfair_certificate: Identity,
+    betfair_identity: Identity,
 }
 
 #[tokio::main]
@@ -29,7 +29,7 @@ async fn main() -> eyre::Result<()> {
         application_key: config.betfair_application_key,
         username: config.betfair_username,
         password: config.betfair_password,
-        identity: config.betfair_certificate,
+        identity: config.betfair_identity,
     };
 
     // login to betfair

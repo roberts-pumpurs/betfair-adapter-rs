@@ -1,17 +1,15 @@
 use std::convert::Infallible as Never;
 use std::fmt::Debug;
-use std::ops::ControlFlow;
-use std::task::Poll;
 
 use betfair_adapter::{ApplicationKey, SessionToken, UnauthenticatedBetfairRpcProvider};
 use betfair_stream_types::request::RequestMessage;
 use betfair_stream_types::response::ResponseMessage;
 use chrono::DateTime;
-use futures::{pin_mut, FutureExt, Sink, SinkExt, TryFutureExt};
+use futures::{pin_mut, FutureExt, SinkExt, TryFutureExt};
 use futures_concurrency::prelude::*;
 use tokio_stream::StreamExt;
 
-use crate::cache::tracker::{IncomingMessage, StreamStateTracker, Updates};
+use crate::cache::tracker::{IncomingMessage, StreamStateTracker};
 use crate::connection::handshake::Handshake;
 use crate::tls_sream::RawStreamApiConnection;
 use crate::{CacheEnabledMessages, ExternalUpdates, HeartbeatStrategy, MetadataUpdates};
@@ -79,8 +77,7 @@ impl StreamConnectioProcessor {
             Ok(connection) => connection,
             Err(err) => {
                 tracing::error!(err =? err, "Failed to connect to the stream, retrying...");
-                let _res = self
-                    .sender
+                self.sender
                     .send(ExternalUpdates::Metadata(MetadataUpdates::FailedToConnect))
                     .await
                     .map_err(|err| {

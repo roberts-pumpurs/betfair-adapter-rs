@@ -1,13 +1,10 @@
 use std::time::Duration;
 
-use betfair_adapter::betfair_types::types::sports_aping::{
-    list_market_catalogue, MarketFilter, MarketProjection, MarketSort,
-};
 use betfair_adapter::{
     ApplicationKey, Identity, Password, SecretProvider, UnauthenticatedBetfairRpcProvider, Username,
 };
 use betfair_stream_api::types::request::order_subscription_message::OrderFilter;
-use betfair_stream_api::{HeartbeatStrategy, MarketSubscriber, OrderSubscriber};
+use betfair_stream_api::{HeartbeatStrategy, OrderSubscriber};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
@@ -16,7 +13,7 @@ struct Config {
     betfair_username: Username,
     betfair_application_key: ApplicationKey,
     betfair_password: Password,
-    betfair_certificate: Identity,
+    betfair_identity: Identity,
 }
 
 #[tokio::main]
@@ -31,7 +28,7 @@ async fn main() -> eyre::Result<()> {
         application_key: config.betfair_application_key,
         username: config.betfair_username,
         password: config.betfair_password,
-        identity: config.betfair_certificate,
+        identity: config.betfair_identity,
     };
 
     // connect to stream

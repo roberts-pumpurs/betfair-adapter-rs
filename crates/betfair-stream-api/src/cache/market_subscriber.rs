@@ -84,7 +84,7 @@ impl MarketSubscriber {
             id: None,
             segmentation_enabled: Some(true),
             clk: None,
-            heartbeat_ms: Some(2500),
+            heartbeat_ms: Some(1000),
             initial_clk: None,
             market_filter: Some(Box::new(MarketFilter {
                 country_codes: None,
@@ -118,9 +118,9 @@ impl MarketSubscriber {
             clk: None,         // empty to reset the clock
             initial_clk: None, // empty to reset the clock
             segmentation_enabled: Some(true),
-            heartbeat_ms: Some(2500),
+            heartbeat_ms: Some(1000),
             market_filter: Some(Box::new(self.filter.clone())),
-            conflate_ms: Some(2500),
+            conflate_ms: None,
             market_data_filter: Some(Box::new(MarketDataFilter {
                 ladder_levels: self.ladder_level.clone(),
                 fields: Some(self.market_data_fields.clone()),

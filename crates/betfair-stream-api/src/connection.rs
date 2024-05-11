@@ -151,9 +151,7 @@ impl<T> Unpin for StreamApiConnection<T> {}
 mod tests {
     use std::time::Duration;
 
-    use futures::executor::block_on;
     use futures::stream::StreamExt;
-    use tokio::runtime::Runtime;
     use tokio::sync::{broadcast, mpsc};
     use tokio::task::JoinSet;
     use tokio::time::timeout;
