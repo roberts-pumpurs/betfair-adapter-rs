@@ -8,3 +8,4 @@ clap.workspace = true
 xshell.workspace = true
 eyre.workspace = true
 color-eyre.workspace = true
+betfair-cert-gen.workspace = true

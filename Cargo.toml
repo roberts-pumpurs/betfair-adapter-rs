@@ -12,6 +12,7 @@ betfair-stream-api = { path = "crates/betfair-stream-api" }
 betfair-xml-parser = { path = "crates/betfair-xml-parser" }
 betfair-rpc-server-mock = { path = "crates/betfair-rpc-server-mock" }
 betfair-typegen = { path = "crates/betfair-typegen" }
+betfair-cert-gen = { path = "crates/betfair-cert-gen" }
 
 # Utils
 rust_decimal = "1"
@@ -63,6 +64,7 @@ rustls-native-certs = "0.7"
 # tls
 rustls-pemfile = "2"
 rcgen = { version = "0.13", features = ["pem"] }
+rsa = "0.9"
 
 # Type gen
 quote = "1"

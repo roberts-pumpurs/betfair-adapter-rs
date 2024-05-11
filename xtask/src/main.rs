@@ -3,13 +3,7 @@ use xshell::{cmd, Shell};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
-struct Args {
-    #[command(subcommand)]
-    command: Commands,
-}
-
-#[derive(Subcommand, Debug)]
-enum Commands {
+enum Args {
     Deny,
     Test {
         #[clap(short, long, default_value_t = false)]
@@ -26,6 +20,25 @@ enum Commands {
         #[clap(short, long, default_value_t = false)]
         write: bool,
     },
+    /// Generate a Betfair certificate for non-interactive bot usage
+    /// Reference:
+    /// https://docs.developer.betfair.com/display/1smk3cen4v3lu3yomq5qye0ni/Non-Interactive+(bot)+login
+    GenBetfairCertificate {
+        /// The country name (2 letter idnetifier) for the certificate
+        #[clap(short, long, default_value = "GB")]
+        country_name: String,
+        /// The state or province name for the certificate (a city, nieghborhood, or other locality
+        /// name)
+        #[clap(short, long, default_value = "London")]
+        state_or_province_name: String,
+        /// The organizational unit name for the certificate (a department, team, or other group
+        /// name)
+        #[clap(short, long, default_value = "IT Department")]
+        organizational_unit_name: String,
+        /// The common name for the certificate (a domain name, email address, or other identifier)
+        #[clap(long, default_value = "Awesome Trading App in Rust")]
+        common_name: String,
+    },
 }
 
 fn main() -> eyre::Result<()> {
@@ -33,13 +46,13 @@ fn main() -> eyre::Result<()> {
     let sh = Shell::new()?;
     let args = Args::parse();
 
-    match args.command {
-        Commands::Deny => {
+    match args {
+        Args::Deny => {
             println!("cargo deny");
             cmd!(sh, "cargo install --locked cargo-deny").run()?;
             cmd!(sh, "cargo deny check").run()?;
         }
-        Commands::Test { args, coverage } => {
+        Args::Test { args, coverage } => {
             println!("cargo test");
             cmd!(sh, "cargo install cargo-nextest").run()?;
 
@@ -75,17 +88,17 @@ fn main() -> eyre::Result<()> {
                 cmd!(sh, "xdg-open target/coverage/html/index.html").run()?;
             }
         }
-        Commands::Audit => {
+        Args::Audit => {
             println!("cargo audit");
             cmd!(sh, "cargo install --locked cargo-audit").run()?;
             cmd!(sh, "cargo audit").run()?;
         }
-        Commands::Check => {
+        Args::Check => {
             println!("cargo check");
             cmd!(sh, "cargo clippy --workspace --locked -- -D warnings").run()?;
             cmd!(sh, "cargo fmt --all --check").run()?;
         }
-        Commands::Fmt => {
+        Args::Fmt => {
             println!("cargo fix");
             cmd!(sh, "cargo fmt --all").run()?;
             cmd!(
@@ -94,7 +107,7 @@ fn main() -> eyre::Result<()> {
             )
             .run()?;
         }
-        Commands::Doc => {
+        Args::Doc => {
             println!("cargo doc");
             cmd!(sh, "cargo doc --workspace --no-deps --all-features").run()?;
             if std::option_env!("CI").is_some() {
@@ -108,12 +121,12 @@ fn main() -> eyre::Result<()> {
             #[cfg(target_os = "linux")]
             cmd!(sh, "xdg-open target/doc/minerva/index.html").run()?;
         }
-        Commands::UnusedDeps => {
+        Args::UnusedDeps => {
             println!("unused deps");
             cmd!(sh, "cargo install --locked cargo-machete").run()?;
             cmd!(sh, "cargo machete").run()?;
         }
-        Commands::Typos { write } => {
+        Args::Typos { write } => {
             println!("cargo spellcheck");
             cmd!(sh, "cargo install typos-cli").run()?;
             if write {
@@ -121,6 +134,28 @@ fn main() -> eyre::Result<()> {
             } else {
                 cmd!(sh, "typos").run()?;
             }
+        }
+        Args::GenBetfairCertificate {
+            country_name,
+            state_or_province_name,
+            organizational_unit_name,
+            common_name,
+        } => {
+            println!("gen betfair certificate");
+            let (cert, key_pair) = betfair_cert_gen::rcgen_cert(
+                country_name.as_str(),
+                state_or_province_name.as_str(),
+                organizational_unit_name.as_str(),
+                common_name.as_str(),
+            )?;
+
+            let pem_serialized = cert.pem();
+            println!("{pem_serialized}");
+            println!("{}", key_pair.serialize_pem());
+
+            std::fs::create_dir_all("certs/")?;
+            std::fs::write("certs/cert.pem", pem_serialized.as_bytes())?;
+            std::fs::write("certs/key.pem", key_pair.serialize_pem().as_bytes())?;
         }
     }
 
