@@ -5,22 +5,14 @@ edition = "2021"
 
 [dependencies]
 betfair-stream-types.workspace = true
-betfair-adapter.workspace = true
 url.workspace = true
 tokio.workspace = true
-tokio-stream.workspace = true
 tokio-util.workspace = true
 tokio-rustls.workspace = true
 serde_json.workspace = true
-thiserror.workspace = true
 tracing.workspace = true
-futures.workspace = true
-futures-concurrency.workspace = true
 futures-util.workspace = true
-rand.workspace = true
-async-stream.workspace = true
 rustls.workspace = true
-rustls-native-certs.workspace = true
 eyre.workspace = true
 rustls-pemfile.workspace = true
 rcgen.workspace = true

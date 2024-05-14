@@ -9,17 +9,11 @@ reqwest.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 serde_json.workspace = true
-hyper.workspace = true
 redact.workspace = true
 tracing.workspace = true
 betfair-types.workspace = true
 eyre.workspace = true
 url.workspace = true
-futures-concurrency.workspace = true
-futures.workspace = true
-chrono.workspace = true
-http.workspace = true
-typed-builder.workspace = true
 
 [dev-dependencies]
 tracing-subscriber.workspace = true

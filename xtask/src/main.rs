@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::Parser;
 use xshell::{cmd, Shell};
 
@@ -46,6 +48,7 @@ fn main() -> eyre::Result<()> {
     let sh = Shell::new()?;
     let args = Args::parse();
 
+    sh.change_dir(project_root());
     match args {
         Args::Deny => {
             println!("cargo deny");
@@ -165,4 +168,10 @@ fn main() -> eyre::Result<()> {
     }
 
     Ok(())
+}
+
+/// Returns the path to the root directory
+fn project_root() -> PathBuf {
+    let dir = env!("CARGO_MANIFEST_DIR").to_owned();
+    PathBuf::from(dir).parent().unwrap().to_owned()
 }
