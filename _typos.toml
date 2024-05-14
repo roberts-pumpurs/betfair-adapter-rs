@@ -1,0 +1,6 @@
+[files]
+extend-exclude = [
+    "crates/betfair-typegen/assets/*",
+    "crates/betfair-stream-types/tests/resources/*",
+    "crates/betfair-stream-types/ESASwaggerSchema.json",
+]
