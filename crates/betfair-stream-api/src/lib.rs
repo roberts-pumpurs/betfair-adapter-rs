@@ -3,11 +3,13 @@ mod connection;
 mod error;
 mod tls_sream;
 
+extern crate alloc;
+
 pub use betfair_stream_types as types;
 pub use cache::market_subscriber::MarketSubscriber;
 pub use cache::order_subscriber::OrderSubscriber;
 pub use connection::builder::{HeartbeatStrategy, StreamApiBuilder};
-pub use connection::{CacheEnabledMessages, ExternalUpdates, MetadataUpdates, StreamApiConnection};
+pub use connection::{CacheEnabledMessages, ExternalUpdates, MetadataUpdates, StreamApi};
 pub use error::StreamError;
 pub use futures::StreamExt;
 

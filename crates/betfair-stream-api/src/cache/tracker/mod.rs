@@ -65,7 +65,7 @@ impl StreamStateTracker {
 
         match change_type {
             Some(ChangeType::SubImage) => self.on_subscribe(msg).0,
-            Some(ChangeType::Heartbeat) => self.on_heartbeat(msg).0,
+            Some(ChangeType::Heartbeat) => self.on_heartbeat(&msg).0,
             Some(ChangeType::ResubDelta) => self.on_resubscribe(msg).0,
             None => self.on_update(msg).0,
         }
@@ -114,8 +114,8 @@ impl StreamStateTracker {
         res
     }
 
-    fn on_heartbeat(&mut self, msg: IncomingMessage) -> (Option<Updates<'_>>, HasFullImage) {
-        self.update_clock_global(&msg);
+    fn on_heartbeat(&mut self, msg: &IncomingMessage) -> (Option<Updates<'_>>, HasFullImage) {
+        self.update_clock_global(msg);
         (None, HasFullImage(false))
     }
 
@@ -126,21 +126,21 @@ impl StreamStateTracker {
 
     fn update_clock_global(&mut self, msg: &IncomingMessage) {
         match msg {
-            IncomingMessage::Market(msg) => {
+            IncomingMessage::Market(ref msg) => {
                 self.update_clk(msg);
             }
-            IncomingMessage::Order(msg) => {
+            IncomingMessage::Order(ref msg) => {
                 self.update_clk(msg);
             }
         };
     }
 
     fn update_clk<T: DeserializeOwned + DataChange<T>>(&mut self, data: &DatasetChangeMessage<T>) {
-        if let Some(initial_clock) = &data.initial_clock {
+        if let Some(ref initial_clock) = data.initial_clock {
             self.initial_clock = Some(initial_clock.clone());
         }
 
-        if let Some(update_clk) = &data.clock {
+        if let Some(ref update_clk) = data.clock {
             self.update_clk = Some(update_clk.clone());
         }
 

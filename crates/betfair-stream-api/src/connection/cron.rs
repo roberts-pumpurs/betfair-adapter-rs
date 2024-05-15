@@ -1,12 +1,17 @@
-use std::convert::Infallible as Never;
-use std::fmt::Debug;
+use core::convert::Infallible as Never;
+use core::fmt::Debug;
+use core::pin::Pin;
+use core::task::{Context, Poll};
 
 use betfair_adapter::{ApplicationKey, SessionToken, UnauthenticatedBetfairRpcProvider};
+use betfair_stream_types::request::heartbeat_message::HeartbeatMessage;
 use betfair_stream_types::request::RequestMessage;
 use betfair_stream_types::response::ResponseMessage;
 use chrono::DateTime;
-use futures::{pin_mut, FutureExt, SinkExt, TryFutureExt};
+use futures::{pin_mut, Future, FutureExt, SinkExt, TryFutureExt};
 use futures_concurrency::prelude::*;
+use tokio::sync::broadcast;
+use tokio::time::Interval;
 use tokio_stream::StreamExt;
 
 use crate::cache::tracker::{IncomingMessage, StreamStateTracker};
@@ -40,6 +45,7 @@ pub struct StreamConnectioProcessor {
 impl StreamConnectioProcessor {
     pub async fn connect_and_process_loop(&mut self) -> Result<Never, FatalError> {
         loop {
+            // todo use `backoff` crate
             match self.connect_and_process_internal().await {
                 Ok(_) => {
                     tracing::info!("Stream connection processor stopped");
@@ -80,8 +86,8 @@ impl StreamConnectioProcessor {
                 self.sender
                     .send(ExternalUpdates::Metadata(MetadataUpdates::FailedToConnect))
                     .await
-                    .map_err(|err| {
-                        tracing::error!(err =? err, "Failed to send metadata update to the output");
+                    .map_err(|send_err| {
+                        tracing::error!(err =? send_err, "Failed to send metadata update to the output");
                         AsyncTaskStopReason::FatalError(FatalError)
                     })?;
                 return Err(AsyncTaskStopReason::NeedsRestart(NeedsRestart));
@@ -133,13 +139,14 @@ impl StreamConnectioProcessor {
     }
 }
 
+#[allow(clippy::pattern_type_mismatch)]
 async fn get_session_token(
     last_time_token_refreshed: &mut Option<(std::time::Instant, SessionToken)>,
     provider: &UnauthenticatedBetfairRpcProvider,
 ) -> Result<SessionToken, NeedsRestart> {
     let session_token = {
-        let get_token = |provider: UnauthenticatedBetfairRpcProvider| async move {
-            let res = provider
+        let get_token = |closure_provider: UnauthenticatedBetfairRpcProvider| async move {
+            let res = closure_provider
                 .clone()
                 .authenticate()
                 .map_err(|err| {
@@ -151,7 +158,7 @@ async fn get_session_token(
         };
         match last_time_token_refreshed {
             Some((time, token)) => {
-                let max_allowed_time = std::time::Duration::from_secs(60 * 5); // 5 minutes
+                let max_allowed_time = core::time::Duration::from_secs(60 * 5); // 5 minutes
                 let elapsed = time.elapsed();
                 if elapsed > max_allowed_time {
                     *token = get_token(provider.clone()).await?;
@@ -185,10 +192,10 @@ pub async fn handle_stream_connection(
         while let Some(results) = handshake.next().await {
             match results {
                 Ok(msg) => {
-                    sender
-                        .send(msg)
-                        .await
-                        .map_err(|_| AsyncTaskStopReason::FatalError(FatalError))?;
+                    sender.send(msg).await.map_err(|err| {
+                        tracing::error!(err =? err, "Failed to send message to the output queue");
+                        AsyncTaskStopReason::FatalError(FatalError)
+                    })?;
                 }
                 Err(err) => {
                     sender
@@ -196,16 +203,19 @@ pub async fn handle_stream_connection(
                             MetadataUpdates::FailedToAuthenticate,
                         ))
                         .await
-                        .map_err(|_| AsyncTaskStopReason::FatalError(FatalError))?;
+                        .map_err(|send_err| {
+                            tracing::error!(err =? send_err, "Failed to send metadata update to the output queue");
+                            AsyncTaskStopReason::FatalError(FatalError)
+                        })?;
                     return Err(AsyncTaskStopReason::NeedsRestart(err));
                 }
             }
         }
-        authenticated.send(()).map_err(|_| {
+        authenticated.send(()).map_err(|_err| {
             tracing::error!("Failed to communicate with the auth one-shot channel");
             AsyncTaskStopReason::NeedsRestart(NeedsRestart)
         })?;
-    }
+    };
     tracing::info!("authenticated");
 
     // todo replace with custom Future impl
@@ -215,7 +225,10 @@ pub async fn handle_stream_connection(
                 match msg {
                     Ok(msg) => {
                         tracing::info!(msg = ?msg, "Sending message to stream");
-                        connection.send(msg).await.map_err(|_| AsyncTaskStopReason::NeedsRestart(NeedsRestart))?;
+                        connection.send(msg).await.map_err(|err| {
+                            tracing::error!(err = ?err, "Failed to send message to the stream");
+                            AsyncTaskStopReason::NeedsRestart(NeedsRestart)
+                        })?;
                     }
                     Err(_) => {
                         return Err(AsyncTaskStopReason::FatalError(FatalError));
@@ -229,7 +242,10 @@ pub async fn handle_stream_connection(
                         sender
                             .send(ExternalUpdates::Layer(msg))
                             .await
-                            .map_err(|_| AsyncTaskStopReason::FatalError(FatalError))?;
+                            .map_err(|err| {
+                                tracing::error!(err = ?err, "Failed to send message to the output queue");
+                                AsyncTaskStopReason::FatalError(FatalError)
+                            })?;
                     }
                     _ => {
                         return Err(AsyncTaskStopReason::NeedsRestart(NeedsRestart));
@@ -267,25 +283,32 @@ pub async fn cache_loop(
             }
             ExternalUpdates::Layer(ResponseMessage::Connection(msg)) => {
                 external_sender
-                    .send(ExternalUpdates::Layer(
-                        CacheEnabledMessages::ConnectionMessage(msg),
-                    ))
-                    .await
-                    .map_err(|_| FatalError)?;
-            }
-            ExternalUpdates::Layer(ResponseMessage::Status(msg)) => {
-                external_sender
-                    .send(ExternalUpdates::Layer(CacheEnabledMessages::StatusMessage(
+                    .send(ExternalUpdates::Layer(CacheEnabledMessages::Connection(
                         msg,
                     )))
                     .await
-                    .map_err(|_| FatalError)?;
+                    .map_err(|err| {
+                        tracing::error!(?err, "Failed to send connection");
+                        FatalError
+                    })?;
+            }
+            ExternalUpdates::Layer(ResponseMessage::Status(msg)) => {
+                external_sender
+                    .send(ExternalUpdates::Layer(CacheEnabledMessages::Status(msg)))
+                    .await
+                    .map_err(|err| {
+                        tracing::error!(?err, "Failed to send status");
+                        FatalError
+                    })?;
             }
             ExternalUpdates::Metadata(metadata) => {
                 external_sender
                     .send(ExternalUpdates::Metadata(metadata))
                     .await
-                    .map_err(|_| FatalError)?;
+                    .map_err(|err| {
+                        tracing::error!(?err, "Failed to send metadata");
+                        FatalError
+                    })?;
             }
         }
     }
@@ -304,18 +327,22 @@ async fn process_cacheable_items<'a>(
     let Some(updates) = updates else {
         return Ok(())
     };
+
     let update = match updates {
         crate::cache::tracker::Updates::Market(msg) => {
-            CacheEnabledMessages::MarketChangeMessage(msg.into_iter().cloned().collect())
+            CacheEnabledMessages::MarketChange(msg.into_iter().cloned().collect())
         }
         crate::cache::tracker::Updates::Order(msg) => {
-            CacheEnabledMessages::OrderChangeMessage(msg.into_iter().cloned().collect())
+            CacheEnabledMessages::OrderChange(msg.into_iter().cloned().collect())
         }
     };
     external_sender
         .send(ExternalUpdates::Layer(update))
         .await
-        .map_err(|_| FatalError)?;
+        .map_err(|err| {
+            tracing::error!(err = ?err, "Failed to send cache update");
+            FatalError
+        })?;
 
     let Some(publish_time) = publish_time else {
         return Ok(())
@@ -326,36 +353,70 @@ async fn process_cacheable_items<'a>(
     Ok(())
 }
 
-async fn heartbeat_loop(
+struct HeartbeatFuture {
     hb: HeartbeatStrategy,
-    command_sender: tokio::sync::broadcast::Sender<RequestMessage>,
-) -> Result<Never, FatalError> {
-    match hb {
-        HeartbeatStrategy::None => loop {
-            std::future::pending::<()>().await;
-        },
-        HeartbeatStrategy::Interval(period) => {
-            let mut interval = tokio::time::interval(period);
-            interval.reset();
-            let mut id: i32 = 0;
+    command_sender: broadcast::Sender<RequestMessage>,
+    interval: Option<Interval>,
+    id: i32,
+}
 
-            loop {
-                futures::select! {
-                    _ = interval.tick().fuse() => {
-                        id = id.wrapping_add(1);
-                        command_sender
-                            .send(RequestMessage::Heartbeat(
-                                betfair_stream_types::request::heartbeat_message::HeartbeatMessage {
-                                    id: Some(id),
-                                },
-                            ))
-                            .map_err(|_| FatalError)?;
+impl HeartbeatFuture {
+    fn new(hb: HeartbeatStrategy, command_sender: broadcast::Sender<RequestMessage>) -> Self {
+        let interval = match hb {
+            HeartbeatStrategy::Interval(period) => Some({
+                let mut interval = tokio::time::interval(period);
+                interval.reset();
+                interval
+            }),
+            HeartbeatStrategy::None => None,
+        };
+        Self {
+            hb,
+            command_sender,
+            interval,
+            id: 0,
+        }
+    }
+}
+
+impl Future for HeartbeatFuture {
+    type Output = Result<Never, FatalError>;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        match self.hb {
+            HeartbeatStrategy::None => {
+                // Pending forever
+                Poll::Pending
+            }
+            HeartbeatStrategy::Interval(_) => {
+                if let Some(interval) = self.interval.as_mut() {
+                    match interval.poll_tick(cx) {
+                        Poll::Ready(_) => {
+                            self.id = self.id.wrapping_add(1);
+                            cx.waker().wake_by_ref();
+                            match self.command_sender.send(RequestMessage::Heartbeat(
+                                HeartbeatMessage { id: Some(self.id) },
+                            )) {
+                                Ok(_) => Poll::Pending,
+                                Err(err) => {
+                                    tracing::error!(?err, "Failed to send heartbeat message");
+                                    Poll::Ready(Err(FatalError))
+                                }
+                            }
+                        }
+                        Poll::Pending => Poll::Pending,
                     }
-                    complete => break,
+                } else {
+                    Poll::Ready(Err(FatalError))
                 }
             }
         }
-    };
+    }
+}
 
-    Err(FatalError)
+async fn heartbeat_loop(
+    hb: HeartbeatStrategy,
+    command_sender: broadcast::Sender<RequestMessage>,
+) -> Result<Never, FatalError> {
+    HeartbeatFuture::new(hb, command_sender).await
 }

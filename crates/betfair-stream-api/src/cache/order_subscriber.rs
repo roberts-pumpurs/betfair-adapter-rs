@@ -4,7 +4,7 @@ use betfair_stream_types::request::order_subscription_message::{
 };
 use betfair_stream_types::request::RequestMessage;
 
-use crate::StreamApiConnection;
+use crate::StreamApi;
 
 /// A wrapper around a `StreamListener` that allows subscribing to order updates with a somewhat
 /// ergonomic API.
@@ -14,7 +14,7 @@ pub struct OrderSubscriber {
 }
 
 impl OrderSubscriber {
-    pub fn new<T>(stream_api_connection: &StreamApiConnection<T>, filter: OrderFilter) -> Self {
+    pub fn new<T>(stream_api_connection: &StreamApi<T>, filter: OrderFilter) -> Self {
         let command_sender = stream_api_connection.command_sender().clone();
         Self {
             command_sender,
@@ -23,7 +23,7 @@ impl OrderSubscriber {
     }
 
     /// Create a new market subscriber.
-    pub async fn subscribe_to_strategy_updates(
+    pub fn subscribe_to_strategy_updates(
         &mut self,
         strategy_ref: CustomerStrategyRef,
     ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
@@ -33,11 +33,11 @@ impl OrderSubscriber {
             self.filter.customer_strategy_refs = Some(vec![strategy_ref]);
         }
 
-        self.resubscribe().await
+        self.resubscribe()
     }
 
     /// Unsubscribe from a market.
-    pub async fn unsubscribe_from_strategy_updates(
+    pub fn unsubscribe_from_strategy_updates(
         &mut self,
         strategy_ref: CustomerStrategyRef,
     ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
@@ -52,7 +52,7 @@ impl OrderSubscriber {
             .map(|x| x.is_empty())
             .unwrap_or(true)
         {
-            self.unsubscribe_from_all_markets().await?;
+            self.unsubscribe_from_all_markets()?;
         }
 
         Ok(())
@@ -63,7 +63,7 @@ impl OrderSubscriber {
     /// Internally it uses a weird trick of subscribing to a market that does not exist to simulate
     /// unsubscribing from all markets.
     /// https://forum.developer.betfair.com/forum/sports-exchange-api/exchange-api/34555-stream-api-unsubscribe-from-all-markets
-    pub async fn unsubscribe_from_all_markets(
+    pub fn unsubscribe_from_all_markets(
         &mut self,
     ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
         let strategy_that_does_not_exist = CustomerStrategyRef::new([
@@ -90,8 +90,8 @@ impl OrderSubscriber {
         Ok(())
     }
 
-    pub async fn resubscribe(
-        &mut self,
+    pub fn resubscribe(
+        &self,
     ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
         let req = RequestMessage::OrderSubscription(OrderSubscriptionMessage {
             id: None,
@@ -111,11 +111,11 @@ impl OrderSubscriber {
         &self.filter
     }
 
-    pub async fn set_filter(
+    pub fn set_filter(
         &mut self,
         filter: OrderFilter,
     ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
         self.filter = filter;
-        self.resubscribe().await
+        self.resubscribe()
     }
 }

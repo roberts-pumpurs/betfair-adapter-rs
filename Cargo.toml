@@ -2,6 +2,31 @@
 resolver = "2"
 members = ["crates/*", "examples/*", "xtask"]
 
+[workspace.lints.clippy]
+cargo = { priority = -1, level = "deny" }
+complexity = { priority = -1, level = "deny" }
+correctness = { priority = -1, level = "deny" }
+nursery = { priority = -1, level = "deny" }
+pedantic = { priority = -1, level = "deny" }
+perf = { priority = -1, level = "deny" }
+restriction = { priority = -1, level = "deny" }
+style = { priority = -1, level = "deny" }
+suspicious = { priority = -1, level = "deny" }
+
+cargo_common_metadata = "allow"
+missing_docs_in_private_items = "allow"
+blanket_clippy_restriction_lints = "allow"
+implicit_return = "allow"
+dbg_macro = "allow"
+single_call_fn = "allow"
+missing_inline_in_public_items = "allow"
+question_mark_used = "allow"
+absolute_paths = "allow"
+missing_trait_methods = "allow"
+wildcard_imports = "allow"
+shadow_reuse = "allow"
+exhaustive_enums = "allow"
+
 [workspace.dependencies]
 # Our crates
 betfair-adapter = { path = "crates/betfair-adapter" }

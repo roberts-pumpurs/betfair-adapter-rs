@@ -91,7 +91,7 @@ async fn main() -> eyre::Result<()> {
         tokio::spawn(async move {
             // sleep for a bit to allow the stream to connect
             tokio::time::sleep(std::time::Duration::from_secs(3)).await;
-            ms.subscribe_to_market(market_id).await.unwrap();
+            ms.subscribe_to_market(market_id).unwrap();
         });
 
         while let Some(value) = stream.next().await {

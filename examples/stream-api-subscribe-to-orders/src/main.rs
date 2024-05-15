@@ -44,12 +44,12 @@ async fn main() -> eyre::Result<()> {
     // start processing stream
     {
         use betfair_stream_api::StreamExt;
-        let mut os = OrderSubscriber::new(&stream, OrderFilter::default());
+        let os = OrderSubscriber::new(&stream, OrderFilter::default());
 
         tokio::spawn(async move {
             // sleep for a bit to allow the stream to connect
             tokio::time::sleep(std::time::Duration::from_secs(3)).await;
-            os.resubscribe().await.unwrap();
+            os.resubscribe().unwrap();
         });
 
         while let Some(value) = stream.next().await {

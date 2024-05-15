@@ -1,5 +1,5 @@
-use std::pin::Pin;
-use std::task::Poll;
+use core::pin::Pin;
+use core::task::Poll;
 
 use betfair_adapter::{ApplicationKey, SessionToken};
 use betfair_stream_types::request::{authentication_message, RequestMessage};
@@ -47,13 +47,14 @@ impl<'a> Unpin for Handshake<'a> {}
 impl<'a> Stream for Handshake<'a> {
     type Item = Result<ExternalUpdates<ResponseMessage>, NeedsRestart>;
 
+    #[allow(clippy::too_many_lines)]
     fn poll_next(
         mut self: Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
+        cx: &mut core::task::Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        match &mut self.state {
+        match self.state {
             State::Error => Poll::Ready(None),
-            State::Done(msg) => {
+            State::Done(ref msg) => {
                 let metadata_update = MetadataUpdates::Authenticated {
                     connections_available: msg.connections_available.unwrap_or(-1),
                     connection_id: msg.connection_id.clone(),
@@ -63,8 +64,8 @@ impl<'a> Stream for Handshake<'a> {
                 Poll::Ready(Some(Ok(ExternalUpdates::Metadata(metadata_update))))
             }
             State::AwaitConnectionMessage => {
-                let connection_message = self.connection.poll_next_unpin(cx);
-                match connection_message {
+                let connection_message_poll = self.connection.poll_next_unpin(cx);
+                match connection_message_poll {
                     Poll::Ready(None) => {
                         tracing::error!("Connection closed");
                         self.state = State::Error;
@@ -103,7 +104,7 @@ impl<'a> Stream for Handshake<'a> {
                     .connection
                     .start_send_unpin(RequestMessage::Authentication(authorization_message));
                 match send_result {
-                    Ok(_) => {
+                    Ok(()) => {
                         self.state = State::AwaitPollForConnectionMessage;
                         cx.waker().wake_by_ref();
                         Poll::Pending
@@ -116,7 +117,7 @@ impl<'a> Stream for Handshake<'a> {
             }
             State::AwaitPollForConnectionMessage => {
                 return match self.connection.poll_flush_unpin(cx) {
-                    Poll::Ready(Ok(_)) => {
+                    Poll::Ready(Ok(())) => {
                         self.state = State::AwaitStatusMessage;
                         return Poll::Ready(Some(Ok(ExternalUpdates::Metadata(
                             MetadataUpdates::AuthenticationMessageSent,
@@ -132,18 +133,18 @@ impl<'a> Stream for Handshake<'a> {
                 }
             }
             State::AwaitStatusMessage => {
-                let status_message = self.connection.poll_next_unpin(cx);
-                match status_message {
+                let status_message_poll = self.connection.poll_next_unpin(cx);
+                match status_message_poll {
                     Poll::Ready(None) => {
                         tracing::error!("Connection closed");
                         Poll::Ready(Some(Err(NeedsRestart)))
                     }
-                    Poll::Ready(Some(Ok(msg))) => match &msg {
-                        ResponseMessage::Status(status_message) => {
+                    Poll::Ready(Some(Ok(response_msg))) => match response_msg {
+                        ResponseMessage::Status(ref status_message) => {
                             if status_message.status_code == Some(StatusCode::Success) {
                                 self.state = State::Done(status_message.clone());
                                 cx.waker().wake_by_ref();
-                                Poll::Ready(Some(Ok(ExternalUpdates::Layer(msg))))
+                                Poll::Ready(Some(Ok(ExternalUpdates::Layer(response_msg))))
                             } else {
                                 self.state = State::Error;
                                 cx.waker().wake_by_ref();
@@ -151,7 +152,9 @@ impl<'a> Stream for Handshake<'a> {
                                 Poll::Ready(Some(Err(NeedsRestart)))
                             }
                         }
-                        msg => {
+                        msg @ ResponseMessage::Connection(_) |
+                        msg @ ResponseMessage::MarketChange(_) |
+                        msg @ ResponseMessage::OrderChange(_) => {
                             self.state = State::Error;
                             cx.waker().wake_by_ref();
                             tracing::error!(msg =? msg, "Expected status message, got something else");

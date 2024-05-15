@@ -14,7 +14,7 @@ async fn successful_heartbeat() {
         async move {
             let bf_mock = betfair_rpc_server_mock::Server::new_with_stream_url(url).await;
             let client = bf_mock.client().await;
-            let mut stream_api_abi = client
+            let stream_api_abi = client
                 .connect_to_stream_with_hb(HeartbeatStrategy::Interval(duration))
                 .await;
 
@@ -32,7 +32,7 @@ async fn successful_heartbeat() {
         connection.process().await;
     });
 
-    // Sleep for 1 second to allow the connection to be established
+    // Sleep for 2 second to allow the connection to be established
     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 
     assert!(!h1.is_finished());

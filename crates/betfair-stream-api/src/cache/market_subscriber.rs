@@ -4,7 +4,7 @@ use betfair_stream_types::request::market_subscription_message::{
 };
 use betfair_stream_types::request::RequestMessage;
 
-use crate::StreamApiConnection;
+use crate::StreamApi;
 
 /// A wrapper around a `StreamListener` that allows subscribing to markets with a somewhat ergonomic
 /// API.
@@ -20,7 +20,7 @@ pub struct MarketSubscriber {
 
 impl MarketSubscriber {
     pub fn new<T>(
-        stream_api_connection: &StreamApiConnection<T>,
+        stream_api_connection: &StreamApi<T>,
         filter: MarketFilter,
         market_data_fields: Vec<Fields>,
         ladder_level: Option<LadderLevel>,
@@ -35,7 +35,7 @@ impl MarketSubscriber {
     }
 
     /// Create a new market subscriber.
-    pub async fn subscribe_to_market(
+    pub fn subscribe_to_market(
         &mut self,
         market_id: MarketId,
     ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
@@ -44,11 +44,11 @@ impl MarketSubscriber {
         } else {
             self.filter.market_ids = Some(vec![market_id]);
         }
-        self.resubscribe().await
+        self.resubscribe()
     }
 
     /// Unsubscribe from a market.
-    pub async fn unsubscribe_from_market(
+    pub fn unsubscribe_from_market(
         &mut self,
         market_id: MarketId,
     ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
@@ -63,7 +63,7 @@ impl MarketSubscriber {
             .map(|x| x.is_empty())
             .unwrap_or(true)
         {
-            self.unsubscribe_from_all_markets().await?;
+            self.unsubscribe_from_all_markets()?;
         }
 
         Ok(())
@@ -74,7 +74,7 @@ impl MarketSubscriber {
     /// Internally it uses a weird trick of subscribing to a market that does not exist to simulate
     /// unsubscribing from all markets.
     /// https://forum.developer.betfair.com/forum/sports-exchange-api/exchange-api/34555-stream-api-unsubscribe-from-all-markets
-    pub async fn unsubscribe_from_all_markets(
+    pub fn unsubscribe_from_all_markets(
         &mut self,
     ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
         let market_that_does_not_exist = MarketId("1.23456789".to_string());
@@ -110,8 +110,8 @@ impl MarketSubscriber {
         Ok(())
     }
 
-    pub async fn resubscribe(
-        &mut self,
+    pub fn resubscribe(
+        &self,
     ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
         let req = RequestMessage::MarketSubscription(MarketSubscriptionMessage {
             id: None,
@@ -135,35 +135,35 @@ impl MarketSubscriber {
         &self.filter
     }
 
-    pub async fn set_filter(
+    pub fn set_filter(
         &mut self,
         filter: MarketFilter,
     ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
         self.filter = filter;
-        self.resubscribe().await
+        self.resubscribe()
     }
 
     pub fn ladder_level(&self) -> Option<&LadderLevel> {
         self.ladder_level.as_ref()
     }
 
-    pub async fn set_ladder_level(
+    pub fn set_ladder_level(
         &mut self,
         ladder_level: Option<LadderLevel>,
     ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
         self.ladder_level = ladder_level;
-        self.resubscribe().await
+        self.resubscribe()
     }
 
     pub fn market_data_fields(&self) -> &Vec<Fields> {
         &self.market_data_fields
     }
 
-    pub async fn set_market_data_fields(
+    pub fn set_market_data_fields(
         &mut self,
         market_data_fields: Vec<Fields>,
     ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
         self.market_data_fields = market_data_fields;
-        self.resubscribe().await
+        self.resubscribe()
     }
 }

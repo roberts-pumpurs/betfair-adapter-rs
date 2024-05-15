@@ -3,6 +3,9 @@ name = "betfair-rpc-server-mock"
 version = "0.1.0"
 edition = "2021"
 
+[lints]
+workspace = true
+
 [dependencies]
 betfair-adapter.workspace = true
 betfair-types.workspace = true

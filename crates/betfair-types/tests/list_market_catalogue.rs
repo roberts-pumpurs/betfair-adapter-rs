@@ -38,7 +38,7 @@ fn test_deserialize() {
                 "marketBaseRate": 2.0,
                 "discountAllowed": false,
                 "wallet": "UK wallet",
-                "rules": "<br><br>MARKET INFORMATION</b><br><br>For further information please see <a href=http://content.betfair.com/aboutus/content.asp?sWhichKey=Rules%20and%20Regulations#undefined.do style=color:0163ad; text-decoration: underline; target=_blank>Rules & Regs</a>.<br><br>Who will win this match? This market includes overtime. At the start of play all unmatched bets will be cancelled and the market <b>turned in-play</b>. Please note that this market will not be actively managed, therefore it is the responsibility of all users to manage their in-play positions. Dead Heat rules apply.<br><br>Customers should be aware that:<b><br><br><li>Transmissions described as “live” by some broadcasters may actually be delayed and that all in-play matches are not necessarily televised.</li><br><li>The extent of any such delay may vary, depending on the set-up through which they are receiving pictures or data.</li><br></b><br>",
+                "rules": "<br><br>MARKET INFORMATION</b><br><br>For further information please see <a href=http://content.betfair.com/aboutus/content.asp?sWhichKey=Rules%20and%20Regulations#undefined.do style=color:0163ad; text-decoration: underline; target=_blank>Rules & Regs</a>.<br><br>Who will win this match? This market includes overtime. At the start of play all unmatched bets will be cancelled and the market <b>turned in-play</b>. Please note that this market will not be actively managed, therefore it is the responsibility of all users to manage their in-play positions. Dead Heat rules apply.<br><br>Customers should be aware that:<b><br><br><li>Transmissions described as \u{201c}live\u{201d} by some broadcasters may actually be delayed and that all in-play matches are not necessarily televised.</li><br><li>The extent of any such delay may vary, depending on the set-up through which they are receiving pictures or data.</li><br></b><br>",
                 "rulesHasDate": false,
                 "priceLadderDescription": {
                     "type": "CLASSIC"
@@ -47,13 +47,13 @@ fn test_deserialize() {
             "totalMatched": 0.0,
             "runners": [
                 {
-                    "selectionId": 12062411,
+                    "selectionId": 12_062_411,
                     "runnerName": "Atomeromu Szekszard Women",
                     "handicap": 0.0,
                     "sortPriority": 1
                 },
                 {
-                    "selectionId": 50310375,
+                    "selectionId": 50_310_375,
                     "runnerName": "Olympiakos Piraeus BC",
                     "handicap": 0.0,
                     "sortPriority": 2

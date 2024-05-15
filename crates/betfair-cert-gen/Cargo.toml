@@ -3,6 +3,9 @@ name = "betfair-cert-gen"
 version = "0.1.0"
 edition = "2021"
 
+[lints]
+workspace = true
+
 [dependencies]
 rcgen.workspace = true
 rsa.workspace = true

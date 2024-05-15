@@ -1,3 +1,5 @@
+#[allow(clippy::module_name_repetitions)]
+#[non_exhaustive]
 #[derive(Debug, thiserror::Error)]
 pub enum StreamError {
     #[error("IO Error {0}")]
@@ -30,4 +32,6 @@ pub enum StreamError {
     CustomCertificateNotSet,
     #[error("Invalid custom certificate")]
     InvalidCustomCertificate,
+    #[error("Unable to load local certificate")]
+    LocalCertificateLoadError,
 }

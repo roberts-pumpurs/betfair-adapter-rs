@@ -3,6 +3,9 @@ name = "betfair-stream-server-mock"
 version = "0.1.0"
 edition = "2021"
 
+[lints]
+workspace = true
+
 [dependencies]
 betfair-stream-types.workspace = true
 url.workspace = true

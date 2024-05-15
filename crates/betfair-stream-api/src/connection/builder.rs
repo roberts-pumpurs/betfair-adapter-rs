@@ -1,5 +1,5 @@
-use std::convert::Infallible as Never;
-use std::time::Duration;
+use core::convert::Infallible as Never;
+use core::time::Duration;
 
 use betfair_stream_types::request::RequestMessage;
 use betfair_stream_types::response::ResponseMessage;
@@ -7,7 +7,7 @@ use tokio::runtime::Handle;
 use tokio::task::JoinSet;
 
 use super::cron::{self, FatalError};
-use super::StreamApiConnection;
+use super::StreamApi;
 use crate::{CacheEnabledMessages, ExternalUpdates};
 
 #[derive(Debug, Clone)]
@@ -16,6 +16,7 @@ pub enum HeartbeatStrategy {
     Interval(Duration),
 }
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct StreamApiBuilder {
     /// Send data to the underlying stream
@@ -28,6 +29,7 @@ pub struct StreamApiBuilder {
 }
 
 impl StreamApiBuilder {
+    #[must_use]
     pub fn new(
         provider: betfair_adapter::UnauthenticatedBetfairRpcProvider,
         hb: HeartbeatStrategy,
@@ -42,16 +44,15 @@ impl StreamApiBuilder {
         }
     }
 
-    pub fn run_with_default_runtime(&mut self) -> StreamApiConnection<ResponseMessage> {
+    #[must_use]
+    pub fn run_with_default_runtime(&self) -> StreamApi<ResponseMessage> {
         self.run(&Handle::current())
     }
 
-    pub fn run(
-        &mut self,
-        rt_handle: &tokio::runtime::Handle,
-    ) -> StreamApiConnection<ResponseMessage> {
+    #[must_use]
+    pub fn run(&self, rt_handle: &tokio::runtime::Handle) -> StreamApi<ResponseMessage> {
         let (join_set, data_feed) = self.run_internal(rt_handle);
-        StreamApiConnection::new(
+        StreamApi::new(
             join_set,
             data_feed,
             self.command_sender.clone(),
@@ -59,14 +60,15 @@ impl StreamApiBuilder {
         )
     }
 
+    #[must_use]
     pub fn run_with_cache(
-        &mut self,
+        &self,
         rt_handle: &tokio::runtime::Handle,
-    ) -> StreamApiConnection<CacheEnabledMessages> {
+    ) -> StreamApi<CacheEnabledMessages> {
         let (mut join_set, data_feed) = self.run_internal(rt_handle);
         let output_queue_reader_post_cache =
             wrap_with_cache_layer(&mut join_set, data_feed, rt_handle);
-        StreamApiConnection::new(
+        StreamApi::new(
             join_set,
             output_queue_reader_post_cache,
             self.command_sender.clone(),
@@ -75,7 +77,7 @@ impl StreamApiBuilder {
     }
 
     fn run_internal(
-        &mut self,
+        &self,
         rt_handle: &tokio::runtime::Handle,
     ) -> (
         JoinSet<Result<Never, FatalError>>,

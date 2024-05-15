@@ -5,7 +5,7 @@ use serde_json::json;
 fn test_deserialize() {
     let data = b"{\"customerRef\":\"0oxfjBrq8K2TZg2Ytqjo1\",\"errorCode\":\"BET_ACTION_ERROR\",\"marketId\":\"1.210878100\",\"status\":\"FAILURE\"}";
     let result: Result<CancelExecutionReport, _> = serde_json::from_slice(data);
-    assert!(result.is_ok());
+    result.unwrap();
 }
 
 #[test]

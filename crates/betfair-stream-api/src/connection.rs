@@ -2,8 +2,8 @@ pub mod builder;
 pub mod cron;
 pub mod handshake;
 
-use std::convert::Infallible as Never;
-use std::task::Poll;
+use core::convert::Infallible as Never;
+use core::task::Poll;
 
 use betfair_stream_types::request::RequestMessage;
 use betfair_stream_types::response::connection_message::ConnectionMessage;
@@ -17,7 +17,7 @@ use self::cron::FatalError;
 use crate::cache::primitives::{MarketBookCache, OrderBookCache};
 
 #[derive(Debug)]
-pub struct StreamApiConnection<T> {
+pub struct StreamApi<T> {
     join_set: JoinSet<Result<Never, FatalError>>,
     rt_handle: tokio::runtime::Handle,
     is_shutting_down: bool,
@@ -25,7 +25,7 @@ pub struct StreamApiConnection<T> {
     command_sender: tokio::sync::broadcast::Sender<RequestMessage>,
 }
 
-impl<T> StreamApiConnection<T> {
+impl<T> StreamApi<T> {
     pub(crate) fn new(
         join_set: JoinSet<Result<Never, FatalError>>,
         data_feed: tokio::sync::mpsc::Receiver<ExternalUpdates<T>>,
@@ -35,22 +35,24 @@ impl<T> StreamApiConnection<T> {
         Self {
             is_shutting_down: false,
             join_set,
-            rt_handle: rt_handle.clone(),
+            rt_handle,
             data_feed,
             command_sender,
         }
     }
 
-    pub fn command_sender(&self) -> &tokio::sync::broadcast::Sender<RequestMessage> {
+    #[must_use]
+    pub const fn command_sender(&self) -> &tokio::sync::broadcast::Sender<RequestMessage> {
         &self.command_sender
     }
 }
 
-impl StreamApiConnection<ResponseMessage> {
-    pub fn enable_cache(mut self) -> StreamApiConnection<CacheEnabledMessages> {
+impl StreamApi<ResponseMessage> {
+    #[must_use]
+    pub fn enable_cache(mut self) -> StreamApi<CacheEnabledMessages> {
         let output_queue_reader_post_cache =
             wrap_with_cache_layer(&mut self.join_set, self.data_feed, &self.rt_handle);
-        StreamApiConnection {
+        StreamApi {
             join_set: self.join_set,
             rt_handle: self.rt_handle,
             is_shutting_down: self.is_shutting_down,
@@ -68,10 +70,10 @@ pub enum ExternalUpdates<T> {
 
 #[derive(Debug, Clone)]
 pub enum CacheEnabledMessages {
-    MarketChangeMessage(Vec<MarketBookCache>),
-    OrderChangeMessage(Vec<OrderBookCache>),
-    ConnectionMessage(ConnectionMessage),
-    StatusMessage(StatusMessage),
+    MarketChange(Vec<MarketBookCache>),
+    OrderChange(Vec<OrderBookCache>),
+    Connection(ConnectionMessage),
+    Status(StatusMessage),
 }
 
 #[derive(Debug, Clone)]
@@ -87,12 +89,12 @@ pub enum MetadataUpdates {
     FailedToAuthenticate,
 }
 
-impl<T> Stream for StreamApiConnection<T> {
+impl<T> Stream for StreamApi<T> {
     type Item = ExternalUpdates<T>;
 
     fn poll_next(
-        mut self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
+        mut self: core::pin::Pin<&mut Self>,
+        cx: &mut core::task::Context<'_>,
     ) -> Poll<Option<Self::Item>> {
         // only return None if we are shutting down and there are no tasks left
         if self.join_set.is_empty() && self.is_shutting_down {
@@ -102,8 +104,8 @@ impl<T> Stream for StreamApiConnection<T> {
 
         // Poll the join set to check if any child tasks have completed
         match self.join_set.poll_join_next(cx) {
-            Poll::Ready(Some(Ok(Err(e)))) => {
-                tracing::error!("Error returned by a task: {:?}", e);
+            Poll::Ready(Some(Ok(Err(err)))) => {
+                tracing::error!(?err, "Error returned by a task");
                 self.join_set.abort_all();
                 self.is_shutting_down = true;
                 cx.waker().wake_by_ref();
@@ -112,8 +114,8 @@ impl<T> Stream for StreamApiConnection<T> {
                 cx.waker().wake_by_ref();
                 return Poll::Pending;
             }
-            Poll::Ready(Some(Err(e))) => {
-                tracing::error!("Error in join_set: {:?}", e);
+            Poll::Ready(Some(Err(err))) => {
+                tracing::error!(?err, "Error in join_set");
                 self.join_set.abort_all();
                 self.is_shutting_down = true;
                 cx.waker().wake_by_ref();
@@ -145,7 +147,7 @@ impl<T> Stream for StreamApiConnection<T> {
     }
 }
 
-impl<T> Unpin for StreamApiConnection<T> {}
+impl<T> Unpin for StreamApi<T> {}
 
 #[cfg(test)]
 mod tests {
@@ -165,8 +167,7 @@ mod tests {
         let join_set = JoinSet::new();
         let handle = tokio::runtime::Handle::current();
 
-        let mut connection =
-            StreamApiConnection::<()>::new(join_set, data_receiver, command_sender, handle);
+        let mut connection = StreamApi::<()>::new(join_set, data_receiver, command_sender, handle);
         connection.is_shutting_down = true;
 
         assert!(
@@ -182,8 +183,7 @@ mod tests {
         let join_set = JoinSet::new();
         let handle = tokio::runtime::Handle::current();
 
-        let mut connection =
-            StreamApiConnection::<()>::new(join_set, data_receiver, command_sender, handle);
+        let mut connection = StreamApi::<()>::new(join_set, data_receiver, command_sender, handle);
 
         assert!(
             connection.next().await.is_none(),
@@ -199,8 +199,7 @@ mod tests {
         join_set.spawn(futures::future::pending());
         let handle = tokio::runtime::Handle::current();
 
-        let mut connection =
-            StreamApiConnection::new(join_set, data_receiver, command_sender, handle);
+        let mut connection = StreamApi::new(join_set, data_receiver, command_sender, handle);
 
         let expected_update = ExternalUpdates::Layer("Test".to_string());
         data_sender.send(expected_update.clone()).await.unwrap();
@@ -228,8 +227,7 @@ mod tests {
         let join_set = JoinSet::new();
         let handle = tokio::runtime::Handle::current();
 
-        let mut connection =
-            StreamApiConnection::new(join_set, data_receiver, command_sender, handle);
+        let mut connection = StreamApi::new(join_set, data_receiver, command_sender, handle);
 
         let expected_update = ExternalUpdates::Layer("Test".to_string());
         data_sender.send(expected_update.clone()).await.unwrap();
@@ -256,8 +254,7 @@ mod tests {
         join_set.spawn(futures::future::ready(Err(FatalError)));
         let handle = tokio::runtime::Handle::current();
 
-        let mut connection =
-            StreamApiConnection::new(join_set, data_receiver, command_sender, handle);
+        let mut connection = StreamApi::new(join_set, data_receiver, command_sender, handle);
 
         let expected_update = ExternalUpdates::Layer("Test".to_string());
         data_sender.send(expected_update.clone()).await.unwrap();
@@ -283,8 +280,7 @@ mod tests {
         let join_set = JoinSet::new();
         let handle = tokio::runtime::Handle::current();
 
-        let mut connection =
-            StreamApiConnection::new(join_set, data_receiver, command_sender, handle);
+        let mut connection = StreamApi::new(join_set, data_receiver, command_sender, handle);
 
         drop(data_sender); // This closes the data_feed channel
 

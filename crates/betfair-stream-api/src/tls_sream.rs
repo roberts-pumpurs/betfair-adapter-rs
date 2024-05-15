@@ -1,6 +1,7 @@
-use std::net::SocketAddr;
-use std::pin::Pin;
-use std::task::{Context, Poll};
+use alloc::sync::Arc;
+use core::net::SocketAddr;
+use core::pin::Pin;
+use core::task::{Context, Poll};
 
 use betfair_adapter::BetfairUrl;
 use betfair_stream_types::request::RequestMessage;
@@ -8,7 +9,6 @@ use betfair_stream_types::response::ResponseMessage;
 use futures::Sink;
 use futures_util::sink::SinkExt;
 use futures_util::{FutureExt, Stream, StreamExt};
-use itertools::Itertools;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
 use tokio_util::bytes;
@@ -16,7 +16,7 @@ use tokio_util::codec::{Decoder, Encoder, Framed};
 
 use crate::StreamError;
 
-pub(crate) async fn connect(
+pub async fn connect(
     url: BetfairUrl<betfair_adapter::Stream>,
 ) -> Result<RawStreamApiConnection, StreamError> {
     let url = url.url();
@@ -26,9 +26,12 @@ pub(crate) async fn connect(
     let port = url.port().unwrap_or(443);
     let socket_addr = tokio::net::lookup_host((host, port))
         .await
-        .map_err(|_| StreamError::UnableToLookUpHost {
-            host: host.to_string(),
-            port,
+        .map_err(|err| {
+            tracing::error!(?err, "unable to look up host");
+            StreamError::UnableToLookUpHost {
+                host: host.to_owned(),
+                port,
+            }
         })?
         .next();
     let domain = url.domain();
@@ -57,31 +60,31 @@ async fn connect_tls(
     domain: &str,
     socket_addr: SocketAddr,
 ) -> Result<RawStreamApiConnection, StreamError> {
-    let domain = rustls::pki_types::ServerName::try_from(domain.to_string())
-        .map_err(|_| StreamError::UnableConvertDomainToServerName)?;
+    let domain = rustls::pki_types::ServerName::try_from(domain.to_owned()).map_err(|err| {
+        tracing::error!(?err, "unable to convert domain to server name");
+        StreamError::UnableConvertDomainToServerName
+    })?;
     let stream = TcpStream::connect(&socket_addr).await?;
     let connector = tls_connector()?;
-    let stream = connector
-        .connect(domain, stream)
-        .await
-        .map_err(|_| StreamError::UnableConnectToTlsStream)?;
+    let stream = connector.connect(domain, stream).await.map_err(|err| {
+        tracing::error!(?err, "unable to connect to TLS stream");
+        StreamError::UnableConnectToTlsStream
+    })?;
     let framed = Framed::new(stream, StreamAPIClientCodec);
     Ok(internal::RawStreamApiConnection { io: framed })
 }
 
-pub(crate) type RawStreamApiConnection =
+pub type RawStreamApiConnection =
     internal::RawStreamApiConnection<tokio_rustls::client::TlsStream<TcpStream>>;
 
 mod internal {
     use super::*;
 
-    pub(crate) struct RawStreamApiConnection<
-        IO: AsyncRead + AsyncWrite + std::fmt::Debug + Send + Unpin,
-    > {
+    pub struct RawStreamApiConnection<IO: AsyncRead + AsyncWrite + core::fmt::Debug + Send + Unpin> {
         pub(super) io: Framed<IO, StreamAPIClientCodec>,
     }
 
-    impl<IO: AsyncRead + AsyncWrite + std::fmt::Debug + Send + Unpin> Stream
+    impl<IO: AsyncRead + AsyncWrite + core::fmt::Debug + Send + Unpin> Stream
         for RawStreamApiConnection<IO>
     {
         type Item = Result<ResponseMessage, CodecError>;
@@ -91,7 +94,7 @@ mod internal {
         }
     }
 
-    impl<IO: AsyncRead + AsyncWrite + std::fmt::Debug + Send + Unpin> Sink<RequestMessage>
+    impl<IO: AsyncRead + AsyncWrite + core::fmt::Debug + Send + Unpin> Sink<RequestMessage>
         for RawStreamApiConnection<IO>
     {
         type Error = CodecError;
@@ -122,7 +125,8 @@ mod internal {
         }
     }
 }
-pub(crate) struct StreamAPIClientCodec;
+
+pub struct StreamAPIClientCodec;
 
 #[derive(Debug, thiserror::Error)]
 pub enum CodecError {
@@ -137,26 +141,22 @@ impl Decoder for StreamAPIClientCodec {
     type Error = CodecError;
 
     fn decode(&mut self, src: &mut bytes::BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        use itertools::*;
+        use itertools::Itertools;
 
         // Check if there is a newline character in the buffer
         if let Some(line) = src
             .iter()
             .tuple_windows::<(_, _)>()
-            .position(|(a, b)| a == &b'\r' && b == &b'\n')
-            .map(|idx| src.split_to(idx + 2))
+            .position(|(char_a, char_b)| char_a == &b'\r' && char_b == &b'\n')
+            .map(|idx| src.split_to(idx.saturating_add(2)))
         {
             if let Some((json, _delimiters)) = line.split_last_chunk::<2>() {
                 // Deserialize the JSON data
                 let data = serde_json::from_slice::<Self::Item>(json)?;
                 return Ok(Some(data))
             }
-
-            Ok(None)
-        } else {
-            // Not enough data to read a complete line
-            Ok(None)
         }
+        Ok(None)
     }
 }
 
@@ -182,15 +182,16 @@ fn tls_connector() -> Result<tokio_rustls::TlsConnector, StreamError> {
     use tokio_rustls::TlsConnector;
 
     let mut roots = rustls::RootCertStore::empty();
-    let _ = rustls_native_certs::load_native_certs()
-        .expect("could not load platform certs")
-        .into_iter()
-        .map(|cert| {
-            roots
-                .add(cert)
-                .map_err(|_| StreamError::CannotSetNativeCertificate)
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+    let native_certs = rustls_native_certs::load_native_certs().map_err(|err| {
+        tracing::error!(?err, "Cannot load native certificates");
+        StreamError::LocalCertificateLoadError
+    })?;
+    for cert in native_certs {
+        roots.add(cert).map_err(|err| {
+            tracing::error!(?err, "Cannot set native certificate");
+            StreamError::CannotSetNativeCertificate
+        })?;
+    }
 
     #[cfg(feature = "integration-test")]
     {
@@ -205,15 +206,16 @@ fn tls_connector() -> Result<tokio_rustls::TlsConnector, StreamError> {
         .next()
         .ok_or(StreamError::InvalidCustomCertificate)?
         .map_err(|_| StreamError::InvalidCustomCertificate)?;
-        roots
-            .add(cert)
-            .map_err(|_| StreamError::CustomCertificateNotSet)?;
+        roots.add(cert).map_err(|err| {
+            tracing::error!(?err, "Cannot set native certificate");
+            StreamError::CustomCertificateNotSet
+        })?;
     }
 
     let config = rustls::ClientConfig::builder()
         .with_root_certificates(roots)
         .with_no_client_auth();
-    Ok(TlsConnector::from(std::sync::Arc::new(config)))
+    Ok(TlsConnector::from(Arc::new(config)))
 }
 
 #[cfg(test)]
