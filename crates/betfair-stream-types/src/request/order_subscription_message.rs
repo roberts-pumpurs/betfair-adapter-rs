@@ -44,7 +44,7 @@ pub struct OrderFilter {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub account_ids: Option<Vec<i64>>,
     /// Restricts to specified customerStrategyRefs; this will filter orders and
-    /// StrategyMatchChanges accordingly (Note: overall postition is not filtered)
+    /// StrategyMatchChanges accordingly (Note: overall position is not filtered)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub customer_strategy_refs: Option<Vec<CustomerStrategyRef>>,
     /// Returns strategy positions (See: OrderRunnerChange.smc=Map<customerStrategyRef,

@@ -31,7 +31,7 @@ async fn market_subscription() {
             ms.subscribe_to_market(market_id).await.unwrap();
 
             while let Some(value) = stream.next().await {
-                tracing::info!(?value, "received vaue from stream");
+                tracing::info!(?value, "received value from stream");
             }
         }
     });

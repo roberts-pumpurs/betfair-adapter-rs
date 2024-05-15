@@ -6,7 +6,7 @@ use betfair_stream_types::request::RequestMessage;
 
 use crate::StreamApiConnection;
 
-/// A warpper around a `StreamListener` that allows subscribing to order updates with a somewhat
+/// A wrapper around a `StreamListener` that allows subscribing to order updates with a somewhat
 /// ergonomic API.
 pub struct OrderSubscriber {
     command_sender: tokio::sync::broadcast::Sender<RequestMessage>,

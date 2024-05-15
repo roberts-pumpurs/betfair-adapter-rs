@@ -3,4 +3,24 @@ extend-exclude = [
     "crates/betfair-typegen/assets/*",
     "crates/betfair-stream-types/tests/resources/*",
     "crates/betfair-stream-types/ESASwaggerSchema.json",
+    "crates/betfair-rpc-server-mock/src/lib.rs",
+    "example_config.example.toml",
+]
+
+[default]
+extend-ignore-re = [
+    # PGP signature
+    "[0-9A-Za-z+=]{44,}",
+    '"egal"',
+    '"bar", "bart", "ba"',
+    '"ot"',
+    '"foo/ba"',
+    '"FO", "FO", &\[\], "FO"',
+    '"(BarFoO|BarFoOo|FoO|FoOo)"',
+    "\\|pn: &BStr\\| pn !=",
+]
+extend-ignore-identifiers-re = [
+    # Git commit hash
+    "[0-9a-f]{7,}",
+    "rela_[a-z_]+",
 ]

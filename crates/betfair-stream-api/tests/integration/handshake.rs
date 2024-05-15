@@ -26,7 +26,7 @@ async fn successful_handshake() {
             let mut stream = stream_api_abi.run_with_default_runtime();
             tracing::info!("stream created");
             while let Some(value) = stream.next().await {
-                tracing::info!(?value, "received vaue from stream");
+                tracing::info!(?value, "received value from stream");
                 let mut w = messages.as_ref().lock().await;
                 w.push(value);
                 drop(w);

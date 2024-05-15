@@ -202,7 +202,7 @@ pub async fn handle_stream_connection(
             }
         }
         authenticated.send(()).map_err(|_| {
-            tracing::error!("Failed to commuincate with the auth one-shot channel");
+            tracing::error!("Failed to communicate with the auth one-shot channel");
             AsyncTaskStopReason::NeedsRestart(NeedsRestart)
         })?;
     }
@@ -248,7 +248,7 @@ pub async fn cache_loop(
     while let Some(msg) = receiver.recv().await {
         match msg {
             ExternalUpdates::Layer(ResponseMessage::MarketChange(msg)) => {
-                process_cachable_items(
+                process_cacheable_items(
                     &mut state,
                     msg.publish_time,
                     IncomingMessage::Market(msg),
@@ -257,7 +257,7 @@ pub async fn cache_loop(
                 .await?;
             }
             ExternalUpdates::Layer(ResponseMessage::OrderChange(msg)) => {
-                process_cachable_items(
+                process_cacheable_items(
                     &mut state,
                     msg.publish_time,
                     IncomingMessage::Order(msg),
@@ -293,7 +293,7 @@ pub async fn cache_loop(
     Err(FatalError)
 }
 
-async fn process_cachable_items<'a>(
+async fn process_cacheable_items<'a>(
     state: &mut StreamStateTracker,
     publish_time: Option<DateTime<chrono::Utc>>,
     updates: IncomingMessage,

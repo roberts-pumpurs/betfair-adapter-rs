@@ -6,7 +6,7 @@ use betfair_stream_types::request::RequestMessage;
 
 use crate::StreamApiConnection;
 
-/// A warpper around a `StreamListener` that allows subscribing to markets with a somewhat ergonomic
+/// A wrapper around a `StreamListener` that allows subscribing to markets with a somewhat ergonomic
 /// API.
 pub struct MarketSubscriber {
     command_sender: tokio::sync::broadcast::Sender<RequestMessage>,

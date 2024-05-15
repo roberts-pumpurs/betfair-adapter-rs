@@ -29,7 +29,7 @@ enum Args {
         /// The country name (2 letter idnetifier) for the certificate
         #[clap(short, long, default_value = "GB")]
         country_name: String,
-        /// The state or province name for the certificate (a city, nieghborhood, or other locality
+        /// The state or province name for the certificate (a city, neighborhood, or other locality
         /// name)
         #[clap(short, long, default_value = "London")]
         state_or_province_name: String,
@@ -83,7 +83,7 @@ fn main() -> eyre::Result<()> {
                     return Ok(());
                 }
 
-                // Open the generted file
+                // Open the generated file
                 #[cfg(target_os = "macos")]
                 cmd!(sh, "open target/coverage/html/index.html").run()?;
 
@@ -117,7 +117,7 @@ fn main() -> eyre::Result<()> {
                 return Ok(());
             }
 
-            // Open the generted file
+            // Open the generated file
             #[cfg(target_os = "macos")]
             cmd!(sh, "open target/doc/minerva/index.html").run()?;
 

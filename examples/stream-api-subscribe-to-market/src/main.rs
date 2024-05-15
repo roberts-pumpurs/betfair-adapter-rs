@@ -95,7 +95,7 @@ async fn main() -> eyre::Result<()> {
         });
 
         while let Some(value) = stream.next().await {
-            tracing::info!(?value, "received vaue from stream");
+            tracing::info!(?value, "received value from stream");
         }
     }
     Ok(())

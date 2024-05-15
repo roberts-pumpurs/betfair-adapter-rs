@@ -20,7 +20,7 @@ async fn successful_heartbeat() {
 
             let mut stream = stream_api_abi.run_with_default_runtime();
             while let Some(value) = stream.next().await {
-                tracing::info!(?value, "received vaue from stream");
+                tracing::info!(?value, "received value from stream");
             }
         }
     });

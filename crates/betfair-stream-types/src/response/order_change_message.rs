@@ -87,10 +87,10 @@ pub struct Order {
     /// Persistence Type - whether the order will persist at in play or not (L = LAPSE, P =
     /// PERSIST, MOC = Market On Close)
     #[serde(rename = "pt")]
-    pub persistance_type: Pt,
+    pub persistence_type: PersistenceType,
     /// Order Type - the type of the order (L = LIMIT, MOC = MARKET_ON_CLOSE, LOC = LIMIT_ON_CLOSE)
     #[serde(rename = "ot")]
-    pub order_type: Ot,
+    pub order_type: OrderType,
     /// Lapse Status Reason Code - the reason that some or all of this order has been lapsed (null
     /// if no portion of the order is lapsed
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -180,7 +180,7 @@ pub enum Side {
     Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
 )]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum Pt {
+pub enum PersistenceType {
     #[default]
     #[serde(rename = "L")]
     Lapse,
@@ -195,7 +195,7 @@ pub enum Pt {
     Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
 )]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum Ot {
+pub enum OrderType {
     #[default]
     #[serde(rename = "L")]
     Limit,

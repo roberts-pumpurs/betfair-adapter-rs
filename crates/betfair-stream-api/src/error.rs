@@ -25,7 +25,7 @@ pub enum StreamError {
     #[error("Unable to set native certificate")]
     CannotSetNativeCertificate,
     #[error("Unable to set custom certificate")]
-    CannnotSetCustomCertificate,
+    UnableToSetCustomCertificate,
     #[error("Unable to set custom certificate")]
     CustomCertificateNotSet,
     #[error("Invalid custom certificate")]

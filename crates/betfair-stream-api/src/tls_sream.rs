@@ -34,15 +34,15 @@ pub(crate) async fn connect(
     let domain = url.domain();
     match (domain, socket_addr) {
         (Some(domain), Some(socket_addr)) => {
-            let connecton = connect_tls(domain, socket_addr).await?;
+            let connection = connect_tls(domain, socket_addr).await?;
             tracing::debug!("connecting to Stream API");
-            Ok(connecton)
+            Ok(connection)
         }
         #[cfg(feature = "integration-test")]
         (None, Some(socket_addr)) => {
-            let connecton = connect_tls("localhost", socket_addr).await?;
+            let connection = connect_tls("localhost", socket_addr).await?;
             tracing::debug!("connecting to Stream API");
-            Ok(connecton)
+            Ok(connection)
         }
         params => {
             tracing::error!(?params, "unable to connect to Stream API");
@@ -84,7 +84,7 @@ mod internal {
     impl<IO: AsyncRead + AsyncWrite + std::fmt::Debug + Send + Unpin> Stream
         for RawStreamApiConnection<IO>
     {
-        type Item = Result<ResponseMessage, CodecEror>;
+        type Item = Result<ResponseMessage, CodecError>;
 
         fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
             self.io.poll_next_unpin(cx)
@@ -94,7 +94,7 @@ mod internal {
     impl<IO: AsyncRead + AsyncWrite + std::fmt::Debug + Send + Unpin> Sink<RequestMessage>
         for RawStreamApiConnection<IO>
     {
-        type Error = CodecEror;
+        type Error = CodecError;
 
         fn poll_ready(
             mut self: Pin<&mut Self>,
@@ -125,7 +125,7 @@ mod internal {
 pub(crate) struct StreamAPIClientCodec;
 
 #[derive(Debug, thiserror::Error)]
-pub enum CodecEror {
+pub enum CodecError {
     #[error("Serde error: {0}")]
     Serde(#[from] serde_json::Error),
     #[error("IO Error {0}")]
@@ -134,7 +134,7 @@ pub enum CodecEror {
 
 impl Decoder for StreamAPIClientCodec {
     type Item = ResponseMessage;
-    type Error = CodecEror;
+    type Error = CodecError;
 
     fn decode(&mut self, src: &mut bytes::BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         use itertools::*;
@@ -161,7 +161,7 @@ impl Decoder for StreamAPIClientCodec {
 }
 
 impl Encoder<RequestMessage> for StreamAPIClientCodec {
-    type Error = CodecEror;
+    type Error = CodecError;
 
     fn encode(
         &mut self,
