@@ -26,6 +26,11 @@ missing_trait_methods = "allow"
 wildcard_imports = "allow"
 shadow_reuse = "allow"
 exhaustive_enums = "allow"
+ref_patterns = "allow"
+pub_use = "allow"
+single_char_lifetime_names = "allow"
+multiple_crate_versions = "allow"
+exhaustive_structs = "allow"
 
 [workspace.dependencies]
 # Our crates

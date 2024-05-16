@@ -11,7 +11,7 @@ use rust_decimal::Decimal;
 
 use super::runner_book_cache::RunnerBookCache;
 
-#[derive(Debug, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, serde::Serialize, serde::Deserialize)]
 pub struct MarketBookCache {
     market_id: MarketId,
     publish_time: DateTime<Utc>,
@@ -37,8 +37,7 @@ impl MarketBookCache {
         !self
             .market_definition
             .as_ref()
-            .map(|x| x.status == StreamMarketDefinitionStatus::Open)
-            .unwrap_or(false)
+            .is_some_and(|x| x.status == StreamMarketDefinitionStatus::Open)
     }
 
     pub fn update_cache(
@@ -123,14 +122,14 @@ impl MarketBookCache {
                     x.total_matched()
                         .unwrap_or_else(|| Size::new(Decimal::ZERO))
                 })
-                .fold(Size::new(Decimal::ZERO), |acc, x| acc + x);
+                .fold(Size::new(Decimal::ZERO), |acc, x| acc.saturating_add(&x));
         }
     }
 
     pub fn update_market_definition(&mut self, market_definition: MarketDefinition) {
         self.market_definition = Some(Box::new(market_definition.clone()));
 
-        for runner_definition in market_definition.runners.into_iter() {
+        for runner_definition in market_definition.runners {
             let selection_id = runner_definition.id.clone();
             let Some(selection_id) = selection_id else {
                 continue;
@@ -167,19 +166,20 @@ impl MarketBookCache {
         self.runners.insert(key, runner);
     }
 
-    pub fn publish_time(&self) -> DateTime<Utc> {
+    pub const fn publish_time(&self) -> DateTime<Utc> {
         self.publish_time
     }
 
-    pub fn runners(&self) -> &HashMap<(SelectionId, Option<Decimal>), RunnerBookCache> {
+    pub const fn runners(&self) -> &HashMap<(SelectionId, Option<Decimal>), RunnerBookCache> {
         &self.runners
     }
 
-    pub fn market_definition(&self) -> Option<&Box<MarketDefinition>> {
+    #[allow(clippy::borrowed_box)]
+    pub const fn market_definition(&self) -> Option<&Box<MarketDefinition>> {
         self.market_definition.as_ref()
     }
 
-    pub fn market_id(&self) -> &MarketId {
+    pub const fn market_id(&self) -> &MarketId {
         &self.market_id
     }
 }
@@ -251,7 +251,7 @@ mod tests {
                     Price::new(dec!(1.01)).unwrap(),
                     Size::new(dec!(200)),
                 )]),
-                id: Some(SelectionId(13536143)),
+                id: Some(SelectionId(13_536_143)),
                 ..Default::default()
             },
             RunnerChange {
@@ -259,7 +259,7 @@ mod tests {
                     Price::new(dec!(1.02)).unwrap(),
                     Size::new(dec!(200)),
                 )]),
-                id: Some(SelectionId(13536143)),
+                id: Some(SelectionId(13_536_143)),
                 ..Default::default()
             },
         ];
@@ -276,10 +276,7 @@ mod tests {
         assert_eq!(init.total_matched, Size::new(Decimal::ZERO));
         // assert atb updated
         assert_eq!(
-            init.runners
-                .get(&(SelectionId(13536143), None))
-                .unwrap()
-                .available_to_back(),
+            init.runners[&(SelectionId(13_536_143), None)].available_to_back(),
             &Available::new([UpdateSet2(
                 Price::new(dec!(1.01)).unwrap(),
                 Size::new(dec!(200))
@@ -287,10 +284,7 @@ mod tests {
         );
         // assert atl updated
         assert_eq!(
-            init.runners
-                .get(&(SelectionId(13536143), None))
-                .unwrap()
-                .available_to_lay(),
+            init.runners[&(SelectionId(13_536_143), None)].available_to_lay(),
             &Available::new([UpdateSet2(
                 Price::new(dec!(1.02)).unwrap(),
                 Size::new(dec!(200))
@@ -332,42 +326,42 @@ mod tests {
                 market_id: Some(market_id.clone()),
                 runner_change: Some(vec![RunnerChange {
                     total_value: Some(Size::new(dec!(123.0))),
-                    id: Some(SelectionId(13536143)),
+                    id: Some(SelectionId(13_536_143)),
                     ..Default::default()
                 }]),
                 ..Default::default()
             };
-            init.update_cache(market_change.clone(), Utc::now(), true);
+            init.update_cache(market_change, Utc::now(), true);
             assert_eq!(
                 init.runners.iter().next().unwrap().1.total_matched(),
                 Some(Size::new(dec!(123.0)))
             );
-        }
+        };
         {
             let market_change = MarketChange {
                 market_id: Some(market_id.clone()),
                 runner_change: Some(vec![RunnerChange {
                     traded: Some(vec![]),
-                    id: Some(SelectionId(13536143)),
+                    id: Some(SelectionId(13_536_143)),
                     ..Default::default()
                 }]),
                 ..Default::default()
             };
-            init.update_cache(market_change.clone(), Utc::now(), true);
+            init.update_cache(market_change, Utc::now(), true);
             assert_eq!(
                 init.runners.iter().next().unwrap().1.total_matched(),
                 Some(Size::new(Decimal::ZERO))
             );
-        }
+        };
         {
             let market_change = MarketChange {
-                market_id: Some(market_id.clone()),
+                market_id: Some(market_id),
                 runner_change: Some(vec![RunnerChange {
                     traded: Some(vec![UpdateSet2(
                         Price::new(dec!(12.0)).unwrap(),
                         Size::new(dec!(2.0)),
                     )]),
-                    id: Some(SelectionId(13536143)),
+                    id: Some(SelectionId(13_536_143)),
                     ..Default::default()
                 }]),
                 ..Default::default()
@@ -389,23 +383,23 @@ mod tests {
                 market_id: Some(market_id.clone()),
                 runner_change: Some(vec![RunnerChange {
                     total_value: Some(Size::new(dec!(123.0))),
-                    id: Some(SelectionId(13536143)),
+                    id: Some(SelectionId(13_536_143)),
                     ..Default::default()
                 }]),
                 ..Default::default()
             };
-            init.update_cache(market_change.clone(), Utc::now(), true);
+            init.update_cache(market_change, Utc::now(), true);
             assert_eq!(init.total_matched, Size::new(Decimal::ZERO));
-        }
+        };
         {
             let market_change = MarketChange {
-                market_id: Some(market_id.clone()),
+                market_id: Some(market_id),
                 runner_change: Some(vec![RunnerChange {
                     traded: Some(vec![UpdateSet2(
                         Price::new(dec!(12.0)).unwrap(),
                         Size::new(dec!(2.0)),
                     )]),
-                    id: Some(SelectionId(13536143)),
+                    id: Some(SelectionId(13_536_143)),
                     ..Default::default()
                 }]),
                 ..Default::default()

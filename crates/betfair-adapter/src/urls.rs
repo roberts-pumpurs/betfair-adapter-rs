@@ -1,17 +1,19 @@
 #[derive(Debug, Clone)]
 pub struct BetfairUrl<T> {
     url: url::Url,
-    _type: std::marker::PhantomData<T>,
+    _type: core::marker::PhantomData<T>,
 }
 
 impl<T> BetfairUrl<T> {
+    #[must_use]
     pub fn new(url: url::Url) -> Self {
         Self {
             url,
-            _type: std::marker::PhantomData,
+            _type: core::marker::PhantomData,
         }
     }
 
+    #[must_use]
     pub fn url(&self) -> &url::Url {
         &self.url
     }
@@ -19,7 +21,7 @@ impl<T> BetfairUrl<T> {
 
 impl<T> From<url::Url> for BetfairUrl<T> {
     fn from(val: url::Url) -> Self {
-        BetfairUrl::new(val)
+        Self::new(val)
     }
 }
 
@@ -59,6 +61,7 @@ pub mod jurisdiction {
     pub struct CustomUrl<T>(pub super::BetfairUrl<T>);
 
     impl<T> CustomUrl<T> {
+        #[must_use]
         pub fn new(url: url::Url) -> Self {
             Self(super::BetfairUrl::new(url))
         }
@@ -66,7 +69,7 @@ pub mod jurisdiction {
 
     impl<T> From<url::Url> for CustomUrl<T> {
         fn from(value: url::Url) -> Self {
-            CustomUrl::new(value)
+            Self::new(value)
         }
     }
 }

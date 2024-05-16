@@ -14,7 +14,7 @@ use super::primitives::{MarketBookCache, OrderBookCache};
 
 /// Separate stream struct to hold market/order caches
 #[derive(Debug)]
-pub(crate) struct StreamStateTracker {
+pub struct StreamState {
     pub(crate) stream_id: Option<u64>,
     pub(crate) update_clk: Option<Clock>,
     pub(crate) max_latency_ms: Option<u64>,
@@ -26,19 +26,19 @@ pub(crate) struct StreamStateTracker {
     pub(crate) order_stream_tracker: OrderStreamTracker,
 }
 
-pub(crate) enum Updates<'a> {
+pub enum Updates<'a> {
     Market(Vec<&'a MarketBookCache>),
     Order(Vec<&'a OrderBookCache>),
 }
 
-pub(crate) enum IncomingMessage {
+pub enum IncomingMessage {
     Market(MarketChangeMessage),
     Order(OrderChangeMessage),
 }
 
-pub(crate) struct HasFullImage(pub(crate) bool);
+pub struct HasFullImage(pub bool);
 
-impl StreamStateTracker {
+impl StreamState {
     pub(crate) fn new() -> Self {
         Self {
             stream_id: None,
@@ -53,14 +53,10 @@ impl StreamStateTracker {
         }
     }
 
-    pub(crate) fn update_unique_id(&mut self, unique_id: i32) {
-        self.unique_id = Some(unique_id);
-    }
-
     pub(crate) fn calculate_updates(&mut self, msg: IncomingMessage) -> Option<Updates<'_>> {
-        let change_type = match &msg {
-            IncomingMessage::Market(msg) => msg.change_type,
-            IncomingMessage::Order(msg) => msg.change_type,
+        let change_type = match msg {
+            IncomingMessage::Market(ref msg) => msg.change_type,
+            IncomingMessage::Order(ref msg) => msg.change_type,
         };
 
         match change_type {
@@ -91,14 +87,14 @@ impl StreamStateTracker {
             self.update_clock_global(&msg);
         }
 
-        let publish_time = match &msg {
-            IncomingMessage::Market(msg) => msg.publish_time,
-            IncomingMessage::Order(msg) => msg.publish_time,
+        let publish_time = match msg {
+            IncomingMessage::Market(ref msg) => msg.publish_time,
+            IncomingMessage::Order(ref msg) => msg.publish_time,
         };
 
         if let (Some(publish_time), Some(max_latency_ms)) = (publish_time, self.max_latency_ms) {
             let latency = chrono::Utc::now().signed_duration_since(publish_time);
-            if latency.num_milliseconds() > max_latency_ms as i64 {
+            if latency.num_milliseconds() > max_latency_ms.try_into().unwrap_or(0) {
                 tracing::warn!(
                     "High Latency! {:?}ms is greater than max_latency_ms of {:?}ms",
                     latency.num_milliseconds(),
@@ -125,7 +121,7 @@ impl StreamStateTracker {
     }
 
     fn update_clock_global(&mut self, msg: &IncomingMessage) {
-        match msg {
+        match *msg {
             IncomingMessage::Market(ref msg) => {
                 self.update_clk(msg);
             }

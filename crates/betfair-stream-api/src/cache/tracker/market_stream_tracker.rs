@@ -7,7 +7,7 @@ use super::HasFullImage;
 use crate::cache::primitives::MarketBookCache;
 
 #[derive(Debug)]
-pub(crate) struct MarketStreamTracker {
+pub struct MarketStreamTracker {
     market_state: HashMap<MarketId, MarketBookCache>,
     updates_processed: u64,
 }
@@ -33,7 +33,7 @@ impl MarketStreamTracker {
 
         if let Some(data) = msg.0.data {
             let mut market_ids = Vec::with_capacity(data.len());
-            for market_change in data.into_iter() {
+            for market_change in data {
                 let Some(market_id) = market_change.market_id.clone() else {
                     continue;
                 };
@@ -62,7 +62,7 @@ impl MarketStreamTracker {
                 };
 
                 updated_caches.push(market);
-                self.updates_processed += 1;
+                self.updates_processed = self.updates_processed.saturating_add(1);
             }
         }
 
@@ -75,7 +75,9 @@ impl MarketStreamTracker {
 
     pub(crate) fn clear_stale_cache(&mut self, publish_time: chrono::DateTime<chrono::Utc>) {
         let max_cache_age = chrono::Duration::hours(8);
-        self.market_state
-            .retain(|_, v| !(v.is_closed() && (publish_time - v.publish_time()) > max_cache_age));
+        self.market_state.retain(|_, cache| {
+            !(cache.is_closed() &&
+                (publish_time.signed_duration_since(cache.publish_time())) > max_cache_age)
+        });
     }
 }

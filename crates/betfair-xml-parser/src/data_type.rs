@@ -16,7 +16,7 @@ pub struct DataType {
 }
 
 /// A child item of the <dataType> tag
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum DataTypeItems {
     /// The description of the data type

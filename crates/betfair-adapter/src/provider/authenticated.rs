@@ -7,8 +7,8 @@ impl AuthenticatedBetfairRpcProvider {
     #[tracing::instrument(skip_all, ret, err, fields(req = ?request))]
     pub async fn send_request<T>(&self, request: T) -> Result<T::Res, ApiError>
     where
-        T: BetfairRpcRequest + serde::Serialize + std::fmt::Debug,
-        T::Res: serde::de::DeserializeOwned + std::fmt::Debug,
+        T: BetfairRpcRequest + serde::Serialize + core::fmt::Debug,
+        T::Res: serde::de::DeserializeOwned + core::fmt::Debug,
         T::Error: serde::de::DeserializeOwned,
         ApiError: From<<T as BetfairRpcRequest>::Error>,
     {

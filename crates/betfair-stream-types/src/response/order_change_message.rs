@@ -9,17 +9,17 @@ use serde::{Deserialize, Serialize};
 
 use super::{DataChange, DatasetChangeMessage, UpdateSet2};
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderChangeMessage(pub DatasetChangeMessage<OrderMarketChange>);
 
-impl DataChange<OrderMarketChange> for OrderMarketChange {
+impl DataChange<Self> for OrderMarketChange {
     fn key() -> &'static str {
         "oc"
     }
 }
 
-impl std::ops::Deref for OrderChangeMessage {
+impl core::ops::Deref for OrderChangeMessage {
     type Target = DatasetChangeMessage<OrderMarketChange>;
 
     fn deref(&self) -> &Self::Target {
@@ -27,7 +27,7 @@ impl std::ops::Deref for OrderChangeMessage {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderMarketChange {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -42,7 +42,7 @@ pub struct OrderMarketChange {
     pub full_image: Option<bool>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderRunnerChange {
     /// Matched Backs - matched amounts by distinct matched price on the Back side for this runner
@@ -75,7 +75,7 @@ pub struct OrderRunnerChange {
     pub full_image: Option<bool>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Order {
     /// Side - the side of the order. For Line markets a 'B' bet refers to a SELL line and an 'L'
@@ -88,7 +88,8 @@ pub struct Order {
     /// PERSIST, MOC = Market On Close)
     #[serde(rename = "pt")]
     pub persistence_type: PersistenceType,
-    /// Order Type - the type of the order (L = LIMIT, MOC = MARKET_ON_CLOSE, LOC = LIMIT_ON_CLOSE)
+    /// Order Type - the type of the order (L = LIMIT, MOC = `MARKET_ON_CLOSE`, LOC =
+    /// `LIMIT_ON_CLOSE`)
     #[serde(rename = "ot")]
     pub order_type: OrderType,
     /// Lapse Status Reason Code - the reason that some or all of this order has been lapsed (null
@@ -153,7 +154,7 @@ pub struct Order {
     /// was not set)
     #[serde(rename = "rfs")]
     pub strategy_reference: CustomerStrategyRef,
-    /// Status - the status of the order (E = EXECUTABLE, EC = EXECUTION_COMPLETE)
+    /// Status - the status of the order (E = EXECUTABLE, EC = `EXECUTION_COMPLETE`)
     pub status: StreamOrderStatus,
     /// Size Remaining - the amount of the order that is remaining unmatched
     #[serde(rename = "sr")]
@@ -190,7 +191,7 @@ pub enum PersistenceType {
     MarketOnClose,
 }
 
-/// Order Type - the type of the order (L = LIMIT, MOC = MARKET_ON_CLOSE, LOC = LIMIT_ON_CLOSE)
+/// Order Type - the type of the order (L = LIMIT, MOC = `MARKET_ON_CLOSE`, LOC = `LIMIT_ON_CLOSE`)
 #[derive(
     Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
 )]
@@ -205,7 +206,7 @@ pub enum OrderType {
     MarketOnClose,
 }
 
-/// Status - the status of the order (E = EXECUTABLE, EC = EXECUTION_COMPLETE)
+/// Status - the status of the order (E = EXECUTABLE, EC = `EXECUTION_COMPLETE`)
 #[derive(
     Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
 )]
@@ -218,7 +219,7 @@ pub enum StreamOrderStatus {
     ExecutionComplete,
 }
 
-#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StrategyMatchChange {
     /// Matched Backs - matched amounts by distinct matched price on the Back side for this

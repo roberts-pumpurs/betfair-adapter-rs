@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Valid values - used to represent an enum
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ValidValues {
     /// Vector of possible values
@@ -11,7 +11,7 @@ pub struct ValidValues {
 }
 
 /// A value of a valid value
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Value {
     /// The id of the value
@@ -23,7 +23,7 @@ pub struct Value {
 }
 
 /// The description tag
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Description {
     /// The value of the description
     #[serde(rename = "$value")]
@@ -31,7 +31,7 @@ pub struct Description {
 }
 
 /// The parameter tag
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Parameter {
     /// Whether the parameter is mandatory
     pub mandatory: Option<bool>,
@@ -45,7 +45,7 @@ pub struct Parameter {
 }
 
 /// A child item of the <parameter> tag
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum ParameterItem {
     /// The description tag

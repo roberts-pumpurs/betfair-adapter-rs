@@ -66,10 +66,10 @@ impl BetfairRpcProviderBase {
             rest_base,
             keep_alive,
             bot_login,
-            login,
             logout,
-            secret_provider,
+            login,
             stream,
+            secret_provider,
         })
     }
 
@@ -129,7 +129,7 @@ fn logged_in_client(
 }
 
 fn login_client(application_key: &ApplicationKey, identity: &Identity) -> Result<Client, ApiError> {
-    const KEEP_ALIVE_INTERVAL: std::time::Duration = std::time::Duration::from_secs(15);
+    const KEEP_ALIVE_INTERVAL: core::time::Duration = core::time::Duration::from_secs(15);
     let mut headers = header::HeaderMap::new();
     headers.insert(
         "X-Application",

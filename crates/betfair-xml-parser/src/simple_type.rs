@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::common::ValidValues;
 
 /// Representation of the <simpleType> tag
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SimpleType {
     /// The name of the simple type

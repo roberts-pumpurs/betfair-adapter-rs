@@ -8,13 +8,13 @@ use serde::{Deserialize, Serialize};
 
 use super::orderbook_runner_cache::OrderBookRunner;
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct OrderBookCache {
-    pub market_id: MarketId,
+    market_id: MarketId,
     publish_time: DateTime<Utc>,
     closed: Option<bool>,
     /// cache of orders placed on a runner
-    pub runners: HashMap<(SelectionId, Option<Handicap>), OrderBookRunner>,
+    runners: HashMap<(SelectionId, Option<Handicap>), OrderBookRunner>,
 }
 
 impl OrderBookCache {
@@ -59,7 +59,7 @@ impl OrderBookCache {
         }
     }
 
-    pub fn publish_time(&self) -> DateTime<Utc> {
+    pub const fn publish_time(&self) -> DateTime<Utc> {
         self.publish_time
     }
 }

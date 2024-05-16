@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use super::available_cache::Available;
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct OrderBookRunner {
     pub market_id: MarketId,
     pub selection_id: SelectionId,
@@ -34,16 +34,16 @@ impl OrderBookRunner {
     }
 
     pub(crate) fn update_unmatched(&mut self, unmatched_orders: impl IntoIterator<Item = Order>) {
-        for order in unmatched_orders.into_iter() {
+        for order in unmatched_orders {
             self.unmatched_orders.insert(order.id.clone(), order);
         }
     }
 
     pub(crate) fn update_matched_lays(&mut self, ml: Vec<UpdateSet2>) {
-        self.matched_lays.update(ml)
+        self.matched_lays.update(ml);
     }
 
     pub(crate) fn update_matched_backs(&mut self, mb: Vec<UpdateSet2>) {
-        self.matched_backs.update(mb)
+        self.matched_backs.update(mb);
     }
 }

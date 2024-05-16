@@ -18,7 +18,7 @@ pub struct ExceptionType {
 }
 
 /// A child item of the <exceptionType> tag
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum ExceptionTypeItems {
     /// The description of the exception

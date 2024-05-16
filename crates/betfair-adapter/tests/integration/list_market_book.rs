@@ -34,7 +34,7 @@ async fn single_market_book() {
             "version": 4910,
             "runners": [
                 {
-                    "selectionId": 12062411,
+                    "selectionId": 12_062_411,
                     "handicap": 0.0,
                     "status": "ACTIVE",
                     "totalMatched": 0.0,
@@ -63,7 +63,7 @@ async fn single_market_book() {
                     }
                 },
                 {
-                    "selectionId": 50310375,
+                    "selectionId": 50_310_375,
                     "handicap": 0.0,
                     "status": "ACTIVE",
                     "totalMatched": 0.0,
@@ -145,7 +145,7 @@ async fn single_market_book() {
         version: Some(4910),
         runners: Some(vec![
             betfair_types::types::sports_aping::Runner {
-                selection_id: betfair_types::types::sports_aping::SelectionId(12062411),
+                selection_id: betfair_types::types::sports_aping::SelectionId(12_062_411),
                 handicap: dec!(0),
                 status: betfair_types::types::sports_aping::RunnerStatus::Active,
                 adjustment_factor: None,
@@ -179,7 +179,7 @@ async fn single_market_book() {
                 matches_by_strategy: None,
             },
             Runner {
-                selection_id: SelectionId(50310375),
+                selection_id: SelectionId(50_310_375),
                 handicap: dec!(0),
                 status: RunnerStatus::Active,
                 adjustment_factor: None,

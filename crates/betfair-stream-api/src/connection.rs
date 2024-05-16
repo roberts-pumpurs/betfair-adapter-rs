@@ -151,7 +151,7 @@ impl<T> Unpin for StreamApi<T> {}
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
+    use core::time::Duration;
 
     use futures::stream::StreamExt;
     use tokio::sync::{broadcast, mpsc};

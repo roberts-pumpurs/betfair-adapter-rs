@@ -10,13 +10,13 @@ use crate::request::market_subscription_message::StreamMarketFilterBettingType;
 #[serde(rename_all = "camelCase")]
 pub struct MarketChangeMessage(pub DatasetChangeMessage<MarketChange>);
 
-impl DataChange<MarketChange> for MarketChange {
+impl DataChange<Self> for MarketChange {
     fn key() -> &'static str {
         "mc"
     }
 }
 
-impl std::ops::Deref for MarketChangeMessage {
+impl core::ops::Deref for MarketChangeMessage {
     type Target = DatasetChangeMessage<MarketChange>;
 
     fn deref(&self) -> &Self::Target {
@@ -24,7 +24,7 @@ impl std::ops::Deref for MarketChangeMessage {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MarketChange {
     /// Runner Changes - a list of changes to runners (or null if un-changed)
@@ -53,7 +53,7 @@ pub struct MarketChange {
     pub market_id: Option<MarketId>,
 }
 
-#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MarketDefinition {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -159,12 +159,12 @@ pub enum StreamMarketDefinitionStatus {
 }
 
 impl Default for StreamMarketDefinitionStatus {
-    fn default() -> StreamMarketDefinitionStatus {
+    fn default() -> Self {
         Self::Inactive
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KeyLineDefinition {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -172,7 +172,7 @@ pub struct KeyLineDefinition {
     pub key_line: Option<Vec<KeyLineSelection>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KeyLineSelection {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -201,7 +201,7 @@ pub enum Type {
     LineRange,
 }
 
-#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RunnerChange {
     /// The total amount matched. This value is truncated at 2dp.
@@ -209,24 +209,24 @@ pub struct RunnerChange {
     #[serde(rename = "tv")]
     pub total_value: Option<Size>,
 
-    /// Best Available To Back - LevelPriceVol triple delta of price changes, keyed by level (0 vol
-    /// is remove)
+    /// Best Available To Back - `LevelPriceVol` triple delta of price changes, keyed by level (0
+    /// vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "batb")]
     pub best_available_to_back: Option<Vec<UpdateSet3>>,
 
-    /// Starting Price Back - PriceVol tuple delta of price changes (0 vol is remove)
+    /// Starting Price Back - `PriceVol` tuple delta of price changes (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "spb")]
     pub starting_price_back: Option<Vec<UpdateSet2>>,
 
-    /// Best Display Available To Lay (includes virtual prices)- LevelPriceVol triple delta of
+    /// Best Display Available To Lay (includes virtual prices)- `LevelPriceVol` triple delta of
     /// price changes, keyed by level (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "bdatl")]
     pub best_display_available_to_lay: Option<Vec<UpdateSet3>>,
 
-    /// Traded - PriceVol tuple delta of price changes (0 vol is remove)
+    /// Traded - `PriceVol` tuple delta of price changes (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "trd")]
     pub traded: Option<Vec<UpdateSet2>>,
@@ -241,12 +241,12 @@ pub struct RunnerChange {
     #[serde(rename = "ltp")]
     pub last_traded_price: Option<Price>,
 
-    /// Available To Back - PriceVol tuple delta of price changes (0 vol is remove)
+    /// Available To Back - `PriceVol` tuple delta of price changes (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "atb")]
     pub available_to_back: Option<Vec<UpdateSet2>>,
 
-    /// Starting Price Lay - PriceVol tuple delta of price changes (0 vol is remove)
+    /// Starting Price Lay - `PriceVol` tuple delta of price changes (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "spl")]
     pub starting_price_lay: Option<Vec<UpdateSet2>>,
@@ -256,13 +256,13 @@ pub struct RunnerChange {
     #[serde(rename = "spn")]
     pub starting_price_near: Option<Price>,
 
-    /// Available To Lay - PriceVol tuple delta of price changes (0 vol is remove)
+    /// Available To Lay - `PriceVol` tuple delta of price changes (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "atl")]
     pub available_to_lay: Option<Vec<UpdateSet2>>,
 
-    /// Best Available To Lay - LevelPriceVol triple delta of price changes, keyed by level (0 vol
-    /// is remove)
+    /// Best Available To Lay - `LevelPriceVol` triple delta of price changes, keyed by level (0
+    /// vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "batl")]
     pub best_available_to_lay: Option<Vec<UpdateSet3>>,
@@ -277,7 +277,7 @@ pub struct RunnerChange {
     #[serde(rename = "hc")]
     pub handicap: Option<rust_decimal::Decimal>,
 
-    /// Best Display Available To Back (includes virtual prices)- LevelPriceVol triple delta of
+    /// Best Display Available To Back (includes virtual prices)- `LevelPriceVol` triple delta of
     /// price changes, keyed by level (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "bdatb")]
@@ -308,13 +308,13 @@ pub struct RunnerDefinition {
 }
 
 impl PartialOrd for RunnerDefinition {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         self.sort_priority.partial_cmp(&other.sort_priority)
     }
 }
 
 impl Ord for RunnerDefinition {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         self.sort_priority.cmp(&other.sort_priority)
     }
 }

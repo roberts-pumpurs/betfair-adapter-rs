@@ -10,6 +10,34 @@ impl Size {
     pub fn new(size: Decimal) -> Self {
         Self(size)
     }
+
+    pub fn checked_add(&self, other: &Self) -> Option<Self> {
+        self.0.checked_add(other.0).map(Self)
+    }
+
+    pub fn checked_sub(&self, other: &Self) -> Option<Self> {
+        self.0.checked_sub(other.0).map(Self)
+    }
+
+    pub fn checked_mul(&self, other: &Self) -> Option<Self> {
+        self.0.checked_mul(other.0).map(Self)
+    }
+
+    pub fn checked_div(&self, other: &Self) -> Option<Self> {
+        self.0.checked_div(other.0).map(Self)
+    }
+
+    pub fn saturating_add(&self, other: &Self) -> Self {
+        Self(self.0.saturating_add(other.0))
+    }
+
+    pub fn saturating_sub(&self, other: &Self) -> Self {
+        Self(self.0.saturating_sub(other.0))
+    }
+
+    pub fn saturating_mul(&self, other: &Self) -> Self {
+        Self(self.0.saturating_mul(other.0))
+    }
 }
 
 impl From<Decimal> for Size {
@@ -22,14 +50,6 @@ impl From<Decimal> for Size {
 impl From<Size> for Decimal {
     fn from(value: Size) -> Self {
         value.0
-    }
-}
-
-impl std::ops::Add for Size {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        Self::new(self.0 + rhs.0)
     }
 }
 

@@ -1,6 +1,6 @@
-//! Inspired by https://github.com/betcode-org/betfair/blob/1ece2bf0ffede3a41bf14ba4ea1c7004f25964dd/betfairlightweight/streaming/cache.py
+//! Inspired by  [this source](https://github.com/betcode-org/betfair/blob/1ece2bf0ffede3a41bf14ba4ea1c7004f25964dd/betfairlightweight/streaming/cache.py)
 
-use std::collections::BTreeMap;
+use alloc::collections::BTreeMap;
 
 use betfair_adapter::betfair_types::price::Price;
 use betfair_adapter::betfair_types::size::Size;
@@ -16,7 +16,7 @@ pub struct Available<T: UpdateSet> {
 }
 
 impl<T: UpdateSet> Available<T> {
-    pub fn new(prices: impl AsRef<[T]>) -> Self {
+    pub fn new<A: AsRef<[T]>>(prices: A) -> Self {
         let mut instance = Self {
             book: BTreeMap::new(),
         };
@@ -25,7 +25,7 @@ impl<T: UpdateSet> Available<T> {
         instance
     }
 
-    pub fn update(&mut self, book_update: impl AsRef<[T]>) {
+    pub fn update<A: AsRef<[T]>>(&mut self, book_update: A) {
         for prices in book_update.as_ref() {
             let key = prices.key(); // this is either `price` or `position`
             let value = prices.value(); // this is either `(price, size)` or `size`
@@ -45,7 +45,7 @@ impl<T: UpdateSet> Available<T> {
 }
 
 pub trait UpdateSet {
-    type Key: std::hash::Hash + PartialEq + Eq + Ord + Serialize + DeserializeOwned;
+    type Key: core::hash::Hash + PartialEq + Eq + Ord + Serialize + DeserializeOwned;
     type Value: PartialEq + Serialize + DeserializeOwned;
     fn value(&self) -> Self::Value;
     fn key(&self) -> Self::Key;
@@ -123,7 +123,7 @@ mod tests {
             (Price::new(dec!(1.02)).unwrap(), Size::new(dec!(34.45))),
         );
 
-        assert_eq!(init.book, expected)
+        assert_eq!(init.book, expected);
     }
 
     #[test]
@@ -140,7 +140,7 @@ mod tests {
         expected.insert(Price::new(dec!(13)).unwrap(), Size::new(dec!(28.01)));
         expected.insert(Price::new(dec!(27)).unwrap(), Size::new(dec!(0.95)));
 
-        assert_eq!(init.book, expected)
+        assert_eq!(init.book, expected);
     }
 
     #[test]
@@ -148,7 +148,7 @@ mod tests {
         let mut init = setup_set3();
         init.clear();
 
-        assert_eq!(init.book, BTreeMap::new())
+        assert_eq!(init.book, BTreeMap::new());
     }
 
     #[test]
@@ -170,7 +170,7 @@ mod tests {
         let mut actual = init;
         actual.update(update);
 
-        assert_eq!(actual.book, expected)
+        assert_eq!(actual.book, expected);
     }
 
     #[test]
@@ -205,7 +205,7 @@ mod tests {
         let mut actual = init;
         actual.update(update);
 
-        assert_eq!(actual.book, expected)
+        assert_eq!(actual.book, expected);
     }
 
     #[test]
@@ -224,7 +224,7 @@ mod tests {
         let mut actual = init;
         actual.update(update);
 
-        assert_eq!(actual.book, expected)
+        assert_eq!(actual.book, expected);
     }
 
     #[test]
@@ -255,6 +255,6 @@ mod tests {
         let mut actual = init;
         actual.update(update);
 
-        assert_eq!(actual.book, expected)
+        assert_eq!(actual.book, expected);
     }
 }

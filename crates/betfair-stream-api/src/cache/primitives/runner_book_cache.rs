@@ -9,7 +9,7 @@ use rust_decimal::Decimal;
 
 use super::available_cache::Available;
 
-#[derive(Debug, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, serde::Serialize, serde::Deserialize)]
 pub struct RunnerBookCache {
     selection_id: SelectionId,
     last_price_traded: Option<Price>,
@@ -44,40 +44,31 @@ impl RunnerBookCache {
             total_matched: runner_change.total_value,
             traded: runner_change
                 .traded
-                .map(Available::new)
-                .unwrap_or_else(|| Available::new(&[])),
+                .map_or_else(|| Available::new(&[]), Available::new),
             available_to_back: runner_change
                 .available_to_back
-                .map(Available::new)
-                .unwrap_or_else(|| Available::new(&[])),
+                .map_or_else(|| Available::new(&[]), Available::new),
             best_available_to_back: runner_change
                 .best_available_to_back
-                .map(Available::new)
-                .unwrap_or_else(|| Available::new(&[])),
+                .map_or_else(|| Available::new(&[]), Available::new),
             best_display_available_to_back: runner_change
                 .best_display_available_to_back
-                .map(Available::new)
-                .unwrap_or_else(|| Available::new(&[])),
+                .map_or_else(|| Available::new(&[]), Available::new),
             available_to_lay: runner_change
                 .available_to_lay
-                .map(Available::new)
-                .unwrap_or_else(|| Available::new(&[])),
+                .map_or_else(|| Available::new(&[]), Available::new),
             best_available_to_lay: runner_change
                 .best_available_to_lay
-                .map(Available::new)
-                .unwrap_or_else(|| Available::new(&[])),
+                .map_or_else(|| Available::new(&[]), Available::new),
             best_display_available_to_lay: runner_change
                 .best_display_available_to_lay
-                .map(Available::new)
-                .unwrap_or_else(|| Available::new(&[])),
+                .map_or_else(|| Available::new(&[]), Available::new),
             starting_price_back: runner_change
                 .starting_price_back
-                .map(Available::new)
-                .unwrap_or_else(|| Available::new(&[])),
+                .map_or_else(|| Available::new(&[]), Available::new),
             starting_price_lay: runner_change
                 .starting_price_lay
-                .map(Available::new)
-                .unwrap_or_else(|| Available::new(&[])),
+                .map_or_else(|| Available::new(&[]), Available::new),
             starting_price_near: runner_change.starting_price_near,
             starting_price_far: runner_change.starting_price_far,
             handicap,
@@ -121,7 +112,7 @@ impl RunnerBookCache {
             traded
                 .iter()
                 .map(|x| x.1)
-                .fold(Size::new(Decimal::ZERO), |acc, x| acc + x),
+                .fold(Size::new(Decimal::ZERO), |acc, x| acc.saturating_add(&x)),
         );
         self.traded.update(traded);
     }
@@ -130,11 +121,11 @@ impl RunnerBookCache {
         self.definition = Some(definition);
     }
 
-    pub fn total_matched(&self) -> Option<Size> {
+    pub const fn total_matched(&self) -> Option<Size> {
         self.total_matched
     }
 
-    pub fn selection_id(&self) -> &SelectionId {
+    pub const fn selection_id(&self) -> &SelectionId {
         &self.selection_id
     }
 
@@ -189,59 +180,59 @@ impl RunnerBookCache {
         self.starting_price_lay.update(spl);
     }
 
-    pub fn last_price_traded(&self) -> Option<&Price> {
+    pub const fn last_price_traded(&self) -> Option<&Price> {
         self.last_price_traded.as_ref()
     }
 
-    pub fn traded(&self) -> &Available<UpdateSet2> {
+    pub const fn traded(&self) -> &Available<UpdateSet2> {
         &self.traded
     }
 
-    pub fn available_to_back(&self) -> &Available<UpdateSet2> {
+    pub const fn available_to_back(&self) -> &Available<UpdateSet2> {
         &self.available_to_back
     }
 
-    pub fn best_available_to_back(&self) -> &Available<UpdateSet3> {
+    pub const fn best_available_to_back(&self) -> &Available<UpdateSet3> {
         &self.best_available_to_back
     }
 
-    pub fn best_display_available_to_back(&self) -> &Available<UpdateSet3> {
+    pub const fn best_display_available_to_back(&self) -> &Available<UpdateSet3> {
         &self.best_display_available_to_back
     }
 
-    pub fn available_to_lay(&self) -> &Available<UpdateSet2> {
+    pub const fn available_to_lay(&self) -> &Available<UpdateSet2> {
         &self.available_to_lay
     }
 
-    pub fn best_available_to_lay(&self) -> &Available<UpdateSet3> {
+    pub const fn best_available_to_lay(&self) -> &Available<UpdateSet3> {
         &self.best_available_to_lay
     }
 
-    pub fn best_display_available_to_lay(&self) -> &Available<UpdateSet3> {
+    pub const fn best_display_available_to_lay(&self) -> &Available<UpdateSet3> {
         &self.best_display_available_to_lay
     }
 
-    pub fn starting_price_back(&self) -> &Available<UpdateSet2> {
+    pub const fn starting_price_back(&self) -> &Available<UpdateSet2> {
         &self.starting_price_back
     }
 
-    pub fn starting_price_lay(&self) -> &Available<UpdateSet2> {
+    pub const fn starting_price_lay(&self) -> &Available<UpdateSet2> {
         &self.starting_price_lay
     }
 
-    pub fn starting_price_near(&self) -> Option<&Price> {
+    pub const fn starting_price_near(&self) -> Option<&Price> {
         self.starting_price_near.as_ref()
     }
 
-    pub fn starting_price_far(&self) -> Option<&Price> {
+    pub const fn starting_price_far(&self) -> Option<&Price> {
         self.starting_price_far.as_ref()
     }
 
-    pub fn handicap(&self) -> Option<Decimal> {
+    pub const fn handicap(&self) -> Option<Decimal> {
         self.handicap
     }
 
-    pub fn definition(&self) -> Option<&RunnerDefinition> {
+    pub const fn definition(&self) -> Option<&RunnerDefinition> {
         self.definition.as_ref()
     }
 }

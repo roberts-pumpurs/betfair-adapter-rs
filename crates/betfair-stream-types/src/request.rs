@@ -22,10 +22,10 @@ pub enum RequestMessage {
 impl RequestMessage {
     pub fn set_id(&mut self, id: i32) {
         match self {
-            RequestMessage::Authentication(msg) => msg.id = Some(id),
-            RequestMessage::Heartbeat(msg) => msg.id = Some(id),
-            RequestMessage::MarketSubscription(msg) => msg.id = Some(id),
-            RequestMessage::OrderSubscription(msg) => msg.id = Some(id),
+            Self::Authentication(msg) => msg.id = Some(id),
+            Self::Heartbeat(msg) => msg.id = Some(id),
+            Self::MarketSubscription(msg) => msg.id = Some(id),
+            Self::OrderSubscription(msg) => msg.id = Some(id),
         }
     }
 }

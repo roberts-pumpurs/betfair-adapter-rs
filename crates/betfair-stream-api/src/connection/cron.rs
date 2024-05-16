@@ -14,7 +14,7 @@ use tokio::sync::broadcast;
 use tokio::time::Interval;
 use tokio_stream::StreamExt;
 
-use crate::cache::tracker::{IncomingMessage, StreamStateTracker};
+use crate::cache::tracker::{IncomingMessage, StreamState};
 use crate::connection::handshake::Handshake;
 use crate::tls_sream::RawStreamApiConnection;
 use crate::{CacheEnabledMessages, ExternalUpdates, HeartbeatStrategy, MetadataUpdates};
@@ -260,7 +260,7 @@ pub async fn cache_loop(
     mut receiver: tokio::sync::mpsc::Receiver<ExternalUpdates<ResponseMessage>>,
     external_sender: tokio::sync::mpsc::Sender<ExternalUpdates<CacheEnabledMessages>>,
 ) -> Result<Never, FatalError> {
-    let mut state = StreamStateTracker::new();
+    let mut state = StreamState::new();
     while let Some(msg) = receiver.recv().await {
         match msg {
             ExternalUpdates::Layer(ResponseMessage::MarketChange(msg)) => {
@@ -317,7 +317,7 @@ pub async fn cache_loop(
 }
 
 async fn process_cacheable_items<'a>(
-    state: &mut StreamStateTracker,
+    state: &mut StreamState,
     publish_time: Option<DateTime<chrono::Utc>>,
     updates: IncomingMessage,
     external_sender: &tokio::sync::mpsc::Sender<ExternalUpdates<CacheEnabledMessages>>,

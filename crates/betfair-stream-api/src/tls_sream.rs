@@ -8,7 +8,7 @@ use betfair_stream_types::request::RequestMessage;
 use betfair_stream_types::response::ResponseMessage;
 use futures::Sink;
 use futures_util::sink::SinkExt;
-use futures_util::{FutureExt, Stream, StreamExt};
+use futures_util::{Stream, StreamExt};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
 use tokio_util::bytes;
@@ -210,7 +210,7 @@ fn tls_connector() -> Result<tokio_rustls::TlsConnector, StreamError> {
             tracing::error!(?err, "Cannot set native certificate");
             StreamError::CustomCertificateNotSet
         })?;
-    }
+    };
 
     let config = rustls::ClientConfig::builder()
         .with_root_certificates(roots)
@@ -221,7 +221,7 @@ fn tls_connector() -> Result<tokio_rustls::TlsConnector, StreamError> {
 #[cfg(test)]
 mod tests {
 
-    use std::fmt::Write;
+    use core::fmt::Write;
 
     use super::*;
 
@@ -245,7 +245,7 @@ mod tests {
     fn can_decode_single_message() {
         let msg = r#"{"op":"connection","connectionId":"002-051134157842-432409"}"#;
         let separator = "\r\n";
-        let data = format!("{}{}", msg, separator);
+        let data = format!("{msg}{separator}");
 
         let mut codec = StreamAPIClientCodec;
         let mut buf = bytes::BytesMut::from(data.as_bytes());
@@ -260,7 +260,7 @@ mod tests {
         let msg_one = r#"{"op":"connection","connectionId":"002-051134157842-432409"}"#;
         let msg_two = r#"{"op":"ocm","id":3,"clk":"AAAAAAAA","status":503,"pt":1498137379766,"ct":"HEARTBEAT"}"#;
         let separator = "\r\n";
-        let data = format!("{}{}{}{}", msg_one, separator, msg_two, separator);
+        let data = format!("{msg_one}{separator}{msg_two}{separator}");
 
         let mut codec = StreamAPIClientCodec;
         let mut buf = bytes::BytesMut::from(data.as_bytes());
@@ -278,7 +278,7 @@ mod tests {
         let msg_two_pt_one = r#"{"op":"ocm","id":3,"clk""#;
         let msg_two_pt_two = r#":"AAAAAAAA","status":503,"pt":1498137379766,"ct":"HEARTBEAT"}"#;
         let separator = "\r\n";
-        let data = format!("{}{}{}", msg_one, separator, msg_two_pt_one);
+        let data = format!("{msg_one}{separator}{msg_two_pt_one}");
 
         let mut codec = StreamAPIClientCodec;
         let mut buf = bytes::BytesMut::from(data.as_bytes());
@@ -299,14 +299,14 @@ mod tests {
         let msg_one = r#"{"op":"connection","connectionId":"002-051134157842-432409"}"#;
         let msg_two = r#"{"op":"ocm","id":3,"clk":"AAAAAAAA","status":503,"pt":1498137379766,"ct":"HEARTBEAT"}"#;
         let separator = "\r\n";
-        let data = format!("{}{}", msg_one, separator);
+        let data = format!("{msg_one}{separator}");
 
         let mut codec = StreamAPIClientCodec;
         let mut buf = bytes::BytesMut::from(data.as_bytes());
         let msg_one = codec.decode(&mut buf).unwrap().unwrap();
         let msg_two_attempt = codec.decode(&mut buf).unwrap();
         assert!(msg_two_attempt.is_none());
-        let data = format!("{}{}", msg_two, separator);
+        let data = format!("{msg_two}{separator}");
         buf.write_str(data.as_str()).unwrap();
         let msg_two = codec.decode(&mut buf).unwrap().unwrap();
 
@@ -328,7 +328,7 @@ mod tests {
         codec.encode(msg, &mut buf).unwrap();
 
         let data = buf.freeze();
-        let data = std::str::from_utf8(&data).unwrap();
+        let data = core::str::from_utf8(&data).unwrap();
 
         // assert that we have the suffix \r\n
         assert!(data.ends_with("\r\n"));

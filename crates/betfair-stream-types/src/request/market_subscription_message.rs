@@ -14,7 +14,7 @@ pub struct MarketSubscriptionMessage {
     /// a single block
     #[serde(skip_serializing_if = "Option::is_none")]
     pub segmentation_enabled: Option<bool>,
-    /// Token value delta (received in MarketChangeMessage) that should be passed to resume a
+    /// Token value delta (received in `MarketChangeMessage`) that should be passed to resume a
     /// subscription
     #[serde(skip_serializing_if = "Option::is_none")]
     pub clk: Option<String>,
@@ -22,7 +22,7 @@ pub struct MarketSubscriptionMessage {
     /// bounds are 500 to 5000)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub heartbeat_ms: Option<i64>,
-    /// Token value (received in initial MarketChangeMessage) that should be passed to resume a
+    /// Token value (received in initial `MarketChangeMessage`) that should be passed to resume a
     /// subscription
     #[serde(skip_serializing_if = "Option::is_none")]
     pub initial_clk: Option<String>,
@@ -60,8 +60,8 @@ pub struct MarketDataFilter {
 pub struct InvalidLadderLevel;
 
 impl std::error::Error for InvalidLadderLevel {}
-impl std::fmt::Display for InvalidLadderLevel {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for InvalidLadderLevel {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "`ladder_levels` must be between 1 and 10")
     }
 }
@@ -121,10 +121,10 @@ pub enum Fields {
     /// The "Last Price Matched" on a selection.
     ExLtp,
     /// - Fields: marketDefinition
-    /// - Type: MarketDefinition
+    /// - Type: `MarketDefinition`
     ///
     /// Send market definitions. To receive updates to any of the following
-    /// fields - MarketDefinitionFields
+    /// fields - `MarketDefinitionFields`
     ExMarketDef,
     /// - Fields: spb, spl
     /// - Type: price, size
@@ -140,7 +140,7 @@ pub enum Fields {
 }
 
 impl Default for Fields {
-    fn default() -> Fields {
+    fn default() -> Self {
         Self::ExBestOffersDisp
     }
 }

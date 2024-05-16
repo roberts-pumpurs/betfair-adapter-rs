@@ -20,6 +20,7 @@ pub const REST_URL: &str = "/rpc/v1/";
 pub const STREAM_URL: &str = "/stream/";
 pub const SESSION_TOKEN: &str = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
 
+#[must_use]
 pub fn rpc_path<T: BetfairRpcRequest>() -> String {
     format!("{REST_URL}{}", T::method())
 }
@@ -31,16 +32,16 @@ pub struct Server {
 
 #[derive(Debug, Clone)]
 pub struct MockSettings {
-    pub keep_alive_period: std::time::Duration,
-    pub health_check_period: std::time::Duration,
+    pub keep_alive_period: core::time::Duration,
+    pub health_check_period: core::time::Duration,
     pub stream_url: CustomUrl<Stream>,
 }
 
 impl Default for MockSettings {
     fn default() -> Self {
         Self {
-            keep_alive_period: std::time::Duration::from_secs(10),
-            health_check_period: std::time::Duration::from_secs(10),
+            keep_alive_period: core::time::Duration::from_secs(10),
+            health_check_period: core::time::Duration::from_secs(10),
             stream_url: CustomUrl::new("http://localhost:80/stream".parse().unwrap()),
         }
     }
@@ -86,6 +87,7 @@ impl Server {
         UnauthenticatedBetfairRpcProvider::new_with_config(config).unwrap()
     }
 
+    #[must_use]
     pub fn secrets_provider(&self) -> SecretProvider {
         let identity = reqwest::Identity::from_pem(CERTIFICATE.as_bytes()).unwrap();
 
@@ -97,6 +99,7 @@ impl Server {
         }
     }
 
+    #[must_use]
     pub fn betfair_config<'a>(
         &self,
         secrets_provider: SecretProvider,
@@ -179,7 +182,7 @@ impl Server {
     }
 }
 
-pub const CERTIFICATE: &str = r#"-----BEGIN CERTIFICATE-----
+pub const CERTIFICATE: &str = "-----BEGIN CERTIFICATE-----
 MIIC3zCCAcegAwIBAgIJALAul9kzR0W/MA0GCSqGSIb3DQEBBQUAMA0xCzAJBgNV
 BAYTAmx2MB4XDTIyMDgwMjE5MTE1NloXDTIzMDgwMjE5MTE1NlowDTELMAkGA1UE
 BhMCbHYwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC8WWPaghYJcXQp
@@ -224,4 +227,4 @@ KyLZjW1TvTf66Q0rrRb+mnvJcF7HRbnYym5CFFNaj4S4g8QsCYgPdlqZU2kizCz1
 yvdFIFrv4ZPdRkf174B1G+FDkH8o3NZ1cf+OuVIKC+jONciIJsYLPTHR0pgWqE4q
 FAbbOyAg51Xklqm2Q954WWFmu3lluHCWUGB9eSHshIurTmDd+8o15A==
 -----END RSA PRIVATE KEY-----
-"#;
+";

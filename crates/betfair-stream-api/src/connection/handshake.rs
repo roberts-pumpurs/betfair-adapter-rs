@@ -152,9 +152,9 @@ impl<'a> Stream for Handshake<'a> {
                                 Poll::Ready(Some(Err(NeedsRestart)))
                             }
                         }
-                        msg @ ResponseMessage::Connection(_) |
-                        msg @ ResponseMessage::MarketChange(_) |
-                        msg @ ResponseMessage::OrderChange(_) => {
+                        msg @ (ResponseMessage::Connection(_) |
+                        ResponseMessage::MarketChange(_) |
+                        ResponseMessage::OrderChange(_)) => {
                             self.state = State::Error;
                             cx.waker().wake_by_ref();
                             tracing::error!(msg =? msg, "Expected status message, got something else");

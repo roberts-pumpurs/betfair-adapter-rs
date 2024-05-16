@@ -48,7 +48,7 @@ pub enum SegmentType {
     Seg,
     SegEnd,
 }
-#[derive(Clone, Debug, PartialEq, Default, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DatasetChangeMessage<T: DeserializeOwned + DataChange<T>> {
     /// Client generated unique id to link request with response (like json rpc)
@@ -58,8 +58,8 @@ pub struct DatasetChangeMessage<T: DeserializeOwned + DataChange<T>> {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "ct")]
     pub change_type: Option<ChangeType>,
-    /// Token value (non-null) should be stored and passed in a MarketSubscriptionMessage to resume
-    /// subscription (in case of disconnect)
+    /// Token value (non-null) should be stored and passed in a `MarketSubscriptionMessage` to
+    /// resume subscription (in case of disconnect)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "clk")]
     pub clock: Option<Clock>,
@@ -71,8 +71,8 @@ pub struct DatasetChangeMessage<T: DeserializeOwned + DataChange<T>> {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "pt")]
     pub publish_time: Option<DateTime<Utc>>,
-    /// Token value (non-null) should be stored and passed in a MarketSubscriptionMessage to resume
-    /// subscription (in case of disconnect)
+    /// Token value (non-null) should be stored and passed in a `MarketSubscriptionMessage` to
+    /// resume subscription (in case of disconnect)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "initialClk")]
     pub initial_clock: Option<InitialClock>,
@@ -93,10 +93,10 @@ pub struct DatasetChangeMessage<T: DeserializeOwned + DataChange<T>> {
     pub status: Option<i32>,
 }
 
-#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct Clock(pub String);
 
-#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct InitialClock(pub String);
 
 impl<'de, T> Deserialize<'de> for DatasetChangeMessage<T>
@@ -109,12 +109,15 @@ where
         T: DeserializeOwned + DataChange<T>,
     {
         let v = Value::deserialize(deserializer)?;
-        let id = v.get("id").and_then(|id| id.as_i64()).map(|id| id as i32);
+        let id = v
+            .get("id")
+            .and_then(serde_json::Value::as_i64)
+            .map(|id| id as i32);
         let data = v
             .get(T::key())
             .and_then(|data| serde_json::from_value(data.clone()).ok());
 
-        let res = DatasetChangeMessage {
+        let res = Self {
             id,
             change_type: v
                 .get("ct")
@@ -123,21 +126,24 @@ where
                 .get("clk")
                 .and_then(|clk| clk.as_str())
                 .map(|clk| Clock(clk.to_string())),
-            heartbeat_ms: v.get("heartbeatMs").and_then(|hm| hm.as_i64()),
+            heartbeat_ms: v.get("heartbeatMs").and_then(serde_json::Value::as_i64),
             publish_time: v
                 .get("pt")
-                .and_then(|pt| pt.as_i64())
+                .and_then(serde_json::Value::as_i64)
                 .and_then(|pt| Utc.timestamp_millis_opt(pt).latest()),
             initial_clock: v
                 .get("initialClk")
                 .and_then(|ic| ic.as_str())
                 .map(|ic| InitialClock(ic.to_string())),
             data,
-            conflate_ms: v.get("conflateMs").and_then(|cm| cm.as_i64()),
+            conflate_ms: v.get("conflateMs").and_then(serde_json::Value::as_i64),
             segment_type: v
                 .get("segmentType")
                 .and_then(|st| serde_json::from_value(st.clone()).ok()),
-            status: v.get("status").and_then(|s| s.as_i64()).map(|s| s as i32),
+            status: v
+                .get("status")
+                .and_then(serde_json::Value::as_i64)
+                .map(|s| s as i32),
         };
 
         Ok(res)

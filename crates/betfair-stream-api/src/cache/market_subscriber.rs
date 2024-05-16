@@ -19,6 +19,7 @@ pub struct MarketSubscriber {
 }
 
 impl MarketSubscriber {
+    #[must_use]
     pub fn new<T>(
         stream_api_connection: &StreamApi<T>,
         filter: MarketFilter,
@@ -35,11 +36,13 @@ impl MarketSubscriber {
     }
 
     /// Create a new market subscriber.
+    /// # Errors
+    /// If the message cannot be sent to the stream.
     pub fn subscribe_to_market(
         &mut self,
         market_id: MarketId,
     ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
-        if let Some(market_ids) = &mut self.filter.market_ids {
+        if let Some(ref mut market_ids) = self.filter.market_ids {
             market_ids.push(market_id);
         } else {
             self.filter.market_ids = Some(vec![market_id]);
@@ -48,20 +51,21 @@ impl MarketSubscriber {
     }
 
     /// Unsubscribe from a market.
+    /// # Errors
+    /// If the message cannot be sent to the stream.
     pub fn unsubscribe_from_market(
         &mut self,
-        market_id: MarketId,
+        market_id: &MarketId,
     ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
         if let Some(x) = self.filter.market_ids.as_mut() {
-            x.retain(|x| x != &market_id)
+            x.retain(|iter_market_id| iter_market_id != market_id);
         }
 
         if self
             .filter
             .market_ids
             .as_ref()
-            .map(|x| x.is_empty())
-            .unwrap_or(true)
+            .map_or(true, alloc::vec::Vec::is_empty)
         {
             self.unsubscribe_from_all_markets()?;
         }
@@ -73,11 +77,14 @@ impl MarketSubscriber {
     ///
     /// Internally it uses a weird trick of subscribing to a market that does not exist to simulate
     /// unsubscribing from all markets.
-    /// https://forum.developer.betfair.com/forum/sports-exchange-api/exchange-api/34555-stream-api-unsubscribe-from-all-markets
+    /// [refernce](https://forum.developer.betfair.com/forum/sports-exchange-api/exchange-api/34555-stream-api-unsubscribe-from-all-markets)
+    ///
+    /// # Errors
+    /// If sending the request to the underlying stream fails.
     pub fn unsubscribe_from_all_markets(
         &mut self,
     ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
-        let market_that_does_not_exist = MarketId("1.23456789".to_string());
+        let market_that_does_not_exist = MarketId("1.23456789".to_owned());
         self.filter = MarketFilter::default();
 
         let req = RequestMessage::MarketSubscription(MarketSubscriptionMessage {
@@ -110,6 +117,10 @@ impl MarketSubscriber {
         Ok(())
     }
 
+    /// Resubscribe to the markets.
+    ///
+    /// # Errors
+    /// If sending the request to the underlying stream fails.
     pub fn resubscribe(
         &self,
     ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
@@ -131,10 +142,15 @@ impl MarketSubscriber {
         Ok(())
     }
 
-    pub fn filter(&self) -> &MarketFilter {
+    #[must_use]
+    pub const fn filter(&self) -> &MarketFilter {
         &self.filter
     }
 
+    /// Set the filter for the market subscription.
+    ///
+    /// # Errors
+    /// If the request to change the subscription fails.
     pub fn set_filter(
         &mut self,
         filter: MarketFilter,
@@ -143,10 +159,15 @@ impl MarketSubscriber {
         self.resubscribe()
     }
 
-    pub fn ladder_level(&self) -> Option<&LadderLevel> {
+    #[must_use]
+    pub const fn ladder_level(&self) -> Option<&LadderLevel> {
         self.ladder_level.as_ref()
     }
 
+    /// Set the ladder level for depth-based ladders.
+    ///
+    /// # Errors
+    /// If the request to change the subscription fails.
     pub fn set_ladder_level(
         &mut self,
         ladder_level: Option<LadderLevel>,
@@ -155,10 +176,15 @@ impl MarketSubscriber {
         self.resubscribe()
     }
 
-    pub fn market_data_fields(&self) -> &Vec<Fields> {
+    #[must_use]
+    pub const fn market_data_fields(&self) -> &Vec<Fields> {
         &self.market_data_fields
     }
 
+    /// Set the market data fields to subscribe to.
+    ///
+    /// # Errors
+    /// If the request to change the subscription fails.
     pub fn set_market_data_fields(
         &mut self,
         market_data_fields: Vec<Fields>,

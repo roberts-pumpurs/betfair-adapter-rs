@@ -14,7 +14,7 @@ pub struct OrderSubscriptionMessage {
     pub segmentation_enabled: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub order_filter: Option<Box<OrderFilter>>,
-    /// Token value delta (received in MarketChangeMessage) that should be passed to resume a
+    /// Token value delta (received in `MarketChangeMessage`) that should be passed to resume a
     /// subscription
     #[serde(skip_serializing_if = "Option::is_none")]
     pub clk: Option<String>,
@@ -22,7 +22,7 @@ pub struct OrderSubscriptionMessage {
     /// bounds are 500 to 5000)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub heartbeat_ms: Option<i64>,
-    /// Token value (received in initial MarketChangeMessage) that should be passed to resume a
+    /// Token value (received in initial `MarketChangeMessage`) that should be passed to resume a
     /// subscription
     #[serde(skip_serializing_if = "Option::is_none")]
     pub initial_clk: Option<String>,
@@ -44,11 +44,11 @@ pub struct OrderFilter {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub account_ids: Option<Vec<i64>>,
     /// Restricts to specified customerStrategyRefs; this will filter orders and
-    /// StrategyMatchChanges accordingly (Note: overall position is not filtered)
+    /// `StrategyMatchChanges` accordingly (Note: overall position is not filtered)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub customer_strategy_refs: Option<Vec<CustomerStrategyRef>>,
     /// Returns strategy positions (See: OrderRunnerChange.smc=Map<customerStrategyRef,
-    /// StrategyMatchChange>) - these are sent in delta format as per overall position.
+    /// `StrategyMatchChange`>) - these are sent in delta format as per overall position.
     /// Default=false
     #[serde(skip_serializing_if = "Option::is_none")]
     pub partition_matched_by_strategy_ref: Option<bool>,

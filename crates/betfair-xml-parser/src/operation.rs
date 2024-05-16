@@ -41,14 +41,14 @@ pub struct Parameters {
 pub enum ParametersItems {
     /// Request tag
     Request(Request),
-    /// SimpleResponse tag
+    /// `SimpleResponse` tag
     SimpleResponse(SimpleResponse),
     /// Exceptions tag
     Exceptions(Exceptions),
 }
 
 /// Representation of the <request> tag
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Request {
     /// Vector of potential children of the tag
     #[serde(rename = "$value")]
@@ -56,7 +56,7 @@ pub struct Request {
 }
 
 /// Representation of the <simpleResponse> tag
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SimpleResponse {
     /// The type of the response
     pub r#type: String,
@@ -65,7 +65,7 @@ pub struct SimpleResponse {
 }
 
 /// Representation of the <exceptions> tag
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Exceptions {
     /// Vector of potential exact Exception tags
     #[serde(rename = "$value")]
@@ -73,7 +73,7 @@ pub struct Exceptions {
 }
 
 /// Representation of the <exception> tag
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Exception {
     /// The type of the exception
     pub r#type: String,
@@ -256,7 +256,7 @@ mod tests {
                 })
             ]
         };
-        assert_eq!(op, expected)
+        assert_eq!(op, expected);
     }
 
     #[rstest]
