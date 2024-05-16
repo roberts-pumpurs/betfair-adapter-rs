@@ -61,6 +61,7 @@ typed-builder = "0.18"
 redact = { version = "0.1", features = ["serde"] }
 trait-variant = "0.1"
 itertools = "0.12"
+backoff = { version = "0.4", features = ["tokio"] }
 
 # Async
 tokio = { version = "1.0", features = ["full", "tracing"] }

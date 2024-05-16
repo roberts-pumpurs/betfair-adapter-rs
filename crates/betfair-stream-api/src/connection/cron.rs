@@ -3,6 +3,7 @@ use core::fmt::Debug;
 use core::pin::Pin;
 use core::task::{Context, Poll};
 
+use backoff::{ExponentialBackoff, ExponentialBackoffBuilder};
 use betfair_adapter::{ApplicationKey, SessionToken, UnauthenticatedBetfairRpcProvider};
 use betfair_stream_types::request::heartbeat_message::HeartbeatMessage;
 use betfair_stream_types::request::RequestMessage;
@@ -73,12 +74,22 @@ impl StreamConnectioProcessor {
             })?;
 
         // connect to the stream
-        let connection = crate::tls_sream::connect(self.provider.base().stream.clone())
-            .await
-            .map_err(|x| {
-                tracing::error!(err =? x, "Failed establish the connection to the stream");
-                AsyncTaskStopReason::NeedsRestart(NeedsRestart)
-            });
+        let connection = retry(|| {
+            let provider = self.provider.clone();
+            async move {
+                crate::tls_sream::connect(provider.base().stream.clone())
+                    .await
+                    .map_err(|x| {
+                        tracing::error!(err =? x, "Failed establish the connection to the stream");
+                        AsyncTaskStopReason::NeedsRestart(NeedsRestart)
+                    })
+                    .map_err(|x| backoff::Error::Transient {
+                        err: x,
+                        retry_after: None,
+                    })
+            }
+        })
+        .await;
         let connection = match connection {
             Ok(connection) => connection,
             Err(err) => {
@@ -419,4 +430,17 @@ async fn heartbeat_loop(
     command_sender: broadcast::Sender<RequestMessage>,
 ) -> Result<Never, FatalError> {
     HeartbeatFuture::new(hb, command_sender).await
+}
+
+async fn retry<Fn, I, Fut>(f: Fn) -> Result<I, AsyncTaskStopReason>
+where
+    Fn: FnMut() -> Fut,
+    Fut: Future<Output = Result<I, backoff::Error<AsyncTaskStopReason>>>,
+{
+    let backoff_settings = ExponentialBackoffBuilder::new()
+        .with_initial_interval(std::time::Duration::from_secs(5))
+        .with_max_interval(std::time::Duration::from_secs(60))
+        .with_multiplier(1.5_f64)
+        .build();
+    backoff::future::retry(backoff_settings, f).await
 }

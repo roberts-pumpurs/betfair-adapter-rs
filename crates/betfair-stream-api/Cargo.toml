@@ -30,6 +30,7 @@ eyre.workspace = true
 rustls-native-certs.workspace = true
 trait-variant.workspace = true
 itertools.workspace = true
+backoff.workspace = true
 rustls-pemfile = { workspace = true, optional = true }
 
 [dev-dependencies]
