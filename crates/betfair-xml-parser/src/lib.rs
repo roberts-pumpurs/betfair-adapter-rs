@@ -21,7 +21,7 @@ pub mod operation;
 pub mod simple_type;
 
 /// Top level representation of the XML file
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Interface {
     /// The name of the interface
     pub name: String,
@@ -39,7 +39,7 @@ pub struct Interface {
 }
 
 /// A child item of the <interface> tag
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum InterfaceItems {
     /// The description of the interface

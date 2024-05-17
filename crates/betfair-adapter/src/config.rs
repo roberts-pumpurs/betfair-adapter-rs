@@ -2,12 +2,12 @@ use crate::{secret, urls};
 
 #[derive(Debug, Clone)]
 pub struct BetfairConfigBuilder<
-    T: urls::RetrieveUrl<urls::RestBase> + core::fmt::Debug,
-    K: urls::RetrieveUrl<urls::KeepAlive> + core::fmt::Debug,
-    V: urls::RetrieveUrl<urls::BotLogin> + core::fmt::Debug,
-    Z: urls::RetrieveUrl<urls::Logout> + core::fmt::Debug,
-    X: urls::RetrieveUrl<urls::InteractiveLogin> + core::fmt::Debug,
-    A: urls::RetrieveUrl<urls::Stream> + core::fmt::Debug,
+    T: urls::RetrieveUrl<urls::RestBase> + core::fmt::Debug = urls::jurisdiction::Global,
+    K: urls::RetrieveUrl<urls::KeepAlive> + core::fmt::Debug = urls::jurisdiction::Global,
+    V: urls::RetrieveUrl<urls::BotLogin> + core::fmt::Debug = urls::jurisdiction::Global,
+    Z: urls::RetrieveUrl<urls::Logout> + core::fmt::Debug = urls::jurisdiction::Global,
+    X: urls::RetrieveUrl<urls::InteractiveLogin> + core::fmt::Debug = urls::jurisdiction::Global,
+    A: urls::RetrieveUrl<urls::Stream> + core::fmt::Debug = urls::jurisdiction::Global,
 > {
     pub rest: T,
     pub keep_alive: K,
