@@ -36,7 +36,6 @@ async fn main() -> eyre::Result<()> {
         use betfair_stream_api::BetfairProviderExt;
         UnauthenticatedBetfairRpcProvider::new(secret_provider.clone())?
             .connect_to_stream_with_hb(HeartbeatStrategy::Interval(Duration::from_secs(5)))
-            .await
             .run_with_default_runtime()
             .enable_cache()
     };

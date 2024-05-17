@@ -20,9 +20,8 @@ async fn successful_handshake() {
             println!("here");
             let bf_mock = betfair_rpc_server_mock::Server::new_with_stream_url(url).await;
             let client = bf_mock.client().await;
-            let mut stream_api_abi = client
-                .connect_to_stream_with_hb(betfair_stream_api::HeartbeatStrategy::None)
-                .await;
+            let mut stream_api_abi =
+                client.connect_to_stream_with_hb(betfair_stream_api::HeartbeatStrategy::None);
             let mut stream = stream_api_abi.run_with_default_runtime();
             tracing::info!("stream created");
             while let Some(value) = stream.next().await {

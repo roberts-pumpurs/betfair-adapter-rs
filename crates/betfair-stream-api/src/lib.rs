@@ -13,20 +13,18 @@ pub use connection::{CacheEnabledMessages, ExternalUpdates, MetadataUpdates, Str
 pub use error::StreamError;
 pub use futures::StreamExt;
 
-#[trait_variant::make(Send)]
 pub trait BetfairProviderExt {
-    async fn connect_to_stream(&self) -> StreamApiBuilder;
+    fn connect_to_stream(&self) -> StreamApiBuilder;
 
-    async fn connect_to_stream_with_hb(&self, hb: HeartbeatStrategy) -> StreamApiBuilder;
+    fn connect_to_stream_with_hb(&self, hb: HeartbeatStrategy) -> StreamApiBuilder;
 }
 
 impl BetfairProviderExt for betfair_adapter::UnauthenticatedBetfairRpcProvider {
-    async fn connect_to_stream(&self) -> StreamApiBuilder {
+    fn connect_to_stream(&self) -> StreamApiBuilder {
         self.connect_to_stream_with_hb(HeartbeatStrategy::None)
-            .await
     }
 
-    async fn connect_to_stream_with_hb(&self, hb: HeartbeatStrategy) -> StreamApiBuilder {
+    fn connect_to_stream_with_hb(&self, hb: HeartbeatStrategy) -> StreamApiBuilder {
         StreamApiBuilder::new(self.clone(), hb)
     }
 }

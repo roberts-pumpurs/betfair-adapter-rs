@@ -14,9 +14,8 @@ async fn successful_heartbeat() {
         async move {
             let bf_mock = betfair_rpc_server_mock::Server::new_with_stream_url(url).await;
             let client = bf_mock.client().await;
-            let stream_api_abi = client
-                .connect_to_stream_with_hb(HeartbeatStrategy::Interval(duration))
-                .await;
+            let stream_api_abi =
+                client.connect_to_stream_with_hb(HeartbeatStrategy::Interval(duration));
 
             let mut stream = stream_api_abi.run_with_default_runtime();
             while let Some(value) = stream.next().await {

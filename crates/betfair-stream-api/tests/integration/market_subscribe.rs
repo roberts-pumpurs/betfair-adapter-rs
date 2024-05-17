@@ -14,8 +14,7 @@ async fn market_subscription() {
         async move {
             let bf_mock = betfair_rpc_server_mock::Server::new_with_stream_url(url).await;
             let client = bf_mock.client().await;
-            let mut stream_api_abi = client.connect_to_stream().await;
-            let mut stream = stream_api_abi.run_with_default_runtime();
+            let mut stream = client.connect_to_stream().run_with_default_runtime();
 
             let mut ms = MarketSubscriber::new(
             &stream,

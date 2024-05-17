@@ -60,7 +60,6 @@ async fn main() -> eyre::Result<()> {
 
         UnauthenticatedBetfairRpcProvider::new(secret_provider.clone())?
             .connect_to_stream()
-            .await
             .run_with_default_runtime()
             .enable_cache()
     };
