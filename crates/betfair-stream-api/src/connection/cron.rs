@@ -3,7 +3,7 @@ use core::fmt::Debug;
 use core::pin::Pin;
 use core::task::{Context, Poll};
 
-use backoff::{ExponentialBackoff, ExponentialBackoffBuilder};
+use backoff::ExponentialBackoffBuilder;
 use betfair_adapter::{ApplicationKey, SessionToken, UnauthenticatedBetfairRpcProvider};
 use betfair_stream_types::request::heartbeat_message::HeartbeatMessage;
 use betfair_stream_types::request::RequestMessage;
@@ -432,15 +432,15 @@ async fn heartbeat_loop(
     HeartbeatFuture::new(hb, command_sender).await
 }
 
-async fn retry<Fn, I, Fut>(f: Fn) -> Result<I, AsyncTaskStopReason>
+async fn retry<Fn, I, Fut>(operation: Fn) -> Result<I, AsyncTaskStopReason>
 where
     Fn: FnMut() -> Fut,
     Fut: Future<Output = Result<I, backoff::Error<AsyncTaskStopReason>>>,
 {
     let backoff_settings = ExponentialBackoffBuilder::new()
-        .with_initial_interval(std::time::Duration::from_secs(5))
-        .with_max_interval(std::time::Duration::from_secs(60))
+        .with_initial_interval(core::time::Duration::from_secs(5))
+        .with_max_interval(core::time::Duration::from_secs(60))
         .with_multiplier(1.5_f64)
         .build();
-    backoff::future::retry(backoff_settings, f).await
+    backoff::future::retry(backoff_settings, operation).await
 }

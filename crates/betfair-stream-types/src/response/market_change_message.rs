@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use super::{DataChange, DatasetChangeMessage, UpdateSet2, UpdateSet3};
 use crate::request::market_subscription_message::StreamMarketFilterBettingType;
 
-#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MarketChangeMessage(pub DatasetChangeMessage<MarketChange>);
 

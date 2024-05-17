@@ -31,6 +31,9 @@ pub_use = "allow"
 single_char_lifetime_names = "allow"
 multiple_crate_versions = "allow"
 exhaustive_structs = "allow"
+future_not_send = "allow"
+separated_literal_suffix = "allow"
+mod_module_files = "allow"
 
 [workspace.dependencies]
 # Our crates

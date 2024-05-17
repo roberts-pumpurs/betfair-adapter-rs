@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::common::{Description, Parameter};
 
 /// Representation of the <exceptionType> tag
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ExceptionType {
     /// The name of the exception

@@ -10,7 +10,7 @@ pub mod market_change_message;
 pub mod order_change_message;
 pub mod status_message;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "op")]
 #[serde(rename_all = "camelCase")]
 pub enum ResponseMessage {

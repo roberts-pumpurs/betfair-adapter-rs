@@ -18,7 +18,7 @@ pub struct Operation {
 }
 
 /// A child item of the <operation> tag
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum OperationItem {
     /// Description tag
@@ -28,7 +28,7 @@ pub enum OperationItem {
 }
 
 /// Representation of the <parameters> tag
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Parameters {
     /// Vector of potential children of the tag
     #[serde(rename = "$value")]
@@ -36,7 +36,7 @@ pub struct Parameters {
 }
 
 /// A child item of the <parameters> tag
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum ParametersItems {
     /// Request tag
