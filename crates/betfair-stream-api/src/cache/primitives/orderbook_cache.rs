@@ -12,7 +12,7 @@ use super::orderbook_runner_cache::OrderBookRunner;
 pub struct OrderBookCache {
     market_id: MarketId,
     publish_time: DateTime<Utc>,
-    closed: Option<bool>,
+    closed: bool,
     /// cache of orders placed on a runner
     runners: HashMap<(SelectionId, Option<Handicap>), OrderBookRunner>,
 }
@@ -22,52 +22,54 @@ impl OrderBookCache {
         Self {
             market_id,
             publish_time,
-            closed: None,
+            closed: false,
             runners: HashMap::new(),
         }
     }
 
     pub fn is_closed(&self) -> bool {
-        self.closed.unwrap_or(false)
+        self.closed
     }
 
     pub fn update_cache(&mut self, change: OrderMarketChange, publish_time: DateTime<Utc>) {
         self.publish_time = publish_time;
-        if let Some(closed) = change.closed {
-            self.closed = Some(closed);
-        }
+        self.closed = change.closed.unwrap_or(self.closed);
 
-        let Some(order_runner_change) = change.order_runner_change else {
-            return;
-        };
+        if let Some(order_runner_change) = change.order_runner_change {
+            for runner_change in order_runner_change {
+                let runner = self
+                    .runners
+                    .entry((runner_change.id.clone(), runner_change.handicap))
+                    .or_insert_with(|| {
+                        OrderBookRunner::new(self.market_id.clone(), runner_change.id.clone())
+                    });
 
-        for runner_change in order_runner_change {
-            let runner = self
-                .runners
-                .entry((runner_change.id.clone(), runner_change.handicap))
-                .or_insert_with(|| OrderBookRunner::new(self.market_id.clone(), runner_change.id));
-
-            if let Some(ml) = runner_change.matched_lays {
-                runner.update_matched_lays(ml);
-            }
-            if let Some(mb) = runner_change.matched_backs {
-                runner.update_matched_backs(mb);
-            }
-            if let Some(uo) = runner_change.unmatched_orders {
-                runner.update_unmatched(uo);
+                if let Some(ml) = runner_change.matched_lays {
+                    runner.update_matched_lays(ml);
+                }
+                if let Some(mb) = runner_change.matched_backs {
+                    runner.update_matched_backs(mb);
+                }
+                if let Some(uo) = runner_change.unmatched_orders {
+                    runner.update_unmatched(uo);
+                }
             }
         }
     }
 
-    pub const fn publish_time(&self) -> DateTime<Utc> {
+    pub fn publish_time(&self) -> DateTime<Utc> {
         self.publish_time
     }
 
-    pub const fn runners(&self) -> &HashMap<(SelectionId, Option<Handicap>), OrderBookRunner> {
+    pub fn runners(&self) -> &HashMap<(SelectionId, Option<Handicap>), OrderBookRunner> {
         &self.runners
     }
 
-    pub const fn market_id(&self) -> &MarketId {
+    pub fn into_runners(self) -> HashMap<(SelectionId, Option<Handicap>), OrderBookRunner> {
+        self.runners
+    }
+
+    pub fn market_id(&self) -> &MarketId {
         &self.market_id
     }
 }
