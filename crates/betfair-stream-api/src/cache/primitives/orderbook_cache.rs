@@ -62,4 +62,12 @@ impl OrderBookCache {
     pub const fn publish_time(&self) -> DateTime<Utc> {
         self.publish_time
     }
+
+    pub const fn runners(&self) -> &HashMap<(SelectionId, Option<Handicap>), OrderBookRunner> {
+        &self.runners
+    }
+
+    pub const fn market_id(&self) -> &MarketId {
+        &self.market_id
+    }
 }
