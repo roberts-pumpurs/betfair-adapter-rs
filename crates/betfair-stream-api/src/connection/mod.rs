@@ -17,6 +17,7 @@ use self::cron::FatalError;
 use crate::cache::primitives::{MarketBookCache, OrderBookCache};
 
 #[derive(Debug)]
+#[pin_project::pin_project]
 pub struct StreamApi<T> {
     join_set: JoinSet<Result<Never, FatalError>>,
     rt_handle: tokio::runtime::Handle,
@@ -146,8 +147,6 @@ impl<T> Stream for StreamApi<T> {
         }
     }
 }
-
-impl<T> Unpin for StreamApi<T> {}
 
 #[cfg(test)]
 mod tests {

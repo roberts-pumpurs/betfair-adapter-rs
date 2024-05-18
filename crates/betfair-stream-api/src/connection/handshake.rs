@@ -11,9 +11,11 @@ use super::cron::NeedsRestart;
 use crate::tls_sream::RawStreamApiConnection;
 use crate::{ExternalUpdates, MetadataUpdates};
 
+#[pin_project::pin_project]
 pub struct Handshake<'a> {
     session_token: &'a SessionToken,
     application_key: &'a ApplicationKey,
+    #[pin]
     connection: Pin<&'a mut RawStreamApiConnection>,
     state: State,
 }
@@ -42,7 +44,6 @@ enum State {
     AwaitPollForConnectionMessage,
     AwaitStatusMessage,
 }
-impl<'a> Unpin for Handshake<'a> {}
 
 impl<'a> Stream for Handshake<'a> {
     type Item = Result<ExternalUpdates<ResponseMessage>, NeedsRestart>;

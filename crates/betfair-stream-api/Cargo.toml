@@ -32,6 +32,7 @@ trait-variant.workspace = true
 itertools.workspace = true
 backoff.workspace = true
 rustls-pemfile = { workspace = true, optional = true }
+pin-project.workspace = true
 
 [dev-dependencies]
 rust_decimal_macros.workspace = true

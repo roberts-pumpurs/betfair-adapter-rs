@@ -279,6 +279,7 @@ dependencies = [
  "futures-concurrency",
  "futures-util",
  "itertools",
+ "pin-project",
  "pretty_assertions",
  "rstest",
  "rust_decimal",
