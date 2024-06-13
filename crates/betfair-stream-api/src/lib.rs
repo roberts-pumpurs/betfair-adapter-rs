@@ -8,6 +8,7 @@ extern crate alloc;
 pub use betfair_stream_types as types;
 pub use cache::market_subscriber::MarketSubscriber;
 pub use cache::order_subscriber::OrderSubscriber;
+pub use cache::primitives::{MarketBookCache, OrderBookCache};
 pub use connection::builder::{HeartbeatStrategy, StreamApiBuilder};
 pub use connection::{CacheEnabledMessages, ExternalUpdates, MetadataUpdates, StreamApi};
 pub use error::StreamError;
