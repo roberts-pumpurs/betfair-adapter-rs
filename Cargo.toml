@@ -51,11 +51,7 @@ betfair-cert-gen = { path = "crates/betfair-cert-gen" }
 rust_decimal = "1"
 rust_decimal_macros = "1"
 rand = { version = "0.8", features = ["small_rng"] }
-chrono = { version = "0.4", default-features = false, features = [
-    "serde",
-    "clock",
-    "std",
-] }
+chrono = { version = "0.4", default-features = false, features = ["serde", "clock", "std"] }
 eyre = "0.6"
 thiserror = "1.0"
 heck = "0.4"
@@ -84,13 +80,7 @@ serde_json = "1.0"
 
 # HTTP
 hyper = { version = "1", features = ["full"] }
-reqwest = { version = "0.11", default-features = false, features = [
-    "json",
-    "gzip",
-    "deflate",
-    "rustls-tls",
-    "stream",
-] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "gzip", "deflate", "rustls-tls", "stream"] }
 url = "2"
 http = "1"
 rustls = "0.22"
@@ -116,14 +106,7 @@ json-rpc-types = "1"
 
 # Tracing
 tracing = { version = "0.1" }
-tracing-subscriber = { version = "0.3", features = [
-    "env-filter",
-    "fmt",
-    "tracing-log",
-    "json",
-    "valuable",
-    "tracing",
-] }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "tracing-log", "json", "valuable", "tracing"] }
 
 # xtask & examples
 clap = { version = "4", features = ["derive"] }
