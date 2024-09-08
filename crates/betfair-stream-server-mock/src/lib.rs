@@ -41,7 +41,7 @@ impl StreamAPIBackend {
 
         let url = Url::parse(&format!("http://{}", listener_addr)).unwrap();
 
-        CERTIFICATE.set(cert.clone()).unwrap();
+        let _ = CERTIFICATE.set(cert.clone());
 
         Self {
             listener_addr,
