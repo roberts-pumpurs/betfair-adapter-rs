@@ -9,6 +9,9 @@ pub use wiremock;
 use wiremock::matchers::{method, path, PathExactMatcher};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
+mod urlencoded_matcher;
+use urlencoded_matcher::FormEncodedBodyMatcher;
+
 pub const USERNAME: &str = "usrn";
 pub const PASSWORD: &str = "pasw";
 pub const APP_KEY: &str = "qa{n}pCPTV]EYTLGVO";
@@ -68,6 +71,10 @@ impl Server {
         );
         Mock::given(method("POST"))
             .and(path(BOT_LOGIN_URL))
+            .and(FormEncodedBodyMatcher::new(vec![
+                ("username".to_owned(), USERNAME.to_owned()),
+                ("password".to_owned(), PASSWORD.to_owned()),
+            ]))
             .respond_with(ResponseTemplate::new(200).set_body_json(login_response))
             .named("Login")
             .mount(&mock_server)
@@ -92,10 +99,10 @@ impl Server {
         let identity = reqwest::Identity::from_pem(CERTIFICATE.as_bytes()).unwrap();
 
         SecretProvider {
-            application_key: ApplicationKey::new(APP_KEY.to_string()),
+            application_key: ApplicationKey::new(APP_KEY.to_owned()),
             identity: Identity::new(identity),
-            password: Password::new(PASSWORD.to_string()),
-            username: Username::new(USERNAME.to_string()),
+            password: Password::new(PASSWORD.to_owned()),
+            username: Username::new(USERNAME.to_owned()),
         }
     }
 
@@ -151,9 +158,9 @@ impl Server {
     pub fn mock_keep_alive(&self) -> Mock {
         let response = json!(
             {
-                "token":"SESSIONTOKEN",
+                "token": SESSION_TOKEN,
                 "product":"AppKey",
-                "status":"SUCCESS",
+                "status": "SUCCESS",
                 "error":""
             }
         );
