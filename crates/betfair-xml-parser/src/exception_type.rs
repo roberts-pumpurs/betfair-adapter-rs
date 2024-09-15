@@ -121,7 +121,7 @@ mod tests {
         assert_eq!(
             exception.values[0],
             ExceptionTypeItems::Description(Description {
-                value: Some("This exception is thrown when an operation fails".to_string()),
+                value: Some("This exception is thrown when an operation fails".to_owned()),
             })
         );
         assert!(matches!(

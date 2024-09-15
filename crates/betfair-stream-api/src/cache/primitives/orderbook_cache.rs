@@ -18,6 +18,7 @@ pub struct OrderBookCache {
 }
 
 impl OrderBookCache {
+    #[must_use]
     pub fn new(market_id: MarketId, publish_time: DateTime<Utc>) -> Self {
         Self {
             market_id,
@@ -27,7 +28,8 @@ impl OrderBookCache {
         }
     }
 
-    pub fn is_closed(&self) -> bool {
+    #[must_use]
+    pub const fn is_closed(&self) -> bool {
         self.closed
     }
 
@@ -57,19 +59,23 @@ impl OrderBookCache {
         }
     }
 
-    pub fn publish_time(&self) -> DateTime<Utc> {
+    #[must_use]
+    pub const fn publish_time(&self) -> DateTime<Utc> {
         self.publish_time
     }
 
-    pub fn runners(&self) -> &HashMap<(SelectionId, Option<Handicap>), OrderBookRunner> {
+    #[must_use]
+    pub const fn runners(&self) -> &HashMap<(SelectionId, Option<Handicap>), OrderBookRunner> {
         &self.runners
     }
 
+    #[must_use]
     pub fn into_runners(self) -> HashMap<(SelectionId, Option<Handicap>), OrderBookRunner> {
         self.runners
     }
 
-    pub fn market_id(&self) -> &MarketId {
+    #[must_use]
+    pub const fn market_id(&self) -> &MarketId {
         &self.market_id
     }
 }

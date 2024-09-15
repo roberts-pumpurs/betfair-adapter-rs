@@ -73,18 +73,18 @@ mod tests {
         assert_eq!(simple_type.valid_values.unwrap().items, vec![
             Value {
                 id: None,
-                name: "COMPETITION".to_string(),
-                description: Description {value: Some("If not selected then the competition will not be returned with marketCatalogue".to_string() )},
+                name: "COMPETITION".to_owned(),
+                description: Description {value: Some("If not selected then the competition will not be returned with marketCatalogue".to_owned() )},
             },
             Value {
                 id: None,
-                name: "EVENT".to_string(),
-                description: Description {value: Some("If not selected then the event will not be returned with marketCatalogue".to_string() )},
+                name: "EVENT".to_owned(),
+                description: Description {value: Some("If not selected then the event will not be returned with marketCatalogue".to_owned() )},
             },
             Value {
                 id: None,
-                name: "EVENT_TYPE".to_string(),
-                description: Description {value: Some("If not selected then the eventType will not be returned with marketCatalogue".to_string() )},
+                name: "EVENT_TYPE".to_owned(),
+                description: Description {value: Some("If not selected then the eventType will not be returned with marketCatalogue".to_owned() )},
             },
         ]);
     }
@@ -116,17 +116,17 @@ mod tests {
             vec![
                 Value {
                     id: None,
-                    name: "SUCCESS".to_string(),
+                    name: "SUCCESS".to_owned(),
                     description: Description { value: None },
                 },
                 Value {
                     id: None,
-                    name: "FAILURE".to_string(),
+                    name: "FAILURE".to_owned(),
                     description: Description { value: None },
                 },
                 Value {
                     id: None,
-                    name: "TIMEOUT".to_string(),
+                    name: "TIMEOUT".to_owned(),
                     description: Description { value: None },
                 },
             ]

@@ -41,7 +41,7 @@ impl CodeInjector for CodeInjectorV1 {
 
 impl CodeInjectorV1 {
     pub fn new() -> Self {
-        CodeInjectorV1 {
+        Self {
             module_level_preamble: quote! {
                 use std::fmt::Debug;
                 use serde::{Serialize, Deserialize};

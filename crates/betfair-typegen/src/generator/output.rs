@@ -31,7 +31,7 @@ impl GeneratedOutput {
 
         for (module_name, submodule) in &self.submodules {
             // Write out the submodule
-            let submodule_file = path.as_ref().join(format!("{}.rs", module_name));
+            let submodule_file = path.as_ref().join(format!("{module_name}.rs"));
             std::fs::write(&submodule_file, submodule.to_string().as_bytes()).unwrap();
 
             let mut cmd = std::process::Command::new("rustfmt");
@@ -44,22 +44,24 @@ impl GeneratedOutput {
         Ok(())
     }
 
-    /// Returns the root module file as a TokenStream
-    pub fn root_mod(&self) -> &TokenStream {
+    /// Returns the root module file as a `TokenStream`
+    #[must_use]
+    pub const fn root_mod(&self) -> &TokenStream {
         &self.root
     }
 
-    /// Returns the submodules as a slice of tuples of the module name and the TokenStream
+    /// Returns the submodules as a slice of tuples of the module name and the `TokenStream`
+    #[must_use]
     pub fn submodules(&self) -> &[(String, TokenStream)] {
         self.submodules.as_ref()
     }
 
-    /// Returns the root module file as a mutable TokenStream
+    /// Returns the root module file as a mutable `TokenStream`
     pub fn submodules_mut(&mut self) -> &mut Vec<(String, TokenStream)> {
         &mut self.submodules
     }
 
-    /// Returns the submodules as a mutable slice of tuples of the module name and the TokenStream
+    /// Returns the submodules as a mutable slice of tuples of the module name and the `TokenStream`
     pub fn root_mut(&mut self) -> &mut TokenStream {
         &mut self.root
     }

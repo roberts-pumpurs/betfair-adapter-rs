@@ -27,7 +27,7 @@ pub struct StreamApi<T> {
 }
 
 impl<T> StreamApi<T> {
-    pub(crate) fn new(
+    pub(crate) const fn new(
         join_set: JoinSet<Result<Never, FatalError>>,
         data_feed: tokio::sync::mpsc::Receiver<ExternalUpdates<T>>,
         command_sender: tokio::sync::broadcast::Sender<RequestMessage>,
@@ -200,7 +200,7 @@ mod tests {
 
         let mut connection = StreamApi::new(join_set, data_receiver, command_sender, handle);
 
-        let expected_update = ExternalUpdates::Layer("Test".to_string());
+        let expected_update = ExternalUpdates::Layer("Test".to_owned());
         data_sender.send(expected_update.clone()).await.unwrap();
 
         match connection.next().await {
@@ -228,7 +228,7 @@ mod tests {
 
         let mut connection = StreamApi::new(join_set, data_receiver, command_sender, handle);
 
-        let expected_update = ExternalUpdates::Layer("Test".to_string());
+        let expected_update = ExternalUpdates::Layer("Test".to_owned());
         data_sender.send(expected_update.clone()).await.unwrap();
 
         match connection.next().await {
@@ -255,7 +255,7 @@ mod tests {
 
         let mut connection = StreamApi::new(join_set, data_receiver, command_sender, handle);
 
-        let expected_update = ExternalUpdates::Layer("Test".to_string());
+        let expected_update = ExternalUpdates::Layer("Test".to_owned());
         data_sender.send(expected_update.clone()).await.unwrap();
 
         match connection.next().await {

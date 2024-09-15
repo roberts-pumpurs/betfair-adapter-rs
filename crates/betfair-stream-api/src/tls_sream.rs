@@ -319,8 +319,8 @@ mod tests {
         let msg = RequestMessage::Authentication(
             betfair_stream_types::request::authentication_message::AuthenticationMessage {
                 id: Some(1),
-                session: "sss".to_string(),
-                app_key: "aaaa".to_string(),
+                session: "sss".to_owned(),
+                app_key: "aaaa".to_owned(),
             },
         );
         let mut codec = StreamAPIClientCodec;

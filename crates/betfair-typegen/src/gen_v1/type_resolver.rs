@@ -14,22 +14,22 @@ impl TypeResolverV1 {
         fn transform_to_rust_types(input: &str) -> String {
             // TODO make this a configurable thing
             match input {
-                "string" => "String".to_string(),
-                "int" => "i32".to_string(),
-                "i32" => "i32".to_string(),
-                "i64" => "i64".to_string(),
-                "double" => "rust_decimal::Decimal".to_string(),
-                "dateTime" => "DateTime<Utc>".to_string(),
-                "boolean" => "bool".to_string(),
-                "bool" => "bool".to_string(),
-                "CustomerRef" => "crate::customer_ref::CustomerRef".to_string(),
+                "string" => "String".to_owned(),
+                "int" => "i32".to_owned(),
+                "i32" => "i32".to_owned(),
+                "i64" => "i64".to_owned(),
+                "double" => "rust_decimal::Decimal".to_owned(),
+                "dateTime" => "DateTime<Utc>".to_owned(),
+                "boolean" => "bool".to_owned(),
+                "bool" => "bool".to_owned(),
+                "CustomerRef" => "crate::customer_ref::CustomerRef".to_owned(),
                 "CustomerStrategyRef" => {
-                    "crate::customer_strategy_ref::CustomerStrategyRef".to_string()
+                    "crate::customer_strategy_ref::CustomerStrategyRef".to_owned()
                 }
-                "CustomerOrderRef" => "crate::customer_order_ref::CustomerOrderRef".to_string(),
-                "Price" => "crate::price::Price".to_string(),
-                "Size" => "crate::size::Size".to_string(),
-                "float" => "rust_decimal::Decimal".to_string(),
+                "CustomerOrderRef" => "crate::customer_order_ref::CustomerOrderRef".to_owned(),
+                "Price" => "crate::price::Price".to_owned(),
+                "Size" => "crate::size::Size".to_owned(),
+                "float" => "rust_decimal::Decimal".to_owned(),
                 _ => input.to_pascal_case(),
             }
         }
@@ -40,18 +40,18 @@ impl TypeResolverV1 {
             }
             TypePlural::List(value) => {
                 let value = transform_to_rust_types(&value);
-                let value = format!("Vec<{}>", value);
+                let value = format!("Vec<{value}>");
                 syn::parse_str(&value).unwrap()
             }
             TypePlural::Set(value) => {
                 let value = transform_to_rust_types(&value);
-                let value = format!("Vec<{}>", value);
+                let value = format!("Vec<{value}>");
                 syn::parse_str(&value).unwrap()
             }
             TypePlural::Map { key, value } => {
                 let key = transform_to_rust_types(&key);
                 let value = transform_to_rust_types(&value);
-                let value = format!("std::collections::HashMap<{}, {}>", key, value);
+                let value = format!("std::collections::HashMap<{key}, {value}>");
                 syn::parse_str(&value).unwrap()
             }
         }
@@ -69,12 +69,12 @@ impl TypeResolverV1 {
         } else if item.contains("map(") {
             let item = item.replace("map(", "");
             let item = item.replace(')', "");
-            let mut item = item.split(',').map(|x| x.to_string());
+            let mut item = item.split(',').map(std::borrow::ToOwned::to_owned);
             let key = item.next().unwrap();
             let value = item.next().unwrap();
             TypePlural::Map { key, value }
         } else {
-            TypePlural::Singular(item.to_string())
+            TypePlural::Singular(item.to_owned())
         }
     }
 }

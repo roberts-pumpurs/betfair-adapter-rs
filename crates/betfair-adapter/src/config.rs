@@ -29,7 +29,7 @@ impl
     >
 {
     #[must_use]
-    pub fn new_with_global_jurisdiction(secret_provider: secret::SecretProvider) -> Self {
+    pub const fn new_with_global_jurisdiction(secret_provider: secret::SecretProvider) -> Self {
         Self {
             rest: urls::jurisdiction::Global,
             keep_alive: urls::jurisdiction::Global,

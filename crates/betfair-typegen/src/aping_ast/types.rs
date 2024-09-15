@@ -40,14 +40,14 @@ fn pad_with(pad: &str, text: impl AsRef<str>) -> proc_macro2::TokenStream {
         .as_ref()
         .split_terminator('\n')
         .collect::<Vec<_>>()
-        .join(format!("\n{}", pad).as_str());
+        .join(format!("\n{pad}").as_str());
     quote::quote! {
         #[doc = #text]
     }
 }
 
 impl Comment {
-    pub(crate) fn new(item: String) -> Self {
+    pub(crate) const fn new(item: String) -> Self {
         Self { item }
     }
 }
@@ -56,7 +56,7 @@ impl Comment {
 pub(crate) struct DataTypeParameter(String);
 
 impl DataTypeParameter {
-    pub(crate) fn new(s: String) -> Self {
+    pub(crate) const fn new(s: String) -> Self {
         Self(s)
     }
 

@@ -41,12 +41,12 @@ async fn cancel_bets_unsuccessful() {
     // Action
     let client = server.client().await;
     let client = client.authenticate().await.unwrap();
-    let market_id = MarketId("1.210878100".to_string());
+    let market_id = MarketId("1.210878100".to_owned());
     let result = client
         .send_request(cancel_orders::Parameters {
             market_id: Some(market_id),
             instructions: Some(vec![CancelInstruction {
-                bet_id: BetId("298537625817".to_string()),
+                bet_id: BetId("298537625817".to_owned()),
                 size_reduction: None,
             }]),
             customer_ref: None,
@@ -56,19 +56,19 @@ async fn cancel_bets_unsuccessful() {
 
     // Assert
     let expected = cancel_orders::ReturnType {
-        customer_ref: Some(CustomerRef::new("0oxfjBrq8K2TZg2Ytqjo1".to_string()).unwrap()),
+        customer_ref: Some(CustomerRef::new("0oxfjBrq8K2TZg2Ytqjo1".to_owned()).unwrap()),
         error_code: Some(ExecutionReportErrorCode::BetActionError),
         instruction_reports: Some(vec![CancelInstructionReport {
             status: InstructionReportStatus::Failure,
             instruction: Some(CancelInstruction {
-                bet_id: BetId("298537625817".to_string()),
+                bet_id: BetId("298537625817".to_owned()),
                 size_reduction: None,
             }),
             cancelled_date: None,
             error_code: Some(InstructionReportErrorCode::BetTakenOrLapsed),
             size_cancelled: Size::from(dec!(0.0)),
         }]),
-        market_id: Some(MarketId("1.210878100".to_string())),
+        market_id: Some(MarketId("1.210878100".to_owned())),
         status: ExecutionReportStatus::Failure,
     };
     assert_eq!(result, expected);

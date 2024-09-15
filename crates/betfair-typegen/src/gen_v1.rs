@@ -1,4 +1,4 @@
-//! The first version of BetfairTypeGen implementation
+//! The first version of `BetfairTypeGen` implementation
 
 mod data_types;
 mod documentation;
@@ -17,7 +17,7 @@ use crate::aping_ast::Aping;
 use crate::settings::GeneratorSettings;
 use crate::GeneratorStrategy;
 
-/// The first version of BetfairTypeGen implementation
+/// The first version of `BetfairTypeGen` implementation
 #[derive(Debug)]
 pub struct GenV1GeneratorStrategy<T: CodeInjector> {
     pub(crate) type_resolver: TypeResolverV1,
@@ -27,7 +27,7 @@ pub struct GenV1GeneratorStrategy<T: CodeInjector> {
 impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
     /// # Instantiate a new `GenV1`
     /// This is the strategy that will be used to generate the code
-    pub fn new(code_injector: T) -> Self {
+    pub const fn new(code_injector: T) -> Self {
         Self {
             type_resolver: TypeResolverV1::new(),
             code_injector,
@@ -37,6 +37,7 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
 
 impl GenV1GeneratorStrategy<injector::CodeInjectorV1> {
     /// Creates a new `GenV1GeneratorStrategy` with the given `CodeInjectorV1`.
+    #[must_use]
     pub fn preconfigured() -> Self {
         Self::new(injector::CodeInjectorV1::new())
     }

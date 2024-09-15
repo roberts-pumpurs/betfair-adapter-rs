@@ -74,12 +74,12 @@ mod tests {
             parameter,
             Parameter {
                 mandatory: Some(false),
-                name: "total".to_string(),
-                r#type: "double".to_string(),
+                name: "total".to_owned(),
+                r#type: "double".to_owned(),
                 items: vec![ParameterItem::Description(Description {
                     value: Some(
                         "Set a limit on total (matched + unmatched) bet exposure on market group"
-                            .to_string()
+                            .to_owned()
                     )
                 })]
             }
@@ -107,28 +107,26 @@ mod tests {
             parameter,
             Parameter {
                 mandatory: None,
-                name: "errorCode".to_string(),
-                r#type: "string".to_string(),
+                name: "errorCode".to_owned(),
+                r#type: "string".to_owned(),
                 items: vec![
                     ParameterItem::Description(Description {
-                        value: Some("the unique code for this error".to_string())
+                        value: Some("the unique code for this error".to_owned())
                     }),
                     ParameterItem::ValidValues(ValidValues {
                         items: vec![
                             Value {
-                                id: Some("1".to_string()),
-                                name: "TOO_MUCH_DATA".to_string(),
+                                id: Some("1".to_owned()),
+                                name: "TOO_MUCH_DATA".to_owned(),
                                 description: Description {
-                                    value: Some(
-                                        "The operation requested too much data".to_string()
-                                    )
+                                    value: Some("The operation requested too much data".to_owned())
                                 }
                             },
                             Value {
-                                id: Some("2".to_string()),
-                                name: "INVALID_INPUT_DATA".to_string(),
+                                id: Some("2".to_owned()),
+                                name: "INVALID_INPUT_DATA".to_owned(),
                                 description: Description {
-                                    value: Some("Invalid input data".to_string())
+                                    value: Some("Invalid input data".to_owned())
                                 }
                             }
                         ]

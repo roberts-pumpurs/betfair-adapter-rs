@@ -36,7 +36,7 @@ pub(crate) struct Aping {
 
 impl From<Interface> for Aping {
     fn from(val: Interface) -> Self {
-        let aping = Aping {
+        let aping = Self {
             name: Name(val.name),
             owner: Name(val.owner),
             version: Name(val.version),
@@ -49,14 +49,14 @@ impl From<Interface> for Aping {
         let aping = val.items.iter().fold(aping, |mut aping, x| {
             match x {
                 betfair_xml_parser::InterfaceItems::Description(x) => {
-                    aping.insert_top_level_docs(x)
+                    aping.insert_top_level_docs(x);
                 }
                 betfair_xml_parser::InterfaceItems::SimpleType(x) => {
-                    aping.insert_simple_data_type(x)
+                    aping.insert_simple_data_type(x);
                 }
                 betfair_xml_parser::InterfaceItems::DataType(x) => aping.insert_data_type(x),
                 betfair_xml_parser::InterfaceItems::ExceptionType(x) => {
-                    aping.insert_exception_type(x)
+                    aping.insert_exception_type(x);
                 }
                 betfair_xml_parser::InterfaceItems::Operation(x) => aping.insert_operation(x),
             };
@@ -312,23 +312,23 @@ impl Aping {
             .insert(wrapper_data_type.name.clone(), wrapper_data_type);
     }
 
-    pub(crate) fn name(&self) -> &Name {
+    pub(crate) const fn name(&self) -> &Name {
         &self.name
     }
 
-    pub(crate) fn owner(&self) -> &Name {
+    pub(crate) const fn owner(&self) -> &Name {
         &self.owner
     }
 
-    pub(crate) fn version(&self) -> &Name {
+    pub(crate) const fn version(&self) -> &Name {
         &self.version
     }
 
-    pub(crate) fn date(&self) -> &Name {
+    pub(crate) const fn date(&self) -> &Name {
         &self.date
     }
 
-    pub(crate) fn namespace(&self) -> &Name {
+    pub(crate) const fn namespace(&self) -> &Name {
         &self.namespace
     }
 
@@ -336,11 +336,11 @@ impl Aping {
         self.top_level_docs.as_ref()
     }
 
-    pub(crate) fn rpc_calls(&self) -> &HashMap<Name, rpc_calls::RpcCall> {
+    pub(crate) const fn rpc_calls(&self) -> &HashMap<Name, rpc_calls::RpcCall> {
         &self.rpc_calls
     }
 
-    pub(crate) fn data_types(&self) -> &HashMap<Name, data_type::DataType> {
+    pub(crate) const fn data_types(&self) -> &HashMap<Name, data_type::DataType> {
         &self.data_types
     }
 }
@@ -365,9 +365,10 @@ mod prism_impls {
                     description: x.description.value.map(Comment::new).into_iter().collect(),
                 })
                 .collect::<Vec<_>>();
-            if returns.len() > 1 {
-                panic!("More than one returns found for operation!");
-            }
+            assert!(
+                returns.len() <= 1,
+                "More than one returns found for operation!"
+            );
 
             returns.into_iter().next().expect("No return info found")
         }
@@ -389,9 +390,10 @@ mod prism_impls {
                     description: x.description.value.map(Comment::new).into_iter().collect(),
                 })
                 .collect::<Vec<_>>();
-            if exceptions.len() > 1 {
-                panic!("More than one exception found for operation");
-            }
+            assert!(
+                exceptions.len() <= 1,
+                "More than one exception found for operation"
+            );
 
             exceptions.into_iter().next()
         }

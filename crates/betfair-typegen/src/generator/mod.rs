@@ -44,7 +44,7 @@ impl BetfairTypeGenerator {
             let submodule_output = strategy.generate_submodule(interface);
             output
                 .submodules_mut()
-                .push((module_name.to_string(), submodule_output));
+                .push((module_name.to_owned(), submodule_output));
         }
 
         let mut output = GeneratedOutput::new();

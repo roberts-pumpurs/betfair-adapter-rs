@@ -125,7 +125,7 @@ where
             clock: v
                 .get("clk")
                 .and_then(|clk| clk.as_str())
-                .map(|clk| Clock(clk.to_string())),
+                .map(|clk| Clock(clk.to_owned())),
             heartbeat_ms: v.get("heartbeatMs").and_then(serde_json::Value::as_i64),
             publish_time: v
                 .get("pt")
@@ -134,7 +134,7 @@ where
             initial_clock: v
                 .get("initialClk")
                 .and_then(|ic| ic.as_str())
-                .map(|ic| InitialClock(ic.to_string())),
+                .map(|ic| InitialClock(ic.to_owned())),
             data,
             conflate_ms: v.get("conflateMs").and_then(serde_json::Value::as_i64),
             segment_type: v
@@ -178,7 +178,7 @@ mod tests {
         assert_eq!(
             msg,
             ResponseMessage::Connection(connection_message::ConnectionMessage {
-                connection_id: Some("206-221122192222-702491".to_string()),
+                connection_id: Some("206-221122192222-702491".to_owned()),
                 id: None,
             })
         );

@@ -6,7 +6,7 @@ pub struct BetfairUrl<T> {
 
 impl<T> BetfairUrl<T> {
     #[must_use]
-    pub fn new(url: url::Url) -> Self {
+    pub const fn new(url: url::Url) -> Self {
         Self {
             url,
             _type: core::marker::PhantomData,
@@ -14,7 +14,7 @@ impl<T> BetfairUrl<T> {
     }
 
     #[must_use]
-    pub fn url(&self) -> &url::Url {
+    pub const fn url(&self) -> &url::Url {
         &self.url
     }
 }
@@ -62,7 +62,7 @@ pub mod jurisdiction {
 
     impl<T> CustomUrl<T> {
         #[must_use]
-        pub fn new(url: url::Url) -> Self {
+        pub const fn new(url: url::Url) -> Self {
             Self(super::BetfairUrl::new(url))
         }
     }

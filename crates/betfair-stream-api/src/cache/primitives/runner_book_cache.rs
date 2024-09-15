@@ -241,5 +241,5 @@ impl RunnerBookCache {
 mod tests {
 
     #[test]
-    fn test_update_traded() {}
+    const fn test_update_traded() {}
 }

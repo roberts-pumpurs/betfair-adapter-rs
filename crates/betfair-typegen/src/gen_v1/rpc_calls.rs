@@ -77,9 +77,9 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                 let description = field.description.as_slice().object_comment();
                 let name = {
                     if field.name.0.as_str() == "type" {
-                        Name("r#type".to_string()).ident_snake()
+                        Name("r#type".to_owned()).ident_snake()
                     } else if field.name.0.as_str() == "async" {
-                        Name("r#async".to_string()).ident_snake()
+                        Name("r#async".to_owned()).ident_snake()
                     } else {
                         field.name.ident_snake()
                     }

@@ -26,34 +26,34 @@ pub struct Identity(
 
 impl ApplicationKey {
     #[must_use]
-    pub fn new(application_key: String) -> Self {
+    pub const fn new(application_key: String) -> Self {
         Self(redact::Secret::new(application_key))
     }
 }
 
 impl Username {
     #[must_use]
-    pub fn new(username: String) -> Self {
+    pub const fn new(username: String) -> Self {
         Self(redact::Secret::new(username))
     }
 }
 impl SessionToken {
     #[must_use]
-    pub fn new(username: String) -> Self {
+    pub const fn new(username: String) -> Self {
         Self(redact::Secret::new(username))
     }
 }
 
 impl Password {
     #[must_use]
-    pub fn new(password: String) -> Self {
+    pub const fn new(password: String) -> Self {
         Self(redact::Secret::new(password))
     }
 }
 
 impl Identity {
     #[must_use]
-    pub fn new(identity: reqwest::Identity) -> Self {
+    pub const fn new(identity: reqwest::Identity) -> Self {
         Self(redact::Secret::new(identity))
     }
 }

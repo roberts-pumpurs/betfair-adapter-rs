@@ -15,7 +15,7 @@ pub(crate) enum DataTypeVariant {
     TypeAlias(TypeAlias),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct EnumValue {
     pub(crate) name: Name,
     pub(crate) valid_values: Vec<ValidEnumValue>,

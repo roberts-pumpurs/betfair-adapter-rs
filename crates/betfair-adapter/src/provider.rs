@@ -28,19 +28,19 @@ pub struct AuthenticatedBetfairRpcProvider {
 
 impl AuthenticatedBetfairRpcProvider {
     #[must_use]
-    pub fn session_token(&self) -> &SessionToken {
+    pub const fn session_token(&self) -> &SessionToken {
         &self.session_token
     }
 
     #[must_use]
-    pub fn base(&self) -> &BetfairRpcProviderBase {
+    pub const fn base(&self) -> &BetfairRpcProviderBase {
         &self.base
     }
 }
 
 impl UnauthenticatedBetfairRpcProvider {
     #[must_use]
-    pub fn base(&self) -> &BetfairRpcProviderBase {
+    pub const fn base(&self) -> &BetfairRpcProviderBase {
         &self.0
     }
 }

@@ -8,7 +8,7 @@ use rsa::RsaPrivateKey;
 
 /// Generate a Betfair certificate for non-interactive bot usage
 /// Reference:
-/// https://docs.developer.betfair.com/display/1smk3cen4v3lu3yomq5qye0ni/Non-Interactive+(bot)+login
+/// <https://docs.developer.betfair.com/display/1smk3cen4v3lu3yomq5qye0ni/Non-Interactive+(bot)+login>
 pub fn rcgen_cert(
     country_name: &str,
     state_or_province_name: &str,

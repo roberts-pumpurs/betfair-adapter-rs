@@ -134,7 +134,7 @@ mod tests {
 
         let exceptions = from_str::<Exceptions>(xml).unwrap();
         assert_eq!(exceptions.values.len(), 1);
-        assert_eq!(exceptions.values[0].r#type, "APINGException".to_string());
+        assert_eq!(exceptions.values[0].r#type, "APINGException".to_owned());
     }
 
     #[rstest]
@@ -204,11 +204,11 @@ mod tests {
 
         let op = from_str::<Operation>(xml).unwrap();
         let expected = Operation {
-            name: "listEventTypes".to_string(),
-            since: Some("1.0.0".to_string()),
+            name: "listEventTypes".to_owned(),
+            since: Some("1.0.0".to_owned()),
             values: vec![
                 OperationItem::Description(Description {
-                    value: Some("Returns a list of Event Types (i.e. Sports) associated with the markets selected by the MarketFilter.".to_string())
+                    value: Some("Returns a list of Event Types (i.e. Sports) associated with the markets selected by the MarketFilter.".to_owned())
                 }),
                 OperationItem::Parameters(Parameters {
                     values: vec![
@@ -216,38 +216,38 @@ mod tests {
                             values: Some(vec![
                                 Parameter {
                                     mandatory: Some(true),
-                                    name: "filter".to_string(),
-                                    r#type: "MarketFilter".to_string(),
+                                    name: "filter".to_owned(),
+                                    r#type: "MarketFilter".to_owned(),
                                     items: vec![
                                         ParameterItem::Description(Description {
-                                            value: Some("The filter to select desired markets. All markets that match the criteria in the filter are selected.".to_string())
+                                            value: Some("The filter to select desired markets. All markets that match the criteria in the filter are selected.".to_owned())
                                         })
                                     ]
                                 },
                                 Parameter {
                                     mandatory: None,
-                                    name: "locale".to_string(),
-                                    r#type: "string".to_string(),
+                                    name: "locale".to_owned(),
+                                    r#type: "string".to_owned(),
                                     items: vec![
                                         ParameterItem::Description(Description {
-                                            value: Some("The language used for the response. If not specified, the default is returned.".to_string())
+                                            value: Some("The language used for the response. If not specified, the default is returned.".to_owned())
                                         })
                                     ]
                                 }
                             ])
                         }),
                         ParametersItems::SimpleResponse(SimpleResponse {
-                            r#type: "list(EventTypeResult)".to_string(),
+                            r#type: "list(EventTypeResult)".to_owned(),
                             description: Description {
-                                value: Some("output data".to_string())
+                                value: Some("output data".to_owned())
                             }
                         }),
                         ParametersItems::Exceptions(Exceptions {
                             values: vec![
                                 Exception {
-                                    r#type: "APINGException".to_string(),
+                                    r#type: "APINGException".to_owned(),
                                     description: Description {
-                                        value: Some("Generic exception that is thrown if this operation fails for any reason.".to_string())
+                                        value: Some("Generic exception that is thrown if this operation fails for any reason.".to_owned())
                                     }
                                 }
                             ]
@@ -284,11 +284,11 @@ mod tests {
 
         let op = from_str::<Operation>(xml).unwrap();
         let expected = Operation {
-            name: "getDeveloperAppKeys".to_string(),
-            since: Some("1.0.0".to_string()),
+            name: "getDeveloperAppKeys".to_owned(),
+            since: Some("1.0.0".to_owned()),
             values: vec![
                 OperationItem::Description(Description {
-                    value: Some("Get all application keys owned by the given developer/vendor".to_string())
+                    value: Some("Get all application keys owned by the given developer/vendor".to_owned())
                 }),
                 OperationItem::Parameters(Parameters {
                     values: vec![
@@ -297,16 +297,16 @@ mod tests {
                         }),
                         ParametersItems::SimpleResponse(SimpleResponse {
                             description: Description {
-                                value: Some("A list of application keys owned by the given developer/vendor".to_string())
+                                value: Some("A list of application keys owned by the given developer/vendor".to_owned())
                             },
-                            r#type: "list(DeveloperApp)".to_string()
+                            r#type: "list(DeveloperApp)".to_owned()
                         }),
                         ParametersItems::Exceptions(Exceptions {
                             values: vec![
                                 Exception {
-                                    r#type: "AccountAPINGException".to_string(),
+                                    r#type: "AccountAPINGException".to_owned(),
                                     description: Description {
-                                        value: Some("Generic exception that is thrown if this operation fails for any reason.".to_string())
+                                        value: Some("Generic exception that is thrown if this operation fails for any reason.".to_owned())
                                     }
                                 }
                             ]

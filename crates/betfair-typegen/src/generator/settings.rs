@@ -1,16 +1,16 @@
 /// Trait that defines the settings for the generator.
 pub trait GeneratorSettings {
-    /// Whether to generate the types for the AccountAPING service
+    /// Whether to generate the types for the `AccountAPING` service
     fn account_aping(&self) -> bool;
-    /// Whether to generate the types for the HeartbeatAPING service
+    /// Whether to generate the types for the `HeartbeatAPING` service
     fn heartbeat_aping(&self) -> bool;
-    /// Whether to generate the types for the SportsAPING service
+    /// Whether to generate the types for the `SportsAPING` service
     fn sports_aping(&self) -> bool;
     /// Whether to generate the types for the Stream API
     fn stream_api(&self) -> bool;
 }
 
-/// Simple implementation of the GeneratorSettings trait.
+/// Simple implementation of the `GeneratorSettings` trait.
 pub struct SimpleGeneratorSettings {
     account_aping: bool,
     heartbeat_aping: bool,
@@ -19,8 +19,9 @@ pub struct SimpleGeneratorSettings {
 }
 
 impl SimpleGeneratorSettings {
-    /// Create a new instance of the SimpleGeneratorSettings struct.
-    pub fn new(
+    /// Create a new instance of the `SimpleGeneratorSettings` struct.
+    #[must_use]
+    pub const fn new(
         account_aping: bool,
         heartbeat_aping: bool,
         sports_aping: bool,
@@ -34,14 +35,16 @@ impl SimpleGeneratorSettings {
         }
     }
 
-    /// Create a new instance of the SimpleGeneratorSettings struct with only the AccountAPING
+    /// Create a new instance of the `SimpleGeneratorSettings` struct with only the `AccountAPING`
     /// service enabled.
-    pub fn aping_only() -> Self {
+    #[must_use]
+    pub const fn aping_only() -> Self {
         Self::new(true, true, true, false)
     }
 
-    /// Create a new instance of the SimpleGeneratorSettings struct with all services enabled.
-    pub fn all() -> Self {
+    /// Create a new instance of the `SimpleGeneratorSettings` struct with all services enabled.
+    #[must_use]
+    pub const fn all() -> Self {
         Self::new(true, true, true, true)
     }
 }

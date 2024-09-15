@@ -52,19 +52,16 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                 }
             } else {
                 let id = &valid_enum_value.id.parse::<i128>();
-                let name = match id {
-                    Ok(id) => {
-                        quote! {
-                            #[serde(rename = #id)]
-                            #name = #id
-                        }
+                let name = if let Ok(id) = id {
+                    quote! {
+                        #[serde(rename = #id)]
+                        #name = #id
                     }
-                    Err(_) => {
-                        let id = &valid_enum_value.id;
-                        quote! {
-                            #[serde(rename = #id)]
-                            #name
-                        }
+                } else {
+                    let id = &valid_enum_value.id;
+                    quote! {
+                        #[serde(rename = #id)]
+                        #name
                     }
                 };
                 let description = valid_enum_value.description.as_slice().object_comment();
@@ -106,7 +103,7 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
             let description = struct_field
                 .description
                 .iter()
-                .map(|x| x.object_comment())
+                .map(super::super::aping_ast::types::Comment::object_comment)
                 .fold(quote! {}, |acc, i| {
                     quote! {
                         #acc
@@ -116,9 +113,9 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
 
             let name = {
                 if struct_field.name.0.as_str() == "type" {
-                    Name("r#type".to_string()).ident_snake()
+                    Name("r#type".to_owned()).ident_snake()
                 } else if struct_field.name.0.as_str() == "async" {
-                    Name("r#async".to_string()).ident_snake()
+                    Name("r#async".to_owned()).ident_snake()
                 } else {
                     struct_field.name.ident_snake()
                 }

@@ -22,6 +22,7 @@ pub struct MarketBookCache {
 }
 
 impl MarketBookCache {
+    #[must_use]
     pub fn new(market_id: MarketId, publish_time: DateTime<Utc>) -> Self {
         Self {
             market_id,
@@ -33,6 +34,7 @@ impl MarketBookCache {
         }
     }
 
+    #[must_use]
     pub fn is_closed(&self) -> bool {
         !self
             .market_definition
@@ -166,19 +168,23 @@ impl MarketBookCache {
         self.runners.insert(key, runner);
     }
 
+    #[must_use]
     pub const fn publish_time(&self) -> DateTime<Utc> {
         self.publish_time
     }
 
+    #[must_use]
     pub const fn runners(&self) -> &HashMap<(SelectionId, Option<Decimal>), RunnerBookCache> {
         &self.runners
     }
 
     #[allow(clippy::borrowed_box)]
+    #[must_use]
     pub const fn market_definition(&self) -> Option<&Box<MarketDefinition>> {
         self.market_definition.as_ref()
     }
 
+    #[must_use]
     pub const fn market_id(&self) -> &MarketId {
         &self.market_id
     }
@@ -195,7 +201,7 @@ mod tests {
     use crate::cache::primitives::available_cache::Available;
 
     fn init() -> (MarketId, DateTime<Utc>, MarketBookCache) {
-        let market_id = MarketId("1.23456789".to_string());
+        let market_id = MarketId("1.23456789".to_owned());
         let publish_time = Utc::now();
         let market_book_cache = MarketBookCache::new(market_id.clone(), publish_time);
         (market_id, publish_time, market_book_cache)
