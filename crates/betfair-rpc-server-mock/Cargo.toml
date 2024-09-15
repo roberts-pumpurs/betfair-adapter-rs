@@ -15,3 +15,13 @@ serde_json.workspace = true
 wiremock.workspace = true
 serde.workspace = true
 serde_urlencoded.workspace = true
+
+[dev-dependencies]
+tracing-subscriber.workspace = true
+rstest.workspace = true
+tokio.workspace = true
+test-log.workspace = true
+wiremock.workspace = true
+rust_decimal_macros.workspace = true
+rust_decimal.workspace = true
+pretty_assertions.workspace = true

@@ -25,4 +25,12 @@ betfair-stream-api = { workspace = true, features = ["integration-test"] }
 chrono.workspace = true
 wiremock.workspace = true
 rstest.workspace = true
+tokio-stream.workspace = true
+futures.workspace = true
+betfair-adapter.workspace = true
 test-log.workspace = true
+rust_decimal_macros.workspace = true
+rust_decimal.workspace = true
+eyre.workspace = true
+pretty_assertions.workspace = true
+betfair-rpc-server-mock.workspace = true

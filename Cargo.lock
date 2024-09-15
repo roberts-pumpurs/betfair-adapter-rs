@@ -233,7 +233,6 @@ checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 name = "betfair-adapter"
 version = "0.1.0"
 dependencies = [
- "betfair-rpc-server-mock",
  "betfair-types",
  "eyre",
  "pretty_assertions",
@@ -269,10 +268,17 @@ version = "0.1.0"
 dependencies = [
  "betfair-adapter",
  "betfair-types",
+ "pretty_assertions",
  "reqwest",
+ "rstest",
+ "rust_decimal",
+ "rust_decimal_macros",
  "serde",
  "serde_json",
  "serde_urlencoded",
+ "test-log",
+ "tokio",
+ "tracing-subscriber",
  "url",
  "wiremock",
 ]
@@ -283,8 +289,6 @@ version = "0.1.0"
 dependencies = [
  "backoff",
  "betfair-adapter",
- "betfair-rpc-server-mock",
- "betfair-stream-server-mock",
  "betfair-stream-types",
  "chrono",
  "eyre",
@@ -318,19 +322,26 @@ dependencies = [
 name = "betfair-stream-server-mock"
 version = "0.1.0"
 dependencies = [
+ "betfair-adapter",
+ "betfair-rpc-server-mock",
  "betfair-stream-api",
  "betfair-stream-types",
  "chrono",
  "eyre",
+ "futures",
  "futures-util",
+ "pretty_assertions",
  "rcgen",
  "rstest",
+ "rust_decimal",
+ "rust_decimal_macros",
  "rustls 0.22.4",
  "rustls-pemfile",
  "serde_json",
  "test-log",
  "tokio",
  "tokio-rustls 0.25.0",
+ "tokio-stream",
  "tokio-util",
  "tracing",
  "url",
