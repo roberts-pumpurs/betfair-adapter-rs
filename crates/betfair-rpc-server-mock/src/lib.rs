@@ -131,13 +131,50 @@ impl Server {
         }
     }
 
-    pub fn mock(
+    pub fn mock_success(
         &self,
         http_method: &str,
         path_matcher: PathExactMatcher,
         name: &str,
         with_auth_headers: bool,
         response: serde_json::Value,
+    ) -> Mock {
+        self.mock_low(
+            http_method,
+            path_matcher,
+            name,
+            with_auth_headers,
+            response,
+            200,
+        )
+    }
+
+    pub fn mock_error(
+        &self,
+        http_method: &str,
+        path_matcher: PathExactMatcher,
+        name: &str,
+        with_auth_headers: bool,
+        response: serde_json::Value,
+    ) -> Mock {
+        self.mock_low(
+            http_method,
+            path_matcher,
+            name,
+            with_auth_headers,
+            response,
+            400,
+        )
+    }
+
+    pub fn mock_low(
+        &self,
+        http_method: &str,
+        path_matcher: PathExactMatcher,
+        name: &str,
+        with_auth_headers: bool,
+        response: serde_json::Value,
+        response_code: u16,
     ) -> Mock {
         use wiremock::matchers::{header, method};
 
@@ -151,7 +188,7 @@ impl Server {
             m
         };
 
-        m.respond_with(ResponseTemplate::new(200).set_body_json(response))
+        m.respond_with(ResponseTemplate::new(response_code).set_body_json(response))
             .named(name)
     }
 
@@ -165,7 +202,7 @@ impl Server {
             }
         );
 
-        self.mock("GET", path(KEEP_ALIVE_URL), "Keep alive", true, response)
+        self.mock_success("GET", path(KEEP_ALIVE_URL), "Keep alive", true, response)
     }
 
     pub fn mock_authenticated_rpc<T: BetfairRpcRequest>(&self, response: T::Res) -> Mock
@@ -175,11 +212,24 @@ impl Server {
         self.mock_authenticated_rpc_from_json::<T>(serde_json::to_value(&response).unwrap())
     }
 
+    pub fn mock_authenticated_error<T: BetfairRpcRequest>(&self, response: T::Error) -> Mock
+    where
+        T::Error: serde::Serialize,
+    {
+        self.mock_error(
+            "POST",
+            path(rpc_path::<T>()),
+            &rpc_path::<T>(),
+            true,
+            serde_json::to_value(response).unwrap(),
+        )
+    }
+
     pub fn mock_authenticated_rpc_from_json<T: BetfairRpcRequest>(
         &self,
         response: serde_json::Value,
     ) -> Mock {
-        self.mock(
+        self.mock_success(
             "POST",
             path(rpc_path::<T>()),
             &rpc_path::<T>(),
