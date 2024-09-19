@@ -9,6 +9,14 @@
     attr(deny(warnings, rust_2018_idioms), allow(dead_code, unused_variables))
 ))]
 #![allow(incomplete_features)]
+#![allow(clippy::module_name_repetitions)]
+#![allow(clippy::unused_self)]
+#![allow(clippy::struct_excessive_bools)]
+#![allow(clippy::fn_params_excessive_bools)]
+#![allow(clippy::field_scoped_visibility_modifiers)]
+#![allow(clippy::self_named_module_files)]
+#![allow(clippy::pub_with_shorthand)]
+#![allow(clippy::redundant_pub_crate)]
 
 mod aping_ast;
 pub mod gen_v1;
@@ -27,8 +35,8 @@ pub trait GeneratorStrategy {
     /// * `aping` - The Betfair API interface
     /// # Returns
     /// The generated types for the Betfair API that can be written to a file
-    fn generate_submodule(&self, aping: impl Into<Interface>) -> TokenStream;
+    fn generate_submodule<T: Into<Interface>>(&self, aping: T) -> TokenStream;
 
     /// Generate the top level documentation and types
-    fn generate_mod(&self, settings: &impl GeneratorSettings) -> TokenStream;
+    fn generate_mod<T: GeneratorSettings>(&self, settings: T) -> TokenStream;
 }

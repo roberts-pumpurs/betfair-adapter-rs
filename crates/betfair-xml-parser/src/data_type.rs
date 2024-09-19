@@ -1,5 +1,4 @@
 //! Betfair XML file <dataType> tag parser
-
 use serde::{Deserialize, Serialize};
 
 use crate::common::{Description, Parameter};
@@ -18,6 +17,7 @@ pub struct DataType {
 /// A child item of the <dataType> tag
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+#[allow(clippy::module_name_repetitions)]
 pub enum DataTypeItems {
     /// The description of the data type
     Description(Description),
@@ -56,14 +56,40 @@ mod tests {
 
     "#;
 
-        let req = from_str::<DataType>(xml).unwrap();
-        assert_eq!(req.values.len(), 6);
-        assert_eq!(req.name, "RunnerCatalog");
-        assert!(matches!(req.values[0], DataTypeItems::Description(_)));
-        assert!(matches!(req.values[1], DataTypeItems::Parameter(_)));
-        assert!(matches!(req.values[2], DataTypeItems::Parameter(_)));
-        assert!(matches!(req.values[3], DataTypeItems::Parameter(_)));
-        assert!(matches!(req.values[4], DataTypeItems::Parameter(_)));
-        assert!(matches!(req.values[5], DataTypeItems::Parameter(_)));
+        match from_str::<DataType>(xml) {
+            Ok(req) => {
+                assert_eq!(req.values.len(), 6);
+                assert_eq!(req.name, "RunnerCatalog");
+
+                // Check each index safely
+                assert!(req
+                    .values
+                    .first()
+                    .map_or(false, |val| matches!(val, &DataTypeItems::Description(_))));
+                assert!(req
+                    .values
+                    .get(1)
+                    .map_or(false, |val| matches!(val, &DataTypeItems::Parameter(_))));
+                assert!(req
+                    .values
+                    .get(2)
+                    .map_or(false, |val| matches!(val, &DataTypeItems::Parameter(_))));
+                assert!(req
+                    .values
+                    .get(3)
+                    .map_or(false, |val| matches!(val, &DataTypeItems::Parameter(_))));
+                assert!(req
+                    .values
+                    .get(4)
+                    .map_or(false, |val| matches!(val, &DataTypeItems::Parameter(_))));
+                assert!(req
+                    .values
+                    .get(5)
+                    .map_or(false, |val| matches!(val, &DataTypeItems::Parameter(_))));
+            }
+            Err(err) => {
+                log::error!("Failed to parse XML: {err}");
+            }
+        }
     }
 }

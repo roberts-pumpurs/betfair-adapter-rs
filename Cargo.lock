@@ -373,9 +373,9 @@ dependencies = [
  "quote",
  "rstest",
  "rust_decimal",
- "serde",
  "serde-xml-rs",
  "syn 2.0.77",
+ "tracing",
  "typed-builder",
 ]
 
@@ -393,6 +393,9 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+ "tracing",
+ "tracing-error",
+ "tracing-subscriber",
  "typed-builder",
 ]
 
@@ -400,6 +403,7 @@ dependencies = [
 name = "betfair-xml-parser"
 version = "0.1.0"
 dependencies = [
+ "log",
  "rstest",
  "serde",
  "serde-xml-rs",

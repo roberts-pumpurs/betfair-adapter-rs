@@ -20,6 +20,7 @@ pub struct Operation {
 /// A child item of the <operation> tag
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+#[allow(clippy::module_name_repetitions)]
 pub enum OperationItem {
     /// Description tag
     Description(Description),
@@ -82,6 +83,8 @@ pub struct Exception {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
+#[allow(clippy::indexing_slicing)]
 mod tests {
     use rstest::rstest;
     use serde_xml_rs::from_str;

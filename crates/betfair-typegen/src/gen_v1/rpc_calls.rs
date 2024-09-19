@@ -44,33 +44,46 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
 
     fn return_type(&self, data_type: &RpcCall) -> TokenStream {
         let description = data_type.returns.description.as_slice().object_comment();
-        if let Some(exception) = &data_type.exception {
-            let err_data_type = self.type_resolver.resolve_type(&exception.data_type);
-            let error_docs = exception.description.as_slice().object_comment();
-            let ok_type = self
-                .type_resolver
-                .resolve_type(&data_type.returns.data_type);
-            quote! {
-                #error_docs
-                pub type Exception = #err_data_type;
 
-                #description
-                pub type ReturnType = #ok_type;
-            }
-        } else {
-            let ok_type = self
+        data_type.exception.as_ref().map_or_else(
+            || match self
                 .type_resolver
-                .resolve_type(&data_type.returns.data_type);
-            quote! {
-                #description
-                pub type ReturnType = #ok_type;
-            }
-        }
+                .resolve_type(&data_type.returns.data_type)
+            {
+                Ok(ok_type) => quote! {
+                    #description
+                    pub type ReturnType = #ok_type;
+                },
+                Err(err) => quote! {
+                    compile_error!(#err);
+                },
+            },
+            |exception| {
+                let err_data_type = match self.type_resolver.resolve_type(&exception.data_type) {
+                    Ok(err_type) => err_type,
+                    Err(err) => return quote! { compile_error!(#err); },
+                };
+                let error_docs = exception.description.as_slice().object_comment();
+                let ok_type = match self
+                    .type_resolver
+                    .resolve_type(&data_type.returns.data_type)
+                {
+                    Ok(ok_type) => ok_type,
+                    Err(err) => return quote! { compile_error!(#err); },
+                };
+                quote! {
+                    #error_docs
+                    pub type Exception = #err_data_type;
+                    #description
+                    pub type ReturnType = #ok_type;
+                }
+            },
+        )
     }
 
-    fn parameter(&self, data_type: &RpcCall) -> TokenStream {
+    fn parameter(&self, rpc_type: &RpcCall) -> TokenStream {
         let struct_parameter_derives = self.code_injector.struct_parameter_derives();
-        let fields = data_type
+        let fields = rpc_type
             .params
             .iter()
             .map(|field| {
@@ -85,29 +98,37 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                     }
                 };
                 let original_name = field.name.0.as_str();
-                let data_type = self.type_resolver.resolve_type(&field.data_type);
-                let data_type = if !field.mandatory {
-                    quote! {
-                        #[serde(skip_serializing_if = "Option::is_none")]
-                        #[builder(default, setter(strip_option))]
-                        #[serde(rename = #original_name)]
-                        #struct_parameter_derives
-                        pub #name: Option<#data_type>
-                    }
-                } else {
-                    quote! {
-                        #struct_parameter_derives
-                        #[serde(rename = #original_name)]
-                        pub #name: #data_type
-                    }
-                };
 
-                quote! {
-                    #description
-                    #data_type,
+                match self.type_resolver.resolve_type(&field.data_type) {
+                    Ok(data_type) => {
+                        let data_type_ = if field.mandatory {
+                            quote! {
+                                #struct_parameter_derives
+                                #[serde(rename = #original_name)]
+                                pub #name: #data_type
+                            }
+                        } else {
+                            quote! {
+                                #[serde(skip_serializing_if = "Option::is_none")]
+                                #[builder(default, setter(strip_option))]
+                                #[serde(rename = #original_name)]
+                                #struct_parameter_derives
+                                pub #name: Option<#data_type>
+                            }
+                        };
+
+                        Some(quote! {
+                            #description
+                            #data_type_,
+                        })
+                    }
+                    Err(err) => Some(quote! {
+                        compile_error!(#err);
+                    }),
                 }
             })
             .collect::<Vec<_>>();
+
         let struct_derives = self.code_injector.struct_derives();
         quote! {
             #struct_derives
@@ -135,32 +156,32 @@ mod test {
     ) {
         // Setup
         let rpc_call = RpcCall {
-            name: Name("createDeveloperAppKeys".to_string()),
+            name: Name("createDeveloperAppKeys".to_owned()),
             params: vec![Param {
-                name: Name("appName".to_string()),
-                data_type: DataTypeParameter::new("string".to_string()),
+                name: Name("appName".to_owned()),
+                data_type: DataTypeParameter::new("string".to_owned()),
                 description: vec![Comment::new(
-                    "A Display name for the application.".to_string(),
+                    "A Display name for the application.".to_owned(),
                 )],
                 mandatory: true,
             }],
             returns: Returns {
-                data_type: DataTypeParameter::new("DeveloperApp".to_string()),
+                data_type: DataTypeParameter::new("DeveloperApp".to_owned()),
                 description: vec![Comment::new(
                     "A map of application keys, one marked ACTIVE, and the other DELAYED"
-                        .to_string(),
+                        .to_owned(),
                 )],
             },
             exception: Some(Exception {
-                data_type: DataTypeParameter::new("AccountAPINGException".to_string()),
+                data_type: DataTypeParameter::new("AccountAPINGException".to_owned()),
                 description: vec![Comment::new(
                     "Generic exception that is thrown if this operation fails for any reason."
-                        .to_string(),
+                        .to_owned(),
                 )],
             }),
             description: vec![Comment::new(
                 "Create 2 application keys for given user; one active and the other delayed"
-                    .to_string(),
+                    .to_owned(),
             )],
         };
 
@@ -206,32 +227,32 @@ mod test {
     ) {
         // Setup
         let rpc_call = RpcCall {
-            name: Name("createDeveloperAppKeys".to_string()),
+            name: Name("createDeveloperAppKeys".to_owned()),
             params: vec![Param {
-                name: Name("appName".to_string()),
-                data_type: DataTypeParameter::new("string".to_string()),
+                name: Name("appName".to_owned()),
+                data_type: DataTypeParameter::new("string".to_owned()),
                 description: vec![Comment::new(
-                    "A Display name for the application.".to_string(),
+                    "A Display name for the application.".to_owned(),
                 )],
                 mandatory: false,
             }],
             returns: Returns {
-                data_type: DataTypeParameter::new("DeveloperApp".to_string()),
+                data_type: DataTypeParameter::new("DeveloperApp".to_owned()),
                 description: vec![Comment::new(
                     "A map of application keys, one marked ACTIVE, and the other DELAYED"
-                        .to_string(),
+                        .to_owned(),
                 )],
             },
             exception: Some(Exception {
-                data_type: DataTypeParameter::new("AccountAPINGException".to_string()),
+                data_type: DataTypeParameter::new("AccountAPINGException".to_owned()),
                 description: vec![Comment::new(
                     "Generic exception that is thrown if this operation fails for any reason."
-                        .to_string(),
+                        .to_owned(),
                 )],
             }),
             description: vec![Comment::new(
                 "Create 2 application keys for given user; one active and the other delayed"
-                    .to_string(),
+                    .to_owned(),
             )],
         };
 
@@ -277,18 +298,13 @@ mod test {
         fn exceptions()(
             present in any::<bool>()
         ) -> Option<Exception> {
-            if present {
-                Some(Exception {
-                    data_type: DataTypeParameter::new("AccountAPINGException".to_string()),
-                    description: vec![Comment::new(
-                        "Generic exception that is thrown if this operation fails for any reason."
-                            .to_string(),
-                    )],
-                })
-            } else {
-                None
-            }
-      }
+            present.then(|| Exception {
+                data_type: DataTypeParameter::new("AccountAPINGException".to_owned()),
+                description: vec![Comment::new(
+                    "Generic exception that is thrown if this operation fails for any reason.".to_owned(),
+                )],
+            })
+        }
     }
 
     use crate::gen_v1::type_resolver::tests::valid_data_types;
@@ -301,9 +317,9 @@ mod test {
             param_name in proptest::sample::select(vec!["argument1", "argument2", "argument3"]),
         ) -> Param {
             Param {
-                name: Name(param_name.to_string()),
+                name: Name(param_name.to_owned()),
                 data_type,
-                description: vec![Comment::new("A Display name for the application.".to_string()); amount_comments],
+                description: vec![Comment::new("A Display name for the application.".to_owned()); amount_comments],
                 mandatory,
             }
         }
@@ -315,19 +331,17 @@ mod test {
             // Setup
             let params_len = params.len();
             let rpc_call = RpcCall {
-                name: Name("createDeveloperAppKeys".to_string()),
+                name: Name("createDeveloperAppKeys".to_owned()),
                 params,
                 returns: Returns {
-                    data_type: DataTypeParameter::new("DeveloperApp".to_string()),
+                    data_type: DataTypeParameter::new("DeveloperApp".to_owned()),
                     description: vec![Comment::new(
-                        "A map of application keys, one marked ACTIVE, and the other DELAYED"
-                            .to_string(),
+                        "A map of application keys, one marked ACTIVE, and the other DELAYED".to_owned(),
                     )],
                 },
                 exception: exception.clone(),
                 description: vec![Comment::new(
-                    "Create 2 application keys for given user; one active and the other delayed"
-                        .to_string(),
+                    "Create 2 application keys for given user; one active and the other delayed".to_owned(),
                 )],
             };
 
@@ -337,20 +351,17 @@ mod test {
 
             // Assert
             prop_assert!(actual.contains("pub mod create_developer_app_keys"));
-            match exception {
-                Some(_) => {
-                    let expected_exception = quote! { pub type Exception = AccountApingException; };
-                    prop_assert!(actual.contains(&expected_exception.to_string()), "actual: {}", actual);
-                    let expected_return_type =
-                        quote! { pub type ReturnType = DeveloperApp; };
-                    prop_assert!(actual.contains(&expected_return_type.to_string()), "actual: {}", actual);
-                }
-                None => {
-                    let expected_exception = quote! { pub type Exception };
-                    prop_assert!(!actual.contains(&expected_exception.to_string()));
-                    let expected_return_type = quote! { pub type ReturnType = DeveloperApp; };
-                    prop_assert!(actual.contains(&expected_return_type.to_string()));
-                }
+            if exception.is_some() {
+                let expected_exception = quote! { pub type Exception = AccountApingException; };
+                prop_assert!(actual.contains(&expected_exception.to_string()), "actual: {}", actual);
+                let expected_return_type =
+                    quote! { pub type ReturnType = DeveloperApp; };
+                prop_assert!(actual.contains(&expected_return_type.to_string()), "actual: {}", actual);
+            } else {
+                let expected_exception = quote! { pub type Exception };
+                prop_assert!(!actual.contains(&expected_exception.to_string()));
+                let expected_return_type = quote! { pub type ReturnType = DeveloperApp; };
+                prop_assert!(actual.contains(&expected_return_type.to_string()));
             }
 
             let empty_parameters = quote! { pub struct Parameters {} };

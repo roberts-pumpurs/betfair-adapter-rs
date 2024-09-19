@@ -1,9 +1,11 @@
 #![warn(missing_docs, unreachable_pub, unused_crate_dependencies)]
 #![deny(unused_must_use, rust_2018_idioms)]
+#![allow(clippy::self_named_module_files)]
 #![doc(test(
     no_crate_inject,
     attr(deny(warnings, rust_2018_idioms), allow(dead_code, unused_variables))
 ))]
+
 //! Betfair XML file parser.
 //! The intended use is to parse the XML files and generate Rust structs that
 //! can be used to generate code for the Betfair API-NG in Rust (or other languages?)
@@ -12,6 +14,7 @@
 //! Output: Rust structs as representation of the XML files
 
 use common::Description;
+use log as _;
 use serde::{Deserialize, Serialize};
 
 pub mod common;
@@ -55,17 +58,47 @@ pub enum InterfaceItems {
 }
 
 /// Parse the XML file into a Rust struct
+///
+/// # Arguments
+///
+/// * `xml` - The XML file as a string
+///
+/// # Returns
+///
+/// * `Result<Interface, serde_xml_rs::Error>` - The parsed interface or an error
+///
+/// # Example
+///
+/// ```
+/// let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+/// <interface name="HeartbeatAPING" owner="BDP" version="1.0.0" date="now()" namespace="com.betfair.heartbeat.api"
+///            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+///     <description>Heartbeat</description>
+///     <operation name="heartbeat" since="1.0.0">
+///         <description>...</description>
+///         <parameters>...</parameters>
+///     </operation>
+/// </interface>"#;
+///
+/// let interface: Interface = xml.into();
+/// ```
+///
+/// # Errors
+///
+/// * `serde_xml_rs::Error` - If the XML file is not valid
+/// ```
 pub fn parse_interface(xml: &str) -> Result<Interface, serde_xml_rs::Error> {
     serde_xml_rs::from_str(xml)
 }
 
 impl From<&str> for Interface {
     fn from(val: &str) -> Self {
-        parse_interface(val).expect("Failed to parse XML file")
+        parse_interface(val).unwrap_or_else(|_| Into::into("Failed to parse XML file"))
     }
 }
 
 #[cfg(test)]
+#[allow(clippy::indexing_slicing)]
 mod tests {
     use rstest::rstest;
 

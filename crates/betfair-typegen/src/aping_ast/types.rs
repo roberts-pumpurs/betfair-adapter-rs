@@ -19,6 +19,10 @@ impl Comment {
         const OBJECT_COMMENT: &str = "///";
         pad_with(OBJECT_COMMENT, &self.item)
     }
+
+    pub(crate) const fn new(item: String) -> Self {
+        Self { item }
+    }
 }
 
 impl Name {
@@ -35,6 +39,7 @@ impl Name {
         pad_with(MODULE_COMMENT, &self.0)
     }
 }
+
 fn pad_with(pad: &str, text: impl AsRef<str>) -> proc_macro2::TokenStream {
     let text = text
         .as_ref()
@@ -46,18 +51,12 @@ fn pad_with(pad: &str, text: impl AsRef<str>) -> proc_macro2::TokenStream {
     }
 }
 
-impl Comment {
-    pub(crate) const fn new(item: String) -> Self {
-        Self { item }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, PartialOrd, Ord, Eq, Hash)]
 pub(crate) struct DataTypeParameter(String);
 
 impl DataTypeParameter {
-    pub(crate) const fn new(s: String) -> Self {
-        Self(s)
+    pub(crate) const fn new(param: String) -> Self {
+        Self(param)
     }
 
     pub(crate) fn as_str(&self) -> &str {
@@ -66,7 +65,7 @@ impl DataTypeParameter {
 }
 
 impl From<String> for DataTypeParameter {
-    fn from(s: String) -> Self {
-        Self::new(s)
+    fn from(param: String) -> Self {
+        Self::new(param)
     }
 }

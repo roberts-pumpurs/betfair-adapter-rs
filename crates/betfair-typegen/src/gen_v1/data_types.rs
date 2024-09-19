@@ -13,14 +13,14 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
     pub(crate) fn generate_data_type(&self, data_type: &DataType) -> TokenStream {
         let description = data_type.description.as_slice().object_comment();
 
-        let inner = match &data_type.variant {
-            crate::aping_ast::data_type::DataTypeVariant::EnumValue(x) => {
+        let inner = match data_type.variant {
+            crate::aping_ast::data_type::DataTypeVariant::EnumValue(ref x) => {
                 self.generate_enum_value(x)
             }
-            crate::aping_ast::data_type::DataTypeVariant::StructValue(x) => {
+            crate::aping_ast::data_type::DataTypeVariant::StructValue(ref x) => {
                 self.generate_struct_value(x)
             }
-            crate::aping_ast::data_type::DataTypeVariant::TypeAlias(x) => {
+            crate::aping_ast::data_type::DataTypeVariant::TypeAlias(ref x) => {
                 match self.generate_type_alias(x) {
                     Some(x) => x,
                     None => return quote! {},
@@ -36,7 +36,7 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
 
     fn generate_enum_value(&self, enum_value: &EnumValue) -> TokenStream {
         fn generate_valid_enum_value(
-            enum_variant_derives: TokenStream,
+            enum_variant_derives: &TokenStream,
             valid_enum_value: &ValidEnumValue,
         ) -> TokenStream {
             let name = valid_enum_value.name.ident_pascal();
@@ -51,24 +51,27 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                     #name,
                 }
             } else {
-                let id = &valid_enum_value.id.parse::<i128>();
-                let name = if let Ok(id) = id {
-                    quote! {
-                        #[serde(rename = #id)]
-                        #name = #id
-                    }
-                } else {
-                    let id = &valid_enum_value.id;
-                    quote! {
-                        #[serde(rename = #id)]
-                        #name
-                    }
-                };
+                let parsed_id = valid_enum_value.id.parse::<i128>();
+                let name_with_attributes = parsed_id.as_ref().map_or_else(
+                    |_| {
+                        let string_id = &valid_enum_value.id;
+                        quote! {
+                            #[serde(rename = #string_id)]
+                            #name
+                        }
+                    },
+                    |numeric_id| {
+                        quote! {
+                            #[serde(rename = #numeric_id)]
+                            #name = #numeric_id
+                        }
+                    },
+                );
                 let description = valid_enum_value.description.as_slice().object_comment();
 
                 quote! {
                     #description
-                    #name,
+                    #name_with_attributes,
                 }
             }
         }
@@ -78,7 +81,7 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
         let valid_values = enum_value
             .valid_values
             .iter()
-            .map(|x| generate_valid_enum_value(enum_variant_derives.clone(), x))
+            .map(|x| generate_valid_enum_value(&enum_variant_derives.clone(), x))
             .fold(quote! {}, |acc, i| {
                 quote! {
                     #acc
@@ -121,7 +124,14 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                 }
             };
             let original_name = struct_field.name.0.as_str();
-            let data_type = gen.type_resolver.resolve_type(&struct_field.data_type);
+            let data_type = match gen.type_resolver.resolve_type(&struct_field.data_type) {
+                Ok(type_) => type_,
+                Err(err) => {
+                    return quote! {
+                        compile_error!(#err);
+                    };
+                }
+            };
             let struct_parameter_derives = gen.code_injector.struct_parameter_derives();
             if struct_field.mandatory {
                 quote! {
@@ -189,7 +199,14 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
 
     fn generate_type_alias(&self, type_alias: &TypeAlias) -> Option<TokenStream> {
         let name = type_alias.name.ident_pascal();
-        let data_type = self.type_resolver.resolve_type(&type_alias.data_type);
+        let data_type = match self.type_resolver.resolve_type(&type_alias.data_type) {
+            Ok(type_) => type_,
+            Err(err) => {
+                return Some(quote! {
+                    compile_error!(#err);
+                });
+            }
+        };
         let type_alias_derives = self.code_injector.type_alias_derives();
 
         let types_to_skip = [
@@ -224,24 +241,24 @@ mod test {
     fn test_generate_structure(gen_v1: GenV1GeneratorStrategy<CodeInjectorV1>) {
         // Setup
         let data_type = DataType {
-            name: Name("MarketFilter".to_string()),
+            name: Name("MarketFilter".to_owned()),
             variant: crate::aping_ast::data_type::DataTypeVariant::StructValue(StructValue {
-                name: Name("MarketFilter".to_string()),
+                name: Name("MarketFilter".to_owned()),
                 fields: vec![
                     StructField {
-                        name: Name("textQuery".to_string()),
+                        name: Name("textQuery".to_owned()),
                         mandatory: false,
-                        data_type: DataTypeParameter::new("string".to_string()),
+                        data_type: DataTypeParameter::new("string".to_owned()),
                         description: vec![
-                            Comment::new("Restrict markets by any text associated with the market such as the Name, Event, Competition, etc. You can include a wildcard (*) character as long as it is not the first character.".to_string()),
-                            Comment::new("Comment 2.".to_string()),
+                            Comment::new("Restrict markets by any text associated with the market such as the Name, Event, Competition, etc. You can include a wildcard (*) character as long as it is not the first character.".to_owned()),
+                            Comment::new("Comment 2.".to_owned()),
                         ],
                     },
                 ],
             }),
             description: vec![
-                Comment::new("The filter to select desired markets. All markets that match the criteria in the filter are selected.".to_string()),
-                Comment::new("Comment 2.".to_string()),
+                Comment::new("The filter to select desired markets. All markets that match the criteria in the filter are selected.".to_owned()),
+                Comment::new("Comment 2.".to_owned()),
             ],
         };
 
@@ -270,33 +287,33 @@ mod test {
     fn test_generate_enum(gen_v1: GenV1GeneratorStrategy<CodeInjectorV1>) {
         // Setup
         let data_type = DataType {
-            name: Name("MarketProjection".to_string()),
+            name: Name("MarketProjection".to_owned()),
             variant: crate::aping_ast::data_type::DataTypeVariant::EnumValue(EnumValue {
-                name: Name("MarketProjection".to_string()),
+                name: Name("MarketProjection".to_owned()),
                 valid_values: vec![
                     crate::aping_ast::data_type::ValidEnumValue {
-                        id: "0".to_string(),
-                        name: Name("COMPETITION".to_string()),
-                        description: vec![Comment::new("If no value is passed into the marketProjections parameter then the competition will not be returned with marketCatalogue".to_string())],
+                        id: "0".to_owned(),
+                        name: Name("COMPETITION".to_owned()),
+                        description: vec![Comment::new("If no value is passed into the marketProjections parameter then the competition will not be returned with marketCatalogue".to_owned())],
                     },
                     crate::aping_ast::data_type::ValidEnumValue {
-                        id: "1".to_string(),
-                        name: Name("EVENT".to_string()),
-                        description: vec![Comment::new("If no value is passed into the marketProjections parameter then the event will not be returned with marketCatalogue".to_string())],
+                        id: "1".to_owned(),
+                        name: Name("EVENT".to_owned()),
+                        description: vec![Comment::new("If no value is passed into the marketProjections parameter then the event will not be returned with marketCatalogue".to_owned())],
                     },
                     crate::aping_ast::data_type::ValidEnumValue {
-                        id: "2".to_string(),
-                        name: Name("EVENT_TYPE".to_string()),
-                        description: vec![Comment::new("If no value is passed into the marketProjections parameter then the eventType will not be returned with marketCatalogue".to_string())],
+                        id: "2".to_owned(),
+                        name: Name("EVENT_TYPE".to_owned()),
+                        description: vec![Comment::new("If no value is passed into the marketProjections parameter then the eventType will not be returned with marketCatalogue".to_owned())],
                     },
                     crate::aping_ast::data_type::ValidEnumValue {
-                        id: "3".to_string(),
-                        name: Name("MARKET_START_TIME".to_string()),
-                        description: vec![Comment::new("If no value is passed into the marketProjections parameter then the marketStartTime will not be returned with marketCatalogue".to_string())],
+                        id: "3".to_owned(),
+                        name: Name("MARKET_START_TIME".to_owned()),
+                        description: vec![Comment::new("If no value is passed into the marketProjections parameter then the marketStartTime will not be returned with marketCatalogue".to_owned())],
                     },
                 ],
             }),
-            description: vec![Comment::new("Type of price data returned by listMarketBook operation".to_string())],
+            description: vec![Comment::new("Type of price data returned by listMarketBook operation".to_owned())],
         };
 
         // Execute
@@ -328,33 +345,33 @@ mod test {
     fn test_generate_enum_2(gen_v1: GenV1GeneratorStrategy<CodeInjectorV1>) {
         // Setup
         let data_type = DataType {
-            name: Name("MarketProjection".to_string()),
+            name: Name("MarketProjection".to_owned()),
             variant: crate::aping_ast::data_type::DataTypeVariant::EnumValue(EnumValue {
-                name: Name("MarketProjection".to_string()),
+                name: Name("MarketProjection".to_owned()),
                 valid_values: vec![
                     crate::aping_ast::data_type::ValidEnumValue {
-                        id: "".to_string(),
-                        name: Name("COMPETITION".to_string()),
-                        description: vec![Comment::new("If no value is passed into the marketProjections parameter then the competition will not be returned with marketCatalogue".to_string())],
+                        id: String::new(),
+                        name: Name("COMPETITION".to_owned()),
+                        description: vec![Comment::new("If no value is passed into the marketProjections parameter then the competition will not be returned with marketCatalogue".to_owned())],
                     },
                     crate::aping_ast::data_type::ValidEnumValue {
-                        id: "".to_string(),
-                        name: Name("EVENT".to_string()),
-                        description: vec![Comment::new("If no value is passed into the marketProjections parameter then the event will not be returned with marketCatalogue".to_string())],
+                        id: String::new(),
+                        name: Name("EVENT".to_owned()),
+                        description: vec![Comment::new("If no value is passed into the marketProjections parameter then the event will not be returned with marketCatalogue".to_owned())],
                     },
                     crate::aping_ast::data_type::ValidEnumValue {
-                        id: "".to_string(),
-                        name: Name("EVENT_TYPE".to_string()),
-                        description: vec![Comment::new("If no value is passed into the marketProjections parameter then the eventType will not be returned with marketCatalogue".to_string())],
+                        id: String::new(),
+                        name: Name("EVENT_TYPE".to_owned()),
+                        description: vec![Comment::new("If no value is passed into the marketProjections parameter then the eventType will not be returned with marketCatalogue".to_owned())],
                     },
                     crate::aping_ast::data_type::ValidEnumValue {
-                        id: "".to_string(),
-                        name: Name("MARKET_START_TIME".to_string()),
-                        description: vec![Comment::new("If no value is passed into the marketProjections parameter then the marketStartTime will not be returned with marketCatalogue".to_string())],
+                        id: String::new(),
+                        name: Name("MARKET_START_TIME".to_owned()),
+                        description: vec![Comment::new("If no value is passed into the marketProjections parameter then the marketStartTime will not be returned with marketCatalogue".to_owned())],
                     },
                 ],
             }),
-            description: vec![Comment::new("Type of price data returned by listMarketBook operation".to_string())],
+            description: vec![Comment::new("Type of price data returned by listMarketBook operation".to_owned())],
         };
 
         // Execute
@@ -386,13 +403,13 @@ mod test {
     fn test_generate_type_alias(gen_v1: GenV1GeneratorStrategy<CodeInjectorV1>) {
         // Setup
         let data_type = DataType {
-            name: Name("MarketProjection".to_string()),
+            name: Name("MarketProjection".to_owned()),
             variant: crate::aping_ast::data_type::DataTypeVariant::TypeAlias(TypeAlias {
-                name: Name("MarketProjection".to_string()),
-                data_type: DataTypeParameter::new("string".to_string()),
+                name: Name("MarketProjection".to_owned()),
+                data_type: DataTypeParameter::new("string".to_owned()),
             }),
             description: vec![Comment::new(
-                "Type of price data returned by listMarketBook operation".to_string(),
+                "Type of price data returned by listMarketBook operation".to_owned(),
             )],
         };
 

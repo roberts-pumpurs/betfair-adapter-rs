@@ -1,11 +1,18 @@
 use proc_macro2::TokenStream;
 use quote::quote;
+/// A trait for generating code injections.
 pub trait CodeInjector {
+    /// Generate the module level preamble
     fn module_level_preamble(&self) -> TokenStream;
+    /// Generate the enum derives
     fn enum_derives(&self) -> TokenStream;
+    /// Generate the enum variant derives
     fn enum_variant_derives(&self) -> TokenStream;
+    /// Generate the struct derives
     fn struct_derives(&self) -> TokenStream;
+    /// Generate the type alias derives
     fn type_alias_derives(&self) -> TokenStream;
+    /// Generate the struct parameter derives
     fn struct_parameter_derives(&self) -> TokenStream;
 }
 

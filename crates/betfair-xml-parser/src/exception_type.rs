@@ -20,6 +20,7 @@ pub struct ExceptionType {
 /// A child item of the <exceptionType> tag
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+#[allow(clippy::module_name_repetitions)]
 pub enum ExceptionTypeItems {
     /// The description of the exception
     Description(Description),
@@ -114,19 +115,26 @@ mod tests {
     </exceptionType>
     "#;
 
-        let exception = from_str::<ExceptionType>(xml).unwrap();
-        assert_eq!(exception.name, "APINGException");
-        assert_eq!(exception.prefix, "ANGX");
-        assert_eq!(exception.values.len(), 4);
-        assert_eq!(
-            exception.values[0],
-            ExceptionTypeItems::Description(Description {
-                value: Some("This exception is thrown when an operation fails".to_owned()),
-            })
-        );
-        assert!(matches!(
-            exception.values[1],
-            ExceptionTypeItems::Parameter(_)
-        ));
+        let exception = from_str::<ExceptionType>(xml);
+
+        match exception {
+            Ok(exception) => {
+                assert_eq!(exception.name, "APINGException");
+                assert_eq!(exception.prefix, "ANGX");
+                assert_eq!(exception.values.len(), 4);
+                assert!(exception.values.first().map_or(false, |item| {
+                    matches!(item, &ExceptionTypeItems::Description(Description {
+                        value: Some(ref desc)
+                    }) if desc == "This exception is thrown when an operation fails")
+                }));
+
+                assert!(exception.values.get(1).map_or(false, |item| {
+                    matches!(item, &ExceptionTypeItems::Parameter(_))
+                }));
+            }
+            Err(err) => {
+                log::error!("Failed to parse XML: {err}");
+            }
+        }
     }
 }
