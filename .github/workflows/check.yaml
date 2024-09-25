@@ -23,33 +23,5 @@ jobs:
       - name: Setup repo
         uses: ./.github/actions/setup-repo
 
-      - name: cargo make fmt-check
-        run: cargo make fmt-check
-  clippy:
-    runs-on: ubuntu-22.04
-    name: clippy
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-          fetch-depth: 0
-
-      - name: Setup repo
-        uses: ./.github/actions/setup-repo
-
-      - name: cargo make clippy-check
-        run: cargo make clippy-check
-  hack:
-    runs-on: ubuntu-22.04
-    name: cargo-hack
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-          fetch-depth: 0
-
-      - name: Setup repo
-        uses: ./.github/actions/setup-repo
-
-      - name: cargo hack
-        run: cargo make hack-check
+      - name: cargo xtask check
+        run: cargo xtask check

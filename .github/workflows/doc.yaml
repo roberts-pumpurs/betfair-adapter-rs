@@ -24,4 +24,4 @@ jobs:
         uses: ./.github/actions/setup-repo
 
       - name: cargo doc
-        run: cargo make doc
+        run: cargo xtask doc

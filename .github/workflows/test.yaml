@@ -22,12 +22,4 @@ jobs:
         uses: ./.github/actions/setup-repo
 
       - name: cargo coverage
-        run: cargo make coverage
-
-      - name: Output coverage
-        uses: 5monkeys/cobertura-action@v13
-        with:
-          path: target/coverage/cobertura.xml
-          minimum_coverage: 85
-          fail_below_threshold: true
-          show_missing: true
+        run: cargo xtask test

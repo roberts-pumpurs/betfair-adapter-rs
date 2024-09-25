@@ -3,3 +3,4 @@ target
 lcov.*
 example_config.toml
 certs
+.DS_Store

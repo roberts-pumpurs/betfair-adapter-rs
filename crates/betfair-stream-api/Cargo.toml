@@ -1,7 +1,12 @@
 [package]
 name = "betfair-stream-api"
-version = "0.1.0"
-edition = "2021"
+readme = "../README.md"
+version = { workspace = true }
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
 
 [lints]
 workspace = true
@@ -28,7 +33,6 @@ rustls.workspace = true
 chrono.workspace = true
 eyre.workspace = true
 rustls-native-certs.workspace = true
-trait-variant.workspace = true
 itertools.workspace = true
 backoff.workspace = true
 rustls-pemfile = { workspace = true, optional = true }

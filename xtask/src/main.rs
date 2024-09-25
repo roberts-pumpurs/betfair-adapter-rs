@@ -127,7 +127,7 @@ fn main() -> eyre::Result<()> {
         Args::UnusedDeps => {
             println!("unused deps");
             cmd!(sh, "cargo install --locked cargo-machete").run()?;
-            cmd!(sh, "cargo machete").run()?;
+            cmd!(sh, "cargo-machete").run()?;
         }
         Args::Typos { write } => {
             println!("cargo spellcheck");

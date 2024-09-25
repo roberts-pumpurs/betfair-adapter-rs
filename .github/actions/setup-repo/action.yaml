@@ -1,13 +1,13 @@
-name: 'Setup Repo Action'
-description: 'A reusable composite action that setups rust and other common tasks'
+name: "Setup Repo Action"
+description: "A reusable composite action that setups rust and other common tasks"
 inputs:
   toolchain:
-    description: 'An example input parameter'
+    description: "An example input parameter"
     required: false
-    default: 'nightly-2023-05-02'
+    default: "nightly-2024-09-24"
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - name: Install nightly
       uses: dtolnay/rust-toolchain@master
@@ -17,8 +17,3 @@ runs:
     - uses: Swatinem/rust-cache@v2
       with:
         cache-on-failure: true
-    - name: Install cargo-make
-      uses: actions-rs/cargo@v1
-      with:
-        command: install
-        args: --debug cargo-make

@@ -1,7 +1,12 @@
 [package]
 name = "stream-api-subscribe-to-orders"
-version = "0.1.0"
-edition = "2021"
+readme = "../README.md"
+version = { workspace = true }
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
 
 [dependencies]
 tokio.workspace = true
