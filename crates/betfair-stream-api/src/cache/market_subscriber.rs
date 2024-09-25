@@ -77,7 +77,7 @@ impl MarketSubscriber {
     ///
     /// Internally it uses a weird trick of subscribing to a market that does not exist to simulate
     /// unsubscribing from all markets.
-    /// [refernce](https://forum.developer.betfair.com/forum/sports-exchange-api/exchange-api/34555-stream-api-unsubscribe-from-all-markets)
+    /// [reference](https://forum.developer.betfair.com/forum/sports-exchange-api/exchange-api/34555-stream-api-unsubscribe-from-all-markets)
     ///
     /// # Errors
     /// If sending the request to the underlying stream fails.
