@@ -49,7 +49,7 @@ use rsa::RsaPrivateKey;
 /// # Example
 ///
 /// ```
-/// use your_crate_name::rcgen_cert;
+/// use betfair_cert_gen::rcgen_cert;
 ///
 /// let result = rcgen_cert("US", "California", "IT Department", "example.com");
 /// match result {
