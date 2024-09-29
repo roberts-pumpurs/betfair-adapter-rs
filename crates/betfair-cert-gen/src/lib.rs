@@ -1,3 +1,6 @@
+//! This crate provides functionality to generate Betfair certificates for non-interactive bot usage.
+//! It includes methods for creating SSL/TLS certificates and key pairs.
+
 use rand::rngs::OsRng;
 use rcgen::{
     date_time_ymd, Certificate, CertificateParams, DistinguishedName, DnType,

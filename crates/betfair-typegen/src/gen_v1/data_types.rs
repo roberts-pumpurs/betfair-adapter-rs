@@ -127,9 +127,8 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
             let data_type = match gen.type_resolver.resolve_type(&struct_field.data_type) {
                 Ok(type_) => type_,
                 Err(err) => {
-                    return quote! {
-                        compile_error!(#err);
-                    };
+                    let err_msg = err.to_string();
+                    return quote! { compile_error!(#err_msg); };
                 }
             };
             let struct_parameter_derives = gen.code_injector.struct_parameter_derives();
@@ -202,13 +201,14 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
         let data_type = match self.type_resolver.resolve_type(&type_alias.data_type) {
             Ok(type_) => type_,
             Err(err) => {
+                let err_msg = err.to_string();
                 return Some(quote! {
-                    compile_error!(#err);
+                    compile_error!(#err_msg);
                 });
             }
         };
         let type_alias_derives = self.code_injector.type_alias_derives();
-
+    
         let types_to_skip = [
             "Price",
             "Size",
@@ -216,7 +216,7 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
             "CustomerRef",
             "CustomerStrategyRef",
         ];
-
+    
         if types_to_skip.contains(&type_alias.name.0.as_str()) {
             return None
         }

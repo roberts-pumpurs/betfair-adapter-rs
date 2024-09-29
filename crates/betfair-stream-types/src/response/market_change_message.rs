@@ -7,6 +7,7 @@ use super::{DataChange, DatasetChangeMessage, UpdateSet2, UpdateSet3};
 use crate::request::market_subscription_message::StreamMarketFilterBettingType;
 
 /// Represents a market change message.
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct MarketChangeMessage(pub DatasetChangeMessage<MarketChange>);
 
 impl DataChange<Self> for MarketChange {
@@ -24,6 +25,7 @@ impl core::ops::Deref for MarketChangeMessage {
 }
 
 /// Represents a market change.
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct MarketChange {
     /// Runner Changes - a list of changes to runners (or null if un-changed)
     #[serde(skip_serializing_if = "Option::is_none")]

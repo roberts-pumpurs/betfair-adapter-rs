@@ -3,6 +3,7 @@ use heck::ToPascalCase;
 use crate::aping_ast::types::DataTypeParameter;
 extern crate alloc;
 use alloc::borrow::ToOwned;
+use eyre::{Result, WrapErr};
 
 #[derive(Debug)]
 pub(crate) struct TypeResolverV1;
@@ -12,7 +13,7 @@ impl TypeResolverV1 {
         Self
     }
 
-    pub(crate) fn resolve_type(&self, data_type: &DataTypeParameter) -> eyre::Result<syn::Type> {
+    pub(crate) fn resolve_type(&self, data_type: &DataTypeParameter) -> Result<syn::Type> {
         fn transform_to_rust_types(input: &str) -> String {
             // TODO make this a configurable thing
             match input {
@@ -35,18 +36,18 @@ impl TypeResolverV1 {
         match self.manage_list(data_type.as_str()) {
             TypePlural::Singular(value) => {
                 let value = transform_to_rust_types(&value);
-                syn::parse_str(&value).map_err(|_err| format!("Failed to parse type: {value}"))
+                syn::parse_str(&value).wrap_err_with(|| format!("Failed to parse type: {value}"))
             }
             TypePlural::List(value) | TypePlural::Set(value) => {
                 let value = transform_to_rust_types(&value);
                 let value = format!("Vec<{value}>");
-                syn::parse_str(&value).map_err(|_err| format!("Failed to parse type: {value}"))
+                syn::parse_str(&value).wrap_err_with(|| format!("Failed to parse type: {value}"))
             }
             TypePlural::Map { key, value } => {
                 let key = transform_to_rust_types(&key);
                 let value = transform_to_rust_types(&value);
                 let value = format!("std::collections::HashMap<{key}, {value}>");
-                syn::parse_str(&value).map_err(|_err| format!("Failed to parse type: {value}"))
+                syn::parse_str(&value).wrap_err_with(|| format!("Failed to parse type: {value}"))
             }
         }
     }
