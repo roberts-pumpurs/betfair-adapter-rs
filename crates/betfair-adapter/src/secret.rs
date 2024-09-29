@@ -78,7 +78,6 @@ mod serde_utils {
 }
 #[cfg(test)]
 mod tests {
-    
 
     use super::*;
 

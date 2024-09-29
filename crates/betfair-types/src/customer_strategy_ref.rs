@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 pub struct CustomerStrategyRef([char; 15]);
 
 impl CustomerStrategyRef {
-    #[must_use] pub const fn new(customer_strategy_ref: [char; 15]) -> Self {
+    #[must_use]
+    pub const fn new(customer_strategy_ref: [char; 15]) -> Self {
         Self(customer_strategy_ref)
     }
 }

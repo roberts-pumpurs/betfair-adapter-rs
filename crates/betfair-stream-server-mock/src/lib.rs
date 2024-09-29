@@ -43,7 +43,13 @@ impl StreamAPIBackend {
 
         let _ = CERTIFICATE.set(cert.clone());
 
-        Self { listener_addr, listener, server_config, cert, url }
+        Self {
+            listener_addr,
+            listener,
+            server_config,
+            cert,
+            url,
+        }
     }
 
     pub async fn process_next(&self) -> ClientStateW {
@@ -67,7 +73,10 @@ pub struct ClientStateW {
 }
 
 impl ClientStateW {
-    pub const fn new(socket: TlsStream<TcpStream>, state: Arc<tokio::sync::Mutex<ClientState>>) -> Self {
+    pub const fn new(
+        socket: TlsStream<TcpStream>,
+        state: Arc<tokio::sync::Mutex<ClientState>>,
+    ) -> Self {
         Self { socket, state }
     }
 

@@ -7,7 +7,8 @@ use serde::{Deserialize, Serialize};
 pub struct Size(Decimal);
 
 impl Size {
-    #[must_use] pub const fn new(size: Decimal) -> Self {
+    #[must_use]
+    pub const fn new(size: Decimal) -> Self {
         Self(size)
     }
 
@@ -27,15 +28,18 @@ impl Size {
         self.0.checked_div(other.0).map(Self)
     }
 
-    #[must_use] pub fn saturating_add(&self, other: &Self) -> Self {
+    #[must_use]
+    pub fn saturating_add(&self, other: &Self) -> Self {
         Self(self.0.saturating_add(other.0))
     }
 
-    #[must_use] pub fn saturating_sub(&self, other: &Self) -> Self {
+    #[must_use]
+    pub fn saturating_sub(&self, other: &Self) -> Self {
         Self(self.0.saturating_sub(other.0))
     }
 
-    #[must_use] pub fn saturating_mul(&self, other: &Self) -> Self {
+    #[must_use]
+    pub fn saturating_mul(&self, other: &Self) -> Self {
         Self(self.0.saturating_mul(other.0))
     }
 }

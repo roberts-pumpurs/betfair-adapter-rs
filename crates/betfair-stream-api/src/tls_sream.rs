@@ -80,7 +80,9 @@ pub(crate) type RawStreamApiConnection =
 mod internal {
     use super::*;
 
-    pub(crate) struct RawStreamApiConnection<IO: AsyncRead + AsyncWrite + core::fmt::Debug + Send + Unpin> {
+    pub(crate) struct RawStreamApiConnection<
+        IO: AsyncRead + AsyncWrite + core::fmt::Debug + Send + Unpin,
+    > {
         pub(super) io: Framed<IO, StreamAPIClientCodec>,
     }
 
