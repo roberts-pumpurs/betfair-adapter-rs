@@ -1,3 +1,7 @@
+use std::path::Path;
+use std::process::Command;
+use std::{fs, io};
+
 use proc_macro2::TokenStream;
 
 /// The generated output
@@ -14,32 +18,81 @@ impl GeneratedOutput {
         }
     }
 
-    /// # Write the generated output to a file
-    /// TODO: add example usage code
-    pub fn write_to_file(&self, path: impl AsRef<std::path::Path>) -> std::io::Result<()> {
-        let root_name = path.as_ref().join("mod.rs");
-        std::fs::create_dir(path.as_ref()).unwrap_or_default();
-        std::fs::write(&root_name, self.root.to_string().as_bytes()).unwrap();
+    /// Writes the generated output to a specified file path.
+    ///
+    /// This function creates a directory at the given path (if it doesn't exist),
+    /// writes the root module to `mod.rs`, and formats the generated code using `rustfmt`.
+    /// It also writes each submodule to its respective file and formats them.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - A reference to a path where the output files will be written.
+    ///
+    /// # Returns
+    ///
+    /// Returns a `Result` indicating success or failure of the file operations.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an `std::io::Error` if:
+    /// - The directory cannot be created.
+    /// - Writing to the file fails.
+    /// - The `rustfmt` command fails to execute.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let output = GeneratedOutput::new();
+    /// let result = output.write_to_file("output_directory");
+    /// match result {
+    ///     Ok(_) => println!("Files written successfully!"),
+    ///     Err(e) => eprintln!("Error writing files: {}", e),
+    /// }
+    /// ```
+    /// Need Help to fix this error
+    #[allow(clippy::pattern_type_mismatch)]
+    #[tracing::instrument(skip_all)]
+    pub fn write_to_file<T: AsRef<Path>>(&self, path: T) -> io::Result<()> {
+        let path = path.as_ref();
+        let root_path = path.join("mod.rs");
+        let root = self.root.to_string();
+        let bytes = root.as_bytes();
+        let bytes_len = bytes.len();
+        tracing::debug!(path = ?root_path, content_len = ?bytes_len, "writing mod.rs");
 
-        // format the generated code
-        let mut cmd = std::process::Command::new("rustfmt");
-        cmd.arg("--emit")
-            .arg("files")
-            .arg(root_name)
-            .spawn()
-            .unwrap();
+        fs::create_dir_all(path)?;
+        fs::write(&root_path, bytes)?;
 
         for (module_name, submodule) in &self.submodules {
             // Write out the submodule
-            let submodule_file = path.as_ref().join(format!("{module_name}.rs"));
-            std::fs::write(&submodule_file, submodule.to_string().as_bytes()).unwrap();
+            tracing::info!(?module_name, "writing module to file");
+            let submodule_file = path.join(format!("{module_name}.rs"));
+            fs::write(&submodule_file, submodule.to_string().as_bytes())?;
 
-            let mut cmd = std::process::Command::new("rustfmt");
-            cmd.arg("--emit")
-                .arg("files")
-                .arg(submodule_file)
-                .spawn()
-                .unwrap();
+            // Format the submodule file
+            self.format_file(&submodule_file)?;
+        }
+
+        // Format the generated code for root
+        self.format_file(&root_path)?;
+
+        Ok(())
+    }
+
+    #[tracing::instrument(skip_all)]
+    fn format_file(&self, file_path: &Path) -> io::Result<()> {
+        let status = Command::new("rustfmt")
+            .arg("--emit")
+            .arg("files")
+            .arg(file_path)
+            .status()?;
+
+        if !status.success() {
+            tracing::error!(?file_path, "cannot format file");
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                format!("rustfmt failed for {}", file_path.display()),
+            ));
         }
         Ok(())
     }

@@ -44,13 +44,12 @@ impl GenV1GeneratorStrategy<injector::CodeInjectorV1> {
 }
 
 impl<T: CodeInjector> GeneratorStrategy for GenV1GeneratorStrategy<T> {
-    fn generate_submodule(&self, interface: impl Into<Interface>) -> TokenStream {
-        let interface = interface.into();
-        let aping: Aping = interface.into();
+    fn generate_submodule<I: Into<Interface>>(&self, aping: I) -> TokenStream {
+        let interface = aping.into();
+        let aping_: Aping = interface.into();
 
-        let aping = aping;
-        let top_level_docs = self.generate_top_level_docs(&aping);
-        let data_types = aping
+        let top_level_docs = self.generate_top_level_docs(&aping_);
+        let data_types = aping_
             .data_types()
             .iter()
             .fold(quote! {}, |acc, (_name, data)| {
@@ -62,7 +61,7 @@ impl<T: CodeInjector> GeneratorStrategy for GenV1GeneratorStrategy<T> {
                     #iter_data_type
                 }
             });
-        let rpc_calls = aping
+        let rpc_calls = aping_
             .rpc_calls()
             .iter()
             .fold(quote! {}, |acc, (_name, data)| {
@@ -90,7 +89,7 @@ impl<T: CodeInjector> GeneratorStrategy for GenV1GeneratorStrategy<T> {
     }
 
     // TODO: Implement the inside gen_1 generate_mod, proper preamble, and proper submodules
-    fn generate_mod(&self, settings: &impl GeneratorSettings) -> TokenStream {
+    fn generate_mod<E: GeneratorSettings>(&self, settings: E) -> TokenStream {
         let transport_layer = self.generate_transport_layer();
 
         let mut top_level_preamble = quote! {

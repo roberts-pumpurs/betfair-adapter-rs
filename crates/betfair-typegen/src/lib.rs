@@ -27,8 +27,8 @@ pub trait GeneratorStrategy {
     /// * `aping` - The Betfair API interface
     /// # Returns
     /// The generated types for the Betfair API that can be written to a file
-    fn generate_submodule(&self, aping: impl Into<Interface>) -> TokenStream;
+    fn generate_submodule<T: Into<Interface>>(&self, aping: T) -> TokenStream;
 
     /// Generate the top level documentation and types
-    fn generate_mod(&self, settings: &impl GeneratorSettings) -> TokenStream;
+    fn generate_mod<T: GeneratorSettings>(&self, settings: T) -> TokenStream;
 }

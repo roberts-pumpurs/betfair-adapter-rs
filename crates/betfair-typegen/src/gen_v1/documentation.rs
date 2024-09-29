@@ -7,6 +7,7 @@ use crate::aping_ast::types::Comment;
 use crate::aping_ast::Aping;
 
 impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
+    #[allow(clippy::unused_self)]
     pub(crate) fn generate_top_level_docs(&self, aping: &Aping) -> TokenStream {
         let description = aping.top_level_docs().module_comment();
         let namespace = aping.namespace().module_comment();
@@ -74,14 +75,14 @@ mod test {
     fn module_docs(gen_v1: GenV1GeneratorStrategy<CodeInjectorV1>) {
         let aping = Aping::builder()
             .top_level_docs(vec![
-                Comment::new("my custom text".to_string()),
-                Comment::new("my custom text x2".to_string()),
+                Comment::new("my custom text".to_owned()),
+                Comment::new("my custom text x2".to_owned()),
             ])
-            .version(Name("1.0.0".to_string()))
-            .date(Name("2020-01-01".to_string()))
-            .name(Name("MyName".to_string()))
-            .owner(Name("MyOwner".to_string()))
-            .namespace(Name("MyNamespace".to_string()))
+            .version(Name("1.0.0".to_owned()))
+            .date(Name("2020-01-01".to_owned()))
+            .name(Name("MyName".to_owned()))
+            .owner(Name("MyOwner".to_owned()))
+            .namespace(Name("MyNamespace".to_owned()))
             .build();
 
         // Action

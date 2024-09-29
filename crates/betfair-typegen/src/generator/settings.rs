@@ -10,6 +10,11 @@ pub trait GeneratorSettings {
     fn stream_api(&self) -> bool;
 }
 
+/// TODO: We need to fix the clippy warning related to boolean fields
+///
+///
+/// For now are suppressing this warning as to mitigate this warnings
+/// many changes are needed in the codebase to fix.
 /// Simple implementation of the `GeneratorSettings` trait.
 pub struct SimpleGeneratorSettings {
     account_aping: bool,
@@ -46,6 +51,17 @@ impl SimpleGeneratorSettings {
     #[must_use]
     pub const fn all() -> Self {
         Self::new(true, true, true, true)
+    }
+}
+
+impl Clone for SimpleGeneratorSettings {
+    fn clone(&self) -> Self {
+        Self::new(
+            self.account_aping,
+            self.heartbeat_aping,
+            self.sports_aping,
+            self.stream_api,
+        )
     }
 }
 

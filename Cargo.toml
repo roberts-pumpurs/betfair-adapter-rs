@@ -83,6 +83,7 @@ redact = { version = "0.1", features = ["serde"] }
 trait-variant = "0.1"
 itertools = "0.12"
 backoff = { version = "0.4", features = ["tokio"] }
+log = "0.4"
 
 # Async
 tokio = { version = "1.0", features = ["full", "tracing"] }
@@ -130,6 +131,7 @@ json-rpc-types = "1"
 # Tracing
 tracing = { version = "0.1" }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "tracing-log", "json", "valuable", "tracing"] }
+tracing-error = "0.2"
 
 # xtask & examples
 clap = { version = "4", features = ["derive"] }

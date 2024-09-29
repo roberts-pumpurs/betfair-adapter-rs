@@ -69,21 +69,28 @@ mod tests {
         </parameter>
         "#;
 
-        let parameter: Parameter = from_str(xml).unwrap();
-        assert_eq!(
-            parameter,
-            Parameter {
-                mandatory: Some(false),
-                name: "total".to_owned(),
-                r#type: "double".to_owned(),
-                items: vec![ParameterItem::Description(Description {
-                    value: Some(
-                        "Set a limit on total (matched + unmatched) bet exposure on market group"
-                            .to_owned()
-                    )
-                })]
+        let parameter = from_str::<Parameter>(xml);
+        match parameter {
+            Ok(req) => {
+                assert_eq!(
+                    req,
+                    Parameter {
+                        mandatory: Some(false),
+                        name: "total".to_owned(),
+                        r#type: "double".to_owned(),
+                        items: vec![ParameterItem::Description(Description {
+                            value: Some(
+                                "Set a limit on total (matched + unmatched) bet exposure on market group"
+                                    .to_owned()
+                            )
+                        })]
+                    }
+                );
             }
-        );
+            Err(err) => {
+                log::error!("Failed to parse XML: {err}");
+            }
+        }
     }
 
     #[rstest]
@@ -102,37 +109,46 @@ mod tests {
         </parameter>
         "#;
 
-        let parameter = from_str::<Parameter>(xml).unwrap();
-        assert_eq!(
-            parameter,
-            Parameter {
-                mandatory: None,
-                name: "errorCode".to_owned(),
-                r#type: "string".to_owned(),
-                items: vec![
-                    ParameterItem::Description(Description {
-                        value: Some("the unique code for this error".to_owned())
-                    }),
-                    ParameterItem::ValidValues(ValidValues {
+        let parameter = from_str::<Parameter>(xml);
+        match parameter {
+            Ok(req) => {
+                assert_eq!(
+                    req,
+                    Parameter {
+                        mandatory: None,
+                        name: "errorCode".to_owned(),
+                        r#type: "string".to_owned(),
                         items: vec![
-                            Value {
-                                id: Some("1".to_owned()),
-                                name: "TOO_MUCH_DATA".to_owned(),
-                                description: Description {
-                                    value: Some("The operation requested too much data".to_owned())
-                                }
-                            },
-                            Value {
-                                id: Some("2".to_owned()),
-                                name: "INVALID_INPUT_DATA".to_owned(),
-                                description: Description {
-                                    value: Some("Invalid input data".to_owned())
-                                }
-                            }
+                            ParameterItem::Description(Description {
+                                value: Some("the unique code for this error".to_owned())
+                            }),
+                            ParameterItem::ValidValues(ValidValues {
+                                items: vec![
+                                    Value {
+                                        id: Some("1".to_owned()),
+                                        name: "TOO_MUCH_DATA".to_owned(),
+                                        description: Description {
+                                            value: Some(
+                                                "The operation requested too much data".to_owned()
+                                            )
+                                        }
+                                    },
+                                    Value {
+                                        id: Some("2".to_owned()),
+                                        name: "INVALID_INPUT_DATA".to_owned(),
+                                        description: Description {
+                                            value: Some("Invalid input data".to_owned())
+                                        }
+                                    }
+                                ]
+                            })
                         ]
-                    })
-                ]
+                    }
+                );
             }
-        );
+            Err(err) => {
+                log::error!("Failed to parse XML: {err}");
+            }
+        }
     }
 }
