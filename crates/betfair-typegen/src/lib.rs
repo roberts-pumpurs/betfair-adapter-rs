@@ -9,14 +9,6 @@
     attr(deny(warnings, rust_2018_idioms), allow(dead_code, unused_variables))
 ))]
 #![allow(incomplete_features)]
-#![allow(clippy::module_name_repetitions)]
-#![allow(clippy::unused_self)]
-#![allow(clippy::struct_excessive_bools)]
-#![allow(clippy::fn_params_excessive_bools)]
-#![allow(clippy::field_scoped_visibility_modifiers)]
-#![allow(clippy::self_named_module_files)]
-#![allow(clippy::pub_with_shorthand)]
-#![allow(clippy::redundant_pub_crate)]
 
 mod aping_ast;
 pub mod gen_v1;
