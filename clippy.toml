@@ -1,4 +1,5 @@
-msrv = "1.80.0"
-
 avoid-breaking-exported-api = false
 cognitive-complexity-threshold = 30
+
+allow-dbg-in-tests = true
+allow-unwrap-in-tests = true

@@ -13,7 +13,6 @@ enum Args {
         #[clap(last = true)]
         args: Vec<String>,
     },
-    Audit,
     Check,
     Fmt,
     Doc,
@@ -90,11 +89,6 @@ fn main() -> eyre::Result<()> {
                 #[cfg(target_os = "linux")]
                 cmd!(sh, "xdg-open target/coverage/html/index.html").run()?;
             }
-        }
-        Args::Audit => {
-            println!("cargo audit");
-            cmd!(sh, "cargo install --locked cargo-audit").run()?;
-            cmd!(sh, "cargo audit").run()?;
         }
         Args::Check => {
             println!("cargo check");
