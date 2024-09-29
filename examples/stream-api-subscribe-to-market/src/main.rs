@@ -23,9 +23,7 @@ async fn main() -> eyre::Result<()> {
     init_tracing();
 
     // load config
-    let config = std::fs::read_to_string(
-        "/Users/ysingh/codebase/github.com/robert-pumpurs/betfair-adapter-rs/example_config.toml",
-    )?;
+    let config = std::fs::read_to_string("example_config.toml")?;
     let config = toml::from_str::<Config>(config.as_str())?;
     let secret_provider = SecretProvider {
         application_key: config.betfair_application_key,

@@ -6,8 +6,7 @@ use serde::{Deserialize, Serialize};
 use super::{DataChange, DatasetChangeMessage, UpdateSet2, UpdateSet3};
 use crate::request::market_subscription_message::StreamMarketFilterBettingType;
 
-#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+/// Represents a market change message.
 pub struct MarketChangeMessage(pub DatasetChangeMessage<MarketChange>);
 
 impl DataChange<Self> for MarketChange {
@@ -24,8 +23,7 @@ impl core::ops::Deref for MarketChangeMessage {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+/// Represents a market change.
 pub struct MarketChange {
     /// Runner Changes - a list of changes to runners (or null if un-changed)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -53,28 +51,38 @@ pub struct MarketChange {
     pub market_id: Option<MarketId>,
 }
 
+/// Represents the market definition.
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MarketDefinition {
+    /// The venue of the market.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub venue: Option<String>,
+    /// The type of race.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub race_type: Option<String>,
+    /// The time the market was settled.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub settled_time: Option<String>,
+    /// The timezone of the market.
     pub timezone: String,
+    /// The divisor for each way betting.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub each_way_divisor: Option<rust_decimal::Decimal>,
 
     /// The market regulators.
     pub regulators: Vec<String>,
 
+    /// The type of market.
     pub market_type: String,
 
+    /// The base rate for the market.
     pub market_base_rate: rust_decimal::Decimal,
 
+    /// The number of winners in the market.
     pub number_of_winners: i32,
 
+    /// The country code for the market.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub country_code: Option<String>,
 
@@ -83,16 +91,20 @@ pub struct MarketDefinition {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub line_max_unit: Option<rust_decimal::Decimal>,
 
+    /// Indicates if the market is in play.
     pub in_play: bool,
 
     /// The number of seconds an order is held until it is submitted into the market. Orders are
     /// usually delayed when the market is in-play
     pub bet_delay: i32,
 
+    /// Indicates if the market is a BSP market.
     pub bsp_market: bool,
 
+    /// The betting type for the market.
     pub betting_type: StreamMarketFilterBettingType,
 
+    /// The number of active runners in the market.
     pub number_of_active_runners: i32,
 
     /// For Handicap and Line markets, the minimum value for the outcome, in market units for this
@@ -100,42 +112,57 @@ pub struct MarketDefinition {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub line_min_unit: Option<rust_decimal::Decimal>,
 
+    /// The event ID associated with the market.
     pub event_id: String,
 
+    /// Indicates if cross matching is enabled.
     pub cross_matching: bool,
 
+    /// Indicates if runners can be voided.
     pub runners_voidable: bool,
 
+    /// Indicates if turning in play is enabled.
     pub turn_in_play_enabled: bool,
 
+    /// The price ladder definition for the market.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub price_ladder_definition: Option<Box<PriceLadderDefinition>>,
 
+    /// The key line definition for the market.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub key_line_definition: Option<Box<KeyLineDefinition>>,
 
+    /// The time the market was suspended.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub suspend_time: Option<String>,
 
+    /// Indicates if discounts are allowed.
     pub discount_allowed: bool,
 
+    /// Indicates if persistence is enabled.
     pub persistence_enabled: bool,
 
+    /// The list of runners in the market.
     pub runners: Vec<RunnerDefinition>,
 
+    /// The version of the market definition.
     pub version: i64,
 
     /// The Event Type the market is contained within.
     pub event_type_id: String,
 
+    /// Indicates if the market is complete.
     pub complete: bool,
 
+    /// The open date of the market.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub open_date: Option<String>,
 
+    /// The time of the market.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub market_time: Option<String>,
 
+    /// Indicates if the BSP has been reconciled.
     pub bsp_reconciled: bool,
 
     /// For Handicap and Line markets, the lines available on this market will be between the range
@@ -145,6 +172,7 @@ pub struct MarketDefinition {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub line_interval: Option<rust_decimal::Decimal>,
 
+    /// The status of the market.
     pub status: StreamMarketDefinitionStatus,
 }
 
@@ -164,32 +192,40 @@ impl Default for StreamMarketDefinitionStatus {
     }
 }
 
+/// Represents the key line definition.
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KeyLineDefinition {
+    /// The key line selections.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "kl")]
     pub key_line: Option<Vec<KeyLineSelection>>,
 }
 
+/// Represents a selection in the key line.
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KeyLineSelection {
+    /// The ID of the key line selection.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<i64>,
+    /// The handicap value for the selection.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "hc")]
     pub handicap: Option<rust_decimal::Decimal>,
 }
 
+/// Represents the price ladder definition.
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PriceLadderDefinition {
+    /// The type of price ladder.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "type")]
     pub r#type: Option<Type>,
 }
 
+/// Represents the type of price ladder.
 #[derive(
     Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
 )]
@@ -201,6 +237,7 @@ pub enum Type {
     LineRange,
 }
 
+/// Represents a change in runner information.
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RunnerChange {
@@ -284,11 +321,14 @@ pub struct RunnerChange {
     pub best_display_available_to_back: Option<Vec<UpdateSet3>>,
 }
 
+/// Represents the definition of a runner.
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct RunnerDefinition {
+    /// The sort priority of the runner.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sort_priority: Option<i32>,
+    /// The removal date of the runner.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub removal_date: Option<String>,
     /// Selection Id - the id of the runner (selection)
@@ -298,11 +338,14 @@ pub struct RunnerDefinition {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "hc")]
     pub handicap: Option<rust_decimal::Decimal>,
+    /// The adjustment factor for the runner.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub adjustment_factor: Option<rust_decimal::Decimal>,
+    /// The BSP value for the runner.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "bsp")]
     pub bsp: Option<rust_decimal::Decimal>,
+    /// The status of the runner.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<StreamRunnerDefinitionStatus>,
 }
@@ -319,6 +362,7 @@ impl Ord for RunnerDefinition {
     }
 }
 
+/// Represents the status of a runner definition.
 #[derive(
     Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
 )]

@@ -12,7 +12,7 @@ impl TypeResolverV1 {
         Self
     }
 
-    pub(crate) fn resolve_type(&self, data_type: &DataTypeParameter) -> Result<syn::Type, String> {
+    pub(crate) fn resolve_type(&self, data_type: &DataTypeParameter) -> eyre::Result<syn::Type> {
         fn transform_to_rust_types(input: &str) -> String {
             // TODO make this a configurable thing
             match input {

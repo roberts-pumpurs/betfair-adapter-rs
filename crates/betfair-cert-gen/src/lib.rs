@@ -5,6 +5,7 @@ use rcgen::{
 };
 use rsa::pkcs8::EncodePrivateKey;
 use rsa::RsaPrivateKey;
+use eyre::WrapErr;
 
 /// Generate a Betfair certificate for non-interactive bot usage
 /// Reference:
@@ -89,15 +90,7 @@ pub fn rcgen_cert(
 
     let private_key = RsaPrivateKey::new(&mut OsRng, 2048)?;
     let private_key_der = private_key.to_pkcs8_der()?;
-    let key_pair = rcgen::KeyPair::try_from(private_key_der.as_bytes());
-    match key_pair {
-        Ok(key_pair) => {
-            let cert = params.self_signed(&key_pair)?;
-
-            Ok((cert, key_pair))
-        }
-        Err(error) => Err(eyre::Report::msg(format!(
-            "Failed to create key pair: {error}"
-        ))),
-    }
+    let key_pair = rcgen::KeyPair::try_from(private_key_der.as_bytes()).wrap_err("failed to create keypair")?;
+    let cert = params.self_signed(&key_pair)?;
+    Ok((cert, key_pair))
 }
