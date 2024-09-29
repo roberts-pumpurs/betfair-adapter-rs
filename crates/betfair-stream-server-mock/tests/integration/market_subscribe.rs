@@ -4,7 +4,7 @@ use betfair_stream_server_mock::{ClientState, StreamAPIBackend, SubSate};
 use futures_util::StreamExt;
 
 #[rstest::rstest]
-#[timeout(std::time::Duration::from_secs(5))]
+#[timeout(core::time::Duration::from_secs(5))]
 #[test_log::test(tokio::test)]
 async fn market_subscription() {
     let mock = StreamAPIBackend::new().await;
@@ -26,7 +26,7 @@ async fn market_subscription() {
             ),
         );
 
-            let market_id = MarketId("1.23456789".to_string());
+            let market_id = MarketId("1.23456789".to_owned());
             ms.subscribe_to_market(market_id).unwrap();
 
             while let Some(value) = stream.next().await {
@@ -43,7 +43,7 @@ async fn market_subscription() {
     });
 
     // Sleep for 1 second to allow the connection to be established
-    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    tokio::time::sleep(core::time::Duration::from_secs(1)).await;
     assert!(!h1.is_finished());
     assert!(!h2.is_finished());
     let conn_state = conn_state.lock().await;

@@ -20,7 +20,7 @@ pub struct ExceptionType {
 /// A child item of the <exceptionType> tag
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub enum ExceptionTypeItems {
     /// The description of the exception
     Description(Description),

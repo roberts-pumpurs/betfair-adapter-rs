@@ -12,7 +12,7 @@ use crate::tls_sream::RawStreamApiConnection;
 use crate::{ExternalUpdates, MetadataUpdates};
 
 #[pin_project::pin_project]
-pub struct Handshake<'a> {
+pub(crate) struct Handshake<'a> {
     session_token: &'a SessionToken,
     application_key: &'a ApplicationKey,
     #[pin]
@@ -21,7 +21,7 @@ pub struct Handshake<'a> {
 }
 
 impl<'a> Handshake<'a> {
-    pub fn new(
+    pub(crate) fn new(
         session_token: &'a SessionToken,
         application_key: &'a ApplicationKey,
         connection: Pin<&'a mut RawStreamApiConnection>,
@@ -48,7 +48,7 @@ enum State {
 impl<'a> Stream for Handshake<'a> {
     type Item = Result<ExternalUpdates<ResponseMessage>, NeedsRestart>;
 
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines)]
     fn poll_next(
         mut self: Pin<&mut Self>,
         cx: &mut core::task::Context<'_>,

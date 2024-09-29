@@ -3,6 +3,7 @@ use heck::ToPascalCase;
 use crate::aping_ast::types::DataTypeParameter;
 extern crate alloc;
 use alloc::borrow::ToOwned;
+
 use eyre::{Result, WrapErr};
 
 #[derive(Debug)]
@@ -81,7 +82,7 @@ enum TypePlural {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[expect(clippy::unwrap_used)]
 pub(crate) mod tests {
     use proptest::prelude::*;
 

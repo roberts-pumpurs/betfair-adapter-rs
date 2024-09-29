@@ -16,7 +16,7 @@ use tokio_util::codec::{Decoder, Encoder, Framed};
 
 use crate::StreamError;
 
-pub async fn connect(
+pub(crate) async fn connect(
     url: BetfairUrl<betfair_adapter::Stream>,
 ) -> Result<RawStreamApiConnection, StreamError> {
     let url = url.url();
@@ -74,13 +74,13 @@ async fn connect_tls(
     Ok(internal::RawStreamApiConnection { io: framed })
 }
 
-pub type RawStreamApiConnection =
+pub(crate) type RawStreamApiConnection =
     internal::RawStreamApiConnection<tokio_rustls::client::TlsStream<TcpStream>>;
 
 mod internal {
     use super::*;
 
-    pub struct RawStreamApiConnection<IO: AsyncRead + AsyncWrite + core::fmt::Debug + Send + Unpin> {
+    pub(crate) struct RawStreamApiConnection<IO: AsyncRead + AsyncWrite + core::fmt::Debug + Send + Unpin> {
         pub(super) io: Framed<IO, StreamAPIClientCodec>,
     }
 
@@ -126,10 +126,10 @@ mod internal {
     }
 }
 
-pub struct StreamAPIClientCodec;
+pub(crate) struct StreamAPIClientCodec;
 
 #[derive(Debug, thiserror::Error)]
-pub enum CodecError {
+pub(crate) enum CodecError {
     #[error("Serde error: {0}")]
     Serde(#[from] serde_json::Error),
     #[error("IO Error {0}")]

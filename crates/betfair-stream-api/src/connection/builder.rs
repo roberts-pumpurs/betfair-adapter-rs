@@ -16,7 +16,7 @@ pub enum HeartbeatStrategy {
     Interval(Duration),
 }
 
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct StreamApiBuilder {
     /// Send data to the underlying stream
@@ -114,7 +114,7 @@ impl StreamApiBuilder {
     }
 }
 
-pub fn wrap_with_cache_layer(
+pub(crate) fn wrap_with_cache_layer(
     join_set: &mut JoinSet<Result<Never, FatalError>>,
     data_feed: tokio::sync::mpsc::Receiver<ExternalUpdates<ResponseMessage>>,
     rt_handle: &tokio::runtime::Handle,

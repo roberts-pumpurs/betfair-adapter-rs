@@ -208,7 +208,7 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
             }
         };
         let type_alias_derives = self.code_injector.type_alias_derives();
-    
+
         let types_to_skip = [
             "Price",
             "Size",
@@ -216,7 +216,7 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
             "CustomerRef",
             "CustomerStrategyRef",
         ];
-    
+
         if types_to_skip.contains(&type_alias.name.0.as_str()) {
             return None
         }

@@ -1,11 +1,11 @@
 use wiremock::{Match, Request};
 
-pub struct FormEncodedBodyMatcher {
+pub(crate) struct FormEncodedBodyMatcher {
     expected: Vec<(String, String)>,
 }
 
 impl FormEncodedBodyMatcher {
-    pub const fn new(expected: Vec<(String, String)>) -> Self {
+    pub(crate) const fn new(expected: Vec<(String, String)>) -> Self {
         Self { expected }
     }
 }

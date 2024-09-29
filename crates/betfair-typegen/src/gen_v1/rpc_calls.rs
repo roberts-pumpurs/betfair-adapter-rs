@@ -57,7 +57,7 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                 Err(err) => {
                     let err_msg = err.to_string();
                     quote! { compile_error!("compile error: {:?}", #err_msg); }
-                },
+                }
             },
             |exception| {
                 let err_data_type = match self.type_resolver.resolve_type(&exception.data_type) {
@@ -65,7 +65,7 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                     Err(err) => {
                         let err_msg = err.to_string();
                         return quote! { compile_error!("compile error: {:?}", #err_msg); };
-                    },
+                    }
                 };
                 let error_docs = exception.description.as_slice().object_comment();
                 let ok_type = match self
@@ -76,7 +76,7 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                     Err(err) => {
                         let err_msg = err.to_string();
                         return quote! { compile_error!("compile error: {:?}", #err_msg); };
-                    },
+                    }
                 };
                 quote! {
                     #error_docs
@@ -134,8 +134,7 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                         Some(quote! {
                             compile_error!("compile error: {:?}", #err_msg);
                         })
-                    },
-                    
+                    }
                 }
             })
             .collect::<Vec<_>>();

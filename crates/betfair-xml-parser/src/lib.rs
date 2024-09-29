@@ -98,7 +98,7 @@ impl From<&str> for Interface {
 }
 
 #[cfg(test)]
-#[allow(clippy::indexing_slicing)]
+#[expect(clippy::indexing_slicing)]
 mod tests {
     use rstest::rstest;
 

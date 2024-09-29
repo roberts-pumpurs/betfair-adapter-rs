@@ -16,7 +16,7 @@ impl CustomerOrderRef {
         {
             return Err(CustomerOrderRefParseError::InvalidCharacters)
         }
-        Ok(CustomerOrderRef(customer_order_ref))
+        Ok(Self(customer_order_ref))
     }
 }
 

@@ -1,10 +1,10 @@
-use std::ops::{Add, Deref, Div, Mul, Sub};
+use core::ops::{Add, Deref, Div, Mul, Sub};
 
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 
-#[derive(thiserror::Error, Clone, Debug, PartialEq)]
+#[derive(thiserror::Error, Clone, Debug, PartialEq, Eq)]
 pub enum PriceParseError {
     #[error("InvalidPriceSpecified: {0}")]
     InvalidPriceSpecified(Decimal),
@@ -68,19 +68,19 @@ impl From<Price> for rust_decimal::Decimal {
 
 impl Price {
     pub fn new(price: rust_decimal::Decimal) -> Result<Self, PriceParseError> {
-        let price = Price(Self::adjust_price_to_betfair_boundaries(price)?);
+        let price = Self(Self::adjust_price_to_betfair_boundaries(price)?);
         Ok(price)
     }
 
     /// This function is unsafe because it does not check if the price is within the Betfair
     /// boundaries. Use `Price::new` instead.
-    pub unsafe fn new_unchecked(price: rust_decimal::Decimal) -> Self {
-        Price(price)
+    #[must_use] pub const unsafe fn new_unchecked(price: rust_decimal::Decimal) -> Self {
+        Self(price)
     }
 
-    /// Betfair docs: https://docs.developer.betfair.com/pages/viewpage.action?pageId=6095894
+    /// Betfair docs: <https://docs.developer.betfair.com/pages/viewpage.action?pageId=6095894>
     /// Below is a list of price increments per price 'group'.  Placing a bet outside of these
-    /// increments will result in an INVALID_ODDS error
+    /// increments will result in an `INVALID_ODDS` error
     ///
     /// Odds Markets
     /// ```markdown

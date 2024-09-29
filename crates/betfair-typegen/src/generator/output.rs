@@ -50,7 +50,7 @@ impl GeneratedOutput {
     /// }
     /// ```
     /// Need Help to fix this error
-    #[allow(clippy::pattern_type_mismatch)]
+    #[expect(clippy::pattern_type_mismatch)]
     #[tracing::instrument(skip_all)]
     pub fn write_to_file<T: AsRef<Path>>(&self, path: T) -> io::Result<()> {
         let path = path.as_ref();

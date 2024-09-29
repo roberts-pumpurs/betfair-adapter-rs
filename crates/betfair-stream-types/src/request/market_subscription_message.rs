@@ -59,7 +59,7 @@ pub struct MarketDataFilter {
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct InvalidLadderLevel;
 
-impl std::error::Error for InvalidLadderLevel {}
+impl core::error::Error for InvalidLadderLevel {}
 impl core::fmt::Display for InvalidLadderLevel {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "`ladder_levels` must be between 1 and 10")

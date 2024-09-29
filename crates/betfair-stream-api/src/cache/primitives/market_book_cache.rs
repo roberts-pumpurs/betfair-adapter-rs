@@ -178,7 +178,7 @@ impl MarketBookCache {
         &self.runners
     }
 
-    #[allow(clippy::borrowed_box)]
+    #[expect(clippy::borrowed_box)]
     #[must_use]
     pub const fn market_definition(&self) -> Option<&Box<MarketDefinition>> {
         self.market_definition.as_ref()

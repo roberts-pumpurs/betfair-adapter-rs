@@ -7,7 +7,7 @@ use futures::StreamExt;
 use tokio::sync::Mutex;
 
 #[rstest::rstest]
-#[timeout(std::time::Duration::from_secs(5))]
+#[timeout(core::time::Duration::from_secs(5))]
 #[test_log::test(tokio::test)]
 async fn successful_handshake() {
     let mock = StreamAPIBackend::new().await;
@@ -20,7 +20,7 @@ async fn successful_handshake() {
             println!("here");
             let bf_mock = betfair_rpc_server_mock::Server::new_with_stream_url(url).await;
             let client = bf_mock.client().await;
-            let mut stream_api_abi =
+            let stream_api_abi =
                 client.connect_to_stream_with_hb(betfair_stream_api::HeartbeatStrategy::None);
             let mut stream = stream_api_abi.run_with_default_runtime();
             tracing::info!("stream created");
@@ -41,7 +41,7 @@ async fn successful_handshake() {
     });
 
     // Sleep for 1 second to allow the connection to be established
-    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    tokio::time::sleep(core::time::Duration::from_secs(1)).await;
     assert!(
         !client_task.is_finished(),
         "the client should not be finished"

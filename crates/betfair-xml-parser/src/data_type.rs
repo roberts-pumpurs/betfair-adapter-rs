@@ -17,7 +17,7 @@ pub struct DataType {
 /// A child item of the <dataType> tag
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions)]
 pub enum DataTypeItems {
     /// The description of the data type
     Description(Description),

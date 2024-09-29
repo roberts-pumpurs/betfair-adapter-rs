@@ -1,6 +1,6 @@
-pub mod builder;
-pub mod cron;
-pub mod handshake;
+pub(crate) mod builder;
+pub(crate) mod cron;
+pub(crate) mod handshake;
 
 use core::convert::Infallible as Never;
 use core::task::Poll;
