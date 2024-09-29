@@ -1,3 +1,4 @@
+/// Module for managing the connection to the Betfair streaming API.
 pub(crate) mod builder;
 pub(crate) mod cron;
 pub(crate) mod handshake;
@@ -16,6 +17,7 @@ use self::builder::wrap_with_cache_layer;
 use self::cron::FatalError;
 use crate::cache::primitives::{MarketBookCache, OrderBookCache};
 
+/// Represents the streaming API connection.
 #[derive(Debug)]
 #[pin_project::pin_project]
 pub struct StreamApi<T> {
@@ -27,6 +29,7 @@ pub struct StreamApi<T> {
 }
 
 impl<T> StreamApi<T> {
+    /// Creates a new instance of `StreamApi`.
     pub(crate) const fn new(
         join_set: JoinSet<Result<Never, FatalError>>,
         data_feed: tokio::sync::mpsc::Receiver<ExternalUpdates<T>>,
@@ -42,6 +45,7 @@ impl<T> StreamApi<T> {
         }
     }
 
+    /// Returns a reference to the command sender.
     #[must_use]
     pub const fn command_sender(&self) -> &tokio::sync::broadcast::Sender<RequestMessage> {
         &self.command_sender
@@ -49,6 +53,7 @@ impl<T> StreamApi<T> {
 }
 
 impl StreamApi<ResponseMessage> {
+    /// Enables caching for the stream API.
     #[must_use]
     pub fn enable_cache(mut self) -> StreamApi<CacheEnabledMessages> {
         let output_queue_reader_post_cache =
@@ -63,30 +68,48 @@ impl StreamApi<ResponseMessage> {
     }
 }
 
+/// Represents external updates received from the data feed.
 #[derive(Debug, Clone)]
 pub enum ExternalUpdates<T> {
+    /// Represents a layer of data.
     Layer(T),
+    /// Represents metadata updates.
     Metadata(MetadataUpdates),
 }
 
+/// Represents messages that have caching enabled.
 #[derive(Debug, Clone)]
 pub enum CacheEnabledMessages {
+    /// Represents market changes.
     MarketChange(Vec<MarketBookCache>),
+    /// Represents order changes.
     OrderChange(Vec<OrderBookCache>),
+    /// Represents connection messages.
     Connection(ConnectionMessage),
+    /// Represents status messages.
     Status(StatusMessage),
 }
 
+
+/// Represents various metadata updates related to the connection state.
 #[derive(Debug, Clone)]
 pub enum MetadataUpdates {
+    /// Indicates disconnection.
     Disconnected,
+    /// Indicates TCP connection established.
     TcpConnected,
+    /// Indicates failure to connect.
     FailedToConnect,
+    /// Indicates authentication message sent.
     AuthenticationMessageSent,
+    /// Indicates successful authentication.
     Authenticated {
+        /// Number of available connections.
         connections_available: i32,
+        /// Optional connection ID.
         connection_id: Option<String>,
     },
+    /// Indicates failure to authenticate.
     FailedToAuthenticate,
 }
 

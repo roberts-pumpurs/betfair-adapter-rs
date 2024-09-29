@@ -10,25 +10,31 @@ use super::cron::{self, FatalError};
 use super::StreamApi;
 use crate::{CacheEnabledMessages, ExternalUpdates};
 
+/// Represents the strategy for sending heartbeat messages.
 #[derive(Debug, Clone)]
 pub enum HeartbeatStrategy {
+    /// No heartbeat strategy.
     None,
+    /// Send heartbeat messages at a specified interval.
     Interval(Duration),
 }
 
+/// Builder for creating a StreamApi instance.
 #[expect(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct StreamApiBuilder {
-    /// Send data to the underlying stream
+    /// Sender for sending commands to the underlying stream.
     command_sender: tokio::sync::broadcast::Sender<RequestMessage>,
+    /// Receiver for reading commands from the underlying stream.
     command_reader: tokio::sync::broadcast::Receiver<RequestMessage>,
-    /// Betfair provider
+    /// Betfair provider for making requests.
     provider: betfair_adapter::UnauthenticatedBetfairRpcProvider,
-    /// heartbeat strategy
+    /// Heartbeat strategy for the stream.
     hb: HeartbeatStrategy,
 }
 
 impl StreamApiBuilder {
+    /// Creates a new StreamApiBuilder with the specified provider and heartbeat strategy.
     #[must_use]
     pub fn new(
         provider: betfair_adapter::UnauthenticatedBetfairRpcProvider,
@@ -44,11 +50,13 @@ impl StreamApiBuilder {
         }
     }
 
+    /// Runs the StreamApi with the default Tokio runtime.
     #[must_use]
     pub fn run_with_default_runtime(&self) -> StreamApi<ResponseMessage> {
         self.run(&Handle::current())
     }
 
+    /// Runs the StreamApi with the specified Tokio runtime handle.
     #[must_use]
     pub fn run(&self, rt_handle: &tokio::runtime::Handle) -> StreamApi<ResponseMessage> {
         let (join_set, data_feed) = self.run_internal(rt_handle);
@@ -60,6 +68,7 @@ impl StreamApiBuilder {
         )
     }
 
+    /// Runs the StreamApi with caching enabled.
     #[must_use]
     pub fn run_with_cache(
         &self,
@@ -76,6 +85,7 @@ impl StreamApiBuilder {
         )
     }
 
+    /// Internal method to run the StreamApi and return a join set and data feed.
     fn run_internal(
         &self,
         rt_handle: &tokio::runtime::Handle,
@@ -114,6 +124,7 @@ impl StreamApiBuilder {
     }
 }
 
+/// Wraps the data feed with a cache layer and returns the receiver for external updates.
 pub(crate) fn wrap_with_cache_layer(
     join_set: &mut JoinSet<Result<Never, FatalError>>,
     data_feed: tokio::sync::mpsc::Receiver<ExternalUpdates<ResponseMessage>>,

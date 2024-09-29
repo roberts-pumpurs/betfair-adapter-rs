@@ -19,6 +19,16 @@ pub struct MarketSubscriber {
 }
 
 impl MarketSubscriber {
+    /// Creates a new `MarketSubscriber`.
+    ///
+    /// # Parameters
+    /// - `stream_api_connection`: A reference to the `StreamApi` connection.
+    /// - `filter`: The `MarketFilter` to apply.
+    /// - `market_data_fields`: A vector of `Fields` to subscribe to.
+    /// - `ladder_level`: An optional `LadderLevel` for depth-based ladders.
+    ///
+    /// # Returns
+    /// A new instance of `MarketSubscriber`.
     #[must_use]
     pub fn new<T>(
         stream_api_connection: &StreamApi<T>,
@@ -35,7 +45,11 @@ impl MarketSubscriber {
         }
     }
 
-    /// Create a new market subscriber.
+    /// Subscribe to a market using its `MarketId`.
+    ///
+    /// # Parameters
+    /// - `market_id`: The `MarketId` of the market to subscribe to.
+    ///
     /// # Errors
     /// If the message cannot be sent to the stream.
     pub fn subscribe_to_market(
@@ -50,7 +64,11 @@ impl MarketSubscriber {
         self.resubscribe()
     }
 
-    /// Unsubscribe from a market.
+    /// Unsubscribe from a market using its `MarketId`.
+    ///
+    /// # Parameters
+    /// - `market_id`: A reference to the `MarketId` of the market to unsubscribe from.
+    ///
     /// # Errors
     /// If the message cannot be sent to the stream.
     pub fn unsubscribe_from_market(
@@ -75,9 +93,8 @@ impl MarketSubscriber {
 
     /// Unsubscribe from all markets.
     ///
-    /// Internally it uses a weird trick of subscribing to a market that does not exist to simulate
+    /// Internally it uses a trick of subscribing to a non-existent market to simulate
     /// unsubscribing from all markets.
-    /// [reference](https://forum.developer.betfair.com/forum/sports-exchange-api/exchange-api/34555-stream-api-unsubscribe-from-all-markets)
     ///
     /// # Errors
     /// If sending the request to the underlying stream fails.
@@ -142,12 +159,19 @@ impl MarketSubscriber {
         Ok(())
     }
 
+    /// Get the current filter for the market subscription.
+    ///
+    /// # Returns
+    /// A reference to the current `MarketFilter`.
     #[must_use]
     pub const fn filter(&self) -> &MarketFilter {
         &self.filter
     }
 
     /// Set the filter for the market subscription.
+    ///
+    /// # Parameters
+    /// - `filter`: The new `MarketFilter` to apply.
     ///
     /// # Errors
     /// If the request to change the subscription fails.
@@ -159,12 +183,19 @@ impl MarketSubscriber {
         self.resubscribe()
     }
 
+    /// Get the current ladder level for depth-based ladders.
+    ///
+    /// # Returns
+    /// An optional reference to the current `LadderLevel`.
     #[must_use]
     pub const fn ladder_level(&self) -> Option<&LadderLevel> {
         self.ladder_level.as_ref()
     }
 
     /// Set the ladder level for depth-based ladders.
+    ///
+    /// # Parameters
+    /// - `ladder_level`: An optional `LadderLevel` to set.
     ///
     /// # Errors
     /// If the request to change the subscription fails.
@@ -176,12 +207,19 @@ impl MarketSubscriber {
         self.resubscribe()
     }
 
+    /// Get the current market data fields to subscribe to.
+    ///
+    /// # Returns
+    /// A reference to the vector of `Fields`.
     #[must_use]
     pub const fn market_data_fields(&self) -> &Vec<Fields> {
         &self.market_data_fields
     }
 
     /// Set the market data fields to subscribe to.
+    ///
+    /// # Parameters
+    /// - `market_data_fields`: A vector of `Fields` to set.
     ///
     /// # Errors
     /// If the request to change the subscription fails.

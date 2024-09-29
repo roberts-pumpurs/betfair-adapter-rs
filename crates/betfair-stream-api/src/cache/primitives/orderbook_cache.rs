@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use super::orderbook_runner_cache::OrderBookRunner;
 
+/// Represents a cache for order book data.
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct OrderBookCache {
     market_id: MarketId,
@@ -17,7 +18,9 @@ pub struct OrderBookCache {
     runners: HashMap<(SelectionId, Option<Handicap>), OrderBookRunner>,
 }
 
+/// Implements methods for managing the order book cache.
 impl OrderBookCache {
+    /// Creates a new `OrderBookCache` with the given market ID and publish time.
     #[must_use]
     pub fn new(market_id: MarketId, publish_time: DateTime<Utc>) -> Self {
         Self {
@@ -28,11 +31,13 @@ impl OrderBookCache {
         }
     }
 
+    /// Checks if the order book is closed.
     #[must_use]
     pub const fn is_closed(&self) -> bool {
         self.closed
     }
 
+    /// Updates the cache with changes from the order market.
     pub fn update_cache(&mut self, change: OrderMarketChange, publish_time: DateTime<Utc>) {
         self.publish_time = publish_time;
         self.closed = change.closed.unwrap_or(self.closed);
@@ -59,21 +64,25 @@ impl OrderBookCache {
         }
     }
 
+    /// Returns the publish time of the order book.
     #[must_use]
     pub const fn publish_time(&self) -> DateTime<Utc> {
         self.publish_time
     }
 
+    /// Returns a reference to the runners in the order book cache.
     #[must_use]
     pub const fn runners(&self) -> &HashMap<(SelectionId, Option<Handicap>), OrderBookRunner> {
         &self.runners
     }
 
+    /// Consumes the `OrderBookCache` and returns the runners.
     #[must_use]
     pub fn into_runners(self) -> HashMap<(SelectionId, Option<Handicap>), OrderBookRunner> {
         self.runners
     }
 
+    /// Returns a reference to the market ID of the order book cache.
     #[must_use]
     pub const fn market_id(&self) -> &MarketId {
         &self.market_id

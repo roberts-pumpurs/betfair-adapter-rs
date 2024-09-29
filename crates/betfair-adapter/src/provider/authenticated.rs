@@ -4,6 +4,14 @@ use betfair_types::types::BetfairRpcRequest;
 use crate::{ApiError, AuthenticatedBetfairRpcProvider};
 
 impl AuthenticatedBetfairRpcProvider {
+    
+    /// Sends a request and returns the response or an error.
+    /// 
+    /// # Parameters
+    /// - `request`: The request to be sent.
+    ///
+    /// # Returns
+    /// A result containing either the response or an `ApiError`.
     #[tracing::instrument(skip_all, ret, err, fields(req = ?request))]
     pub async fn send_request<T>(&self, request: T) -> Result<T::Res, ApiError>
     where
@@ -19,13 +27,23 @@ impl AuthenticatedBetfairRpcProvider {
             .json(&request)
             .send()
             .await?;
-
+        tracing::debug!("Response status: {:?}", full.status());
+        tracing::debug!("Response headers: {:?}", full.headers());
+    
         if full.status().is_success() {
-            let res = full.json::<T::Res>().await?;
-            return Ok(res)
+            let text = full.text().await?;
+            tracing::debug!("Response body: {}", text);
+            if text.trim().is_empty() {
+                tracing::warn!("Received empty response body");
+                return Err(ApiError::EmptyResponse);
+            }
+            let res = serde_json::from_str::<T::Res>(&text)?;
+            Ok(res)
         } else {
-            let res = full.json::<T::Error>().await?;
-            return Err(res.into())
+            let text = full.text().await?;
+            tracing::error!("Error response body: {}", text);
+            let res = serde_json::from_str::<T::Error>(&text)?;
+            Err(res.into())
         }
     }
 

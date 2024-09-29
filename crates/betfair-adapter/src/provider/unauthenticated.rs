@@ -8,12 +8,15 @@ use crate::{
     Identity, UnauthenticatedBetfairRpcProvider,
 };
 
+/// Represents an unauthenticated Betfair RPC provider.
 impl UnauthenticatedBetfairRpcProvider {
+    /// Creates a new instance of `UnauthenticatedBetfairRpcProvider` using the provided secret provider.
     pub fn new(secret_provider: secret::SecretProvider) -> Result<Self, ApiError> {
         let config = BetfairConfigBuilder::new_with_global_jurisdiction(secret_provider);
         Self::new_with_config(config)
     }
 
+    /// Creates a new instance of `UnauthenticatedBetfairRpcProvider` with a specific configuration.
     pub fn new_with_config(
         config: BetfairConfigBuilder<
             impl urls::RetrieveUrl<urls::RestBase> + core::fmt::Debug,
@@ -27,6 +30,7 @@ impl UnauthenticatedBetfairRpcProvider {
         BetfairRpcProviderBase::new(config).map(Self)
     }
 
+    /// Authenticates the user and returns an `AuthenticatedBetfairRpcProvider`.
     pub async fn authenticate(self) -> Result<AuthenticatedBetfairRpcProvider, ApiError> {
         let (session_token, authenticated_client) = self.0.bot_log_in().await?;
 
@@ -38,7 +42,9 @@ impl UnauthenticatedBetfairRpcProvider {
     }
 }
 
+/// Represents the base for Betfair RPC providers.
 impl BetfairRpcProviderBase {
+    /// Creates a new instance of `BetfairRpcProviderBase` with the given configuration.
     pub fn new(
         config: BetfairConfigBuilder<
             impl urls::RetrieveUrl<urls::RestBase> + core::fmt::Debug,
@@ -73,7 +79,7 @@ impl BetfairRpcProviderBase {
         })
     }
 
-    /// Also known as "non interactive login"
+    /// Performs a non-interactive login to obtain a session token and authenticated client.
     #[tracing::instrument(skip(self), err)]
     pub(super) async fn bot_log_in(&self) -> Result<(SessionToken, reqwest::Client), ApiError> {
         let login_response = self
@@ -97,6 +103,7 @@ impl BetfairRpcProviderBase {
     // TODO implement interactive login
 }
 
+/// Creates a logged-in HTTP client with the specified application key and session token.
 fn logged_in_client(
     app_key: &ApplicationKey,
     session_token: &SessionToken,
@@ -128,6 +135,7 @@ fn logged_in_client(
         .build()?)
 }
 
+/// Creates a login client with the specified application key and identity.
 fn login_client(application_key: &ApplicationKey, identity: &Identity) -> Result<Client, ApiError> {
     const KEEP_ALIVE_INTERVAL: core::time::Duration = core::time::Duration::from_secs(15);
     let mut headers = header::HeaderMap::new();

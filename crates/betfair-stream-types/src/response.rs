@@ -5,49 +5,68 @@ use rust_decimal::Decimal;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize};
 
+/// Module for handling connection messages.
 pub mod connection_message;
+
+/// Module for handling market change messages.
 pub mod market_change_message;
+
+/// Module for handling order change messages.
 pub mod order_change_message;
+
+/// Module for handling status messages.
 pub mod status_message;
 
+/// Represents different types of response messages from the server.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "op")]
 #[serde(rename_all = "camelCase")]
 pub enum ResponseMessage {
+    /// Connection message indicating a successful connection.
     #[serde(rename = "connection")]
     Connection(connection_message::ConnectionMessage),
+    /// Market change message indicating updates to market data.
     #[serde(rename = "mcm")]
     MarketChange(market_change_message::MarketChangeMessage),
+    /// Order change message indicating updates to order data.
     #[serde(rename = "ocm")]
     OrderChange(order_change_message::OrderChangeMessage),
+    /// Status message indicating the current status of the connection.
     #[serde(rename = "status")]
     Status(status_message::StatusMessage),
 }
 
-/// Change Type - set to indicate the type of change - if null this is a delta)
+/// Change Type - set to indicate the type of change - if null this is a delta.
 #[derive(
     Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
 )]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ChangeType {
+    /// Represents a full snapshot of the data.
     #[default]
     SubImage,
+    /// Represents a resubscription delta.
     ResubDelta,
+    /// Represents a heartbeat message.
     Heartbeat,
 }
 
 /// Segment Type - if the change is split into multiple segments, this denotes the beginning and end
-/// of a change, and segments in between. Will be null if data is not segmented
+/// of a change, and segments in between. Will be null if data is not segmented.
 #[derive(
     Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
 )]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum SegmentType {
+    /// Indicates the start of a segment.
     #[default]
     SegStart,
+    /// Represents a middle segment.
     Seg,
+    /// Indicates the end of a segment.
     SegEnd,
 }
+
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DatasetChangeMessage<T: DeserializeOwned + DataChange<T>> {

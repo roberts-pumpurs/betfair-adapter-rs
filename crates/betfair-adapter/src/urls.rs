@@ -1,3 +1,4 @@
+/// Represents a Betfair URL with a generic type.
 #[derive(Debug, Clone)]
 pub struct BetfairUrl<T> {
     url: url::Url,
@@ -5,6 +6,7 @@ pub struct BetfairUrl<T> {
 }
 
 impl<T> BetfairUrl<T> {
+    /// Creates a new BetfairUrl instance.
     #[must_use]
     pub const fn new(url: url::Url) -> Self {
         Self {
@@ -13,6 +15,7 @@ impl<T> BetfairUrl<T> {
         }
     }
 
+    /// Returns a reference to the URL.
     #[must_use]
     pub const fn url(&self) -> &url::Url {
         &self.url
@@ -25,42 +28,62 @@ impl<T> From<url::Url> for BetfairUrl<T> {
     }
 }
 
+/// Base struct for REST API URLs.
 #[derive(Debug, Clone)]
 pub struct RestBase;
 
+/// Base struct for KeepAlive URLs.
 #[derive(Debug, Clone)]
 pub struct KeepAlive;
 
+/// Base struct for BotLogin URLs.
 #[derive(Debug, Clone)]
 pub struct BotLogin;
 
+/// Base struct for InteractiveLogin URLs.
 #[derive(Debug, Clone)]
 pub struct InteractiveLogin;
 
+/// Base struct for Logout URLs.
 #[derive(Debug, Clone)]
 pub struct Logout;
 
+/// Base struct for Stream URLs.
 #[derive(Debug, Clone)]
 pub struct Stream;
 
+/// Represents the jurisdictions.
 pub mod jurisdiction {
+    /// Represents the global jurisdiction.
     #[derive(Debug)]
     pub struct Global;
+
+    /// Represents the Italy jurisdiction.
     #[derive(Debug)]
     pub struct Italy;
+
+    /// Represents the Spain jurisdiction.
     #[derive(Debug)]
     pub struct Spain;
+
+    /// Represents the Romania jurisdiction.
     #[derive(Debug)]
     pub struct Romania;
+
+    /// Represents the Sweden jurisdiction.
     #[derive(Debug)]
     pub struct Sweden;
+
+    /// Represents the Australia jurisdiction.
     #[derive(Debug)]
     pub struct Australia;
 
+    /// A custom URL type that wraps a Betfair URL.
     #[derive(Debug, Clone)]
     pub struct CustomUrl<T>(pub super::BetfairUrl<T>);
 
     impl<T> CustomUrl<T> {
+        /// Creates a new CustomUrl instance.
         #[must_use]
         pub const fn new(url: url::Url) -> Self {
             Self(super::BetfairUrl::new(url))
@@ -74,7 +97,9 @@ pub mod jurisdiction {
     }
 }
 
+/// Trait for retrieving URLs based on a generic type.
 pub trait RetrieveUrl<T> {
+    /// Retrieves the Betfair URL.
     fn url(&self) -> BetfairUrl<T>;
 }
 
