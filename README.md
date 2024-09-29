@@ -1,4 +1,4 @@
-# Betfari Adapter
+# Betfair Adapter
 
 [![check](https://github.com/roberts-ivanovs/betfair-adapter-rs/actions/workflows/check.yaml/badge.svg)](https://github.com/roberts-ivanovs/betfair-adapter-rs/actions/workflows/check.yaml)
 [![docs](https://github.com/roberts-ivanovs/betfair-adapter-rs/actions/workflows/doc.yaml/badge.svg)](https://github.com/roberts-ivanovs/betfair-adapter-rs/actions/workflows/doc.yaml)
