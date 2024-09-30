@@ -195,24 +195,24 @@ fn tls_connector() -> Result<tokio_rustls::TlsConnector, StreamError> {
         })?;
     }
 
-    #[cfg(feature = "integration-test")]
-    {
-        use crate::CERTIFICATE;
+    // #[cfg(feature = "integration-test")]
+    // {
+    //     use crate::CERTIFICATE;
 
-        let cert = rustls_pemfile::certs(
-            &mut CERTIFICATE
-                .get()
-                .ok_or(StreamError::CustomCertificateNotSet)?
-                .as_bytes(),
-        )
-        .next()
-        .ok_or(StreamError::InvalidCustomCertificate)?
-        .map_err(|_| StreamError::InvalidCustomCertificate)?;
-        roots.add(cert).map_err(|err| {
-            tracing::error!(?err, "Cannot set native certificate");
-            StreamError::CustomCertificateNotSet
-        })?;
-    };
+    //     let cert = rustls_pemfile::certs(
+    //         &mut CERTIFICATE
+    //             .get()
+    //             .ok_or(StreamError::CustomCertificateNotSet)?
+    //             .as_bytes(),
+    //     )
+    //     .next()
+    //     .ok_or(StreamError::InvalidCustomCertificate)?
+    //     .map_err(|_| StreamError::InvalidCustomCertificate)?;
+    //     roots.add(cert).map_err(|err| {
+    //         tracing::error!(?err, "Cannot set native certificate");
+    //         StreamError::CustomCertificateNotSet
+    //     })?;
+    // };
 
     let config = rustls::ClientConfig::builder()
         .with_root_certificates(roots)

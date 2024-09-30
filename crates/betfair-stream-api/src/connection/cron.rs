@@ -33,7 +33,7 @@ pub(crate) struct FatalError;
 pub(crate) struct NeedsRestart;
 
 #[derive(Debug)]
-pub(crate) struct StreamConnectioProcessor {
+pub(crate) struct StreamConnectionProcessor {
     pub sender: tokio::sync::mpsc::Sender<ExternalUpdates<ResponseMessage>>,
     pub command_reader: tokio::sync::broadcast::Receiver<RequestMessage>,
     pub command_sender: tokio::sync::broadcast::Sender<RequestMessage>,
@@ -43,7 +43,7 @@ pub(crate) struct StreamConnectioProcessor {
     pub last_time_token_refreshed: Option<(std::time::Instant, SessionToken)>,
 }
 
-impl StreamConnectioProcessor {
+impl StreamConnectionProcessor {
     pub(crate) async fn connect_and_process_loop(&mut self) -> Result<Never, FatalError> {
         loop {
             // todo use `backoff` crate

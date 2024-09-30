@@ -20,7 +20,6 @@ impl AuthenticatedBetfairRpcProvider {
         T::Error: serde::de::DeserializeOwned,
         ApiError: From<<T as BetfairRpcRequest>::Error>,
     {
-        dbg!("Sending request {:?}", &request);
         let endpoint = self.base.rest_base.url().join(T::method())?;
         let full = self
             .authenticated_client
@@ -28,12 +27,9 @@ impl AuthenticatedBetfairRpcProvider {
             .json(&request)
             .send()
             .await?;
-        dbg!("Response status: {:?}", full.status());
-        dbg!("Response headers: {:?}", full.headers());
     
         if full.status().is_success() {
             let text = full.text().await?;
-            dbg!("Response body: {}", text.clone());
             if text.trim().is_empty() {
                 tracing::warn!("Received empty response body");
                 return Err(ApiError::EmptyResponse);
@@ -42,7 +38,6 @@ impl AuthenticatedBetfairRpcProvider {
             Ok(res)
         } else {
             let text = full.text().await?;
-            dbg!("Error response body: {}", text.clone());
             let res = serde_json::from_str::<T::Error>(&text)?;
             Err(res.into())
         }

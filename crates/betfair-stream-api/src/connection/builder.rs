@@ -104,7 +104,7 @@ impl StreamApiBuilder {
                 let runtime_handle = rt_handle.clone();
                 let hb = self.hb.clone();
                 async move {
-                    cron::StreamConnectioProcessor {
+                    cron::StreamConnectionProcessor {
                         sender: output_queue_sender,
                         command_reader,
                         command_sender,
