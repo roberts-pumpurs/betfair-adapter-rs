@@ -1,5 +1,6 @@
 use crate::{secret, urls};
 
+/// A builder for Betfair configuration with various URL retrieval types.
 #[derive(Debug, Clone)]
 pub struct BetfairConfigBuilder<
     T: urls::RetrieveUrl<urls::RestBase> + core::fmt::Debug = urls::jurisdiction::Global,
