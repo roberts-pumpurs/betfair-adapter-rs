@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{DataChange, DatasetChangeMessage, UpdateSet2};
 
+/// Order Change Message - represents a message containing changes to orders.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderChangeMessage(pub DatasetChangeMessage<OrderMarketChange>);
@@ -27,21 +28,27 @@ impl core::ops::Deref for OrderChangeMessage {
     }
 }
 
+/// Order Market Change - represents changes to orders in a specific market.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderMarketChange {
+    /// Account ID - the identifier for the account associated with the order.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub account_id: Option<i64>,
-    /// Order Changes - a list of changes to orders on a selection
+    /// Order Changes - a list of changes to orders on a selection.
     #[serde(rename = "orc")]
     pub order_runner_change: Option<Vec<OrderRunnerChange>>,
+    /// Closed - indicates if the market is closed.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub closed: Option<bool>,
+    /// Market ID - the identifier for the market associated with the order changes.
     pub market_id: MarketId,
+    /// Full Image - indicates if a full image of the order is available.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub full_image: Option<bool>,
 }
 
+/// Order Runner Change - represents changes to a specific runner's orders.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderRunnerChange {
@@ -71,10 +78,12 @@ pub struct OrderRunnerChange {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "hc")]
     pub handicap: Option<Handicap>,
+    /// Indicates if the runner has a full image of the order.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub full_image: Option<bool>,
 }
 
+/// Order - represents a single order with its details.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Order {
@@ -111,7 +120,7 @@ pub struct Order {
     /// Size - the original placed size of the order
     #[serde(rename = "s")]
     pub size: Size,
-    /// Placed Date - the date the order was placed
+    /// The date the order was placed.
     #[serde(rename = "pd")]
     pub place_date: chrono::DateTime<chrono::Utc>,
     /// Regulator Auth Code - the auth code returned by the regulator
@@ -161,8 +170,7 @@ pub struct Order {
     pub size_remaining: Size,
 }
 
-/// Side - the side of the order. For Line markets a 'B' bet refers to a SELL line and an 'L' bet
-/// refers to a BUY line.
+/// Side - the side of the order (Back or Lay).
 #[derive(
     Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
 )]
@@ -175,8 +183,7 @@ pub enum Side {
     Lay,
 }
 
-/// Persistence Type - whether the order will persist at in play or not (L = LAPSE, P = PERSIST, MOC
-/// = Market On Close)
+/// Persistence Type - indicates whether the order will persist at in play or not.
 #[derive(
     Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
 )]
@@ -191,7 +198,7 @@ pub enum PersistenceType {
     MarketOnClose,
 }
 
-/// Order Type - the type of the order (L = LIMIT, MOC = `MARKET_ON_CLOSE`, LOC = `LIMIT_ON_CLOSE`)
+/// Order Type - the type of the order (Limit, Market On Close, etc.).
 #[derive(
     Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
 )]
@@ -206,7 +213,7 @@ pub enum OrderType {
     MarketOnClose,
 }
 
-/// Status - the status of the order (E = EXECUTABLE, EC = `EXECUTION_COMPLETE`)
+/// Stream Order Status - the status of the order (Executable, Execution Complete).
 #[derive(
     Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
 )]
@@ -219,6 +226,7 @@ pub enum StreamOrderStatus {
     ExecutionComplete,
 }
 
+/// Strategy Match Change - represents changes in matched amounts by strategy.
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StrategyMatchChange {

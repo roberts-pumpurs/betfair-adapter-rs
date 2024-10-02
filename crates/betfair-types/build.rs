@@ -1,4 +1,4 @@
-use std::error::Error;
+use core::error::Error;
 use std::process;
 
 use tracing_error::ErrorLayer;

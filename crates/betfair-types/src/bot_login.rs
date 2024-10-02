@@ -6,7 +6,7 @@ use serde_json::Value;
 #[repr(transparent)]
 pub struct BotLoginResponse(pub Result<SuccessResponse, LoginError>);
 
-impl std::ops::Deref for BotLoginResponse {
+impl core::ops::Deref for BotLoginResponse {
     type Target = Result<SuccessResponse, LoginError>;
 
     fn deref(&self) -> &Self::Target {
@@ -200,13 +200,13 @@ impl<'de> Deserialize<'de> for BotLoginResponse {
             let success_response = SuccessResponse {
                 session_token: Secret::new(session_token.to_owned()),
             };
-            return Ok(BotLoginResponse(Ok(success_response)))
+            return Ok(Self(Ok(success_response)))
         }
 
         // If not success, parse as an error
         if let Some(err) = value.get("loginStatus") {
             let login_error = LoginError::deserialize(err).map_err(serde::de::Error::custom)?;
-            return Ok(BotLoginResponse(Err(login_error)))
+            return Ok(Self(Err(login_error)))
         }
 
         Err(serde::de::Error::custom("invalid response"))

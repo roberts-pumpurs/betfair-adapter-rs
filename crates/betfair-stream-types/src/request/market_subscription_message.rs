@@ -59,7 +59,7 @@ pub struct MarketDataFilter {
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct InvalidLadderLevel;
 
-impl std::error::Error for InvalidLadderLevel {}
+impl core::error::Error for InvalidLadderLevel {}
 impl core::fmt::Display for InvalidLadderLevel {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "`ladder_levels` must be between 1 and 10")
@@ -147,36 +147,70 @@ impl Default for Fields {
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize, TypedBuilder)]
 #[serde(rename_all = "camelCase")]
+/// Represents filters for market subscriptions.
+/// 
+/// This struct allows you to specify various criteria to filter the markets you want to subscribe to.
+/// 
+/// Fields:
+/// - `country_codes`: Optional list of country codes to filter markets by country.
+/// - `betting_types`: Optional list of betting types to filter the markets.
+/// - `turn_in_play_enabled`: Optional flag indicating if the market allows betting while the event is in play.
+/// - `market_types`: Optional list of market types to filter the markets.
+/// - `venues`: Optional list of venues to filter the markets.
+/// - `market_ids`: Optional list of specific market IDs to subscribe to.
+/// - `event_type_ids`: Optional list of event type IDs to filter the markets.
+/// - `event_ids`: Optional list of specific event IDs to subscribe to.
+/// - `bsp_market`: Optional flag indicating if the market is a Best Starting Price market.
+/// - `race_types`: Optional list of race types to filter the markets.
 pub struct MarketFilter {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
+    /// Optional list of country codes to filter markets by country.
     pub country_codes: Option<Vec<CountryCode>>,
+    
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
+    /// Optional list of betting types to filter the markets.
     pub betting_types: Option<Vec<StreamMarketFilterBettingType>>,
+    
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
+    /// Optional flag indicating if the market allows betting while the event is in play.
     pub turn_in_play_enabled: Option<bool>,
+    
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
+    /// Optional list of market types to filter the markets.
     pub market_types: Option<Vec<MarketType>>,
+    
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
+    /// Optional list of venues to filter the markets.
     pub venues: Option<Vec<Venue>>,
+    
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
+    /// Optional list of specific market IDs to subscribe to.
     pub market_ids: Option<Vec<MarketId>>,
+    
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
+    /// Optional list of event type IDs to filter the markets.
     pub event_type_ids: Option<Vec<EventTypeId>>,
+    
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
+    /// Optional list of specific event IDs to subscribe to.
     pub event_ids: Option<Vec<EventId>>,
+    
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
+    /// Optional flag indicating if the market is a Best Starting Price market.
     pub bsp_market: Option<bool>,
+    
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
+    /// Optional list of race types to filter the markets.
     pub race_types: Option<Vec<String>>,
 }
 
@@ -184,11 +218,17 @@ pub struct MarketFilter {
     Clone, Copy, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
 )]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+/// Represents the betting type for market filtering.
 pub enum StreamMarketFilterBettingType {
+    /// Represents traditional odds betting.
     #[default]
     Odds,
+    /// Represents line betting, where a line is set for the event.
     Line,
+    /// Represents a range betting type.
     Range,
+    /// Represents double line Asian handicap betting.
     AsianHandicapDoubleLine,
+    /// Represents single line Asian handicap betting.
     AsianHandicapSingleLine,
 }

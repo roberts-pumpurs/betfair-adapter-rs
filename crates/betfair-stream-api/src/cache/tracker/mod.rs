@@ -14,7 +14,7 @@ use super::primitives::{MarketBookCache, OrderBookCache};
 
 /// Separate stream struct to hold market/order caches
 #[derive(Debug)]
-pub struct StreamState {
+pub(crate) struct StreamState {
     pub(crate) stream_id: Option<u64>,
     pub(crate) update_clk: Option<Clock>,
     pub(crate) max_latency_ms: Option<u64>,
@@ -26,17 +26,17 @@ pub struct StreamState {
     pub(crate) order_stream_tracker: OrderStreamTracker,
 }
 
-pub enum Updates<'a> {
+pub(crate) enum Updates<'a> {
     Market(Vec<&'a MarketBookCache>),
     Order(Vec<&'a OrderBookCache>),
 }
 
-pub enum IncomingMessage {
+pub(crate) enum IncomingMessage {
     Market(MarketChangeMessage),
     Order(OrderChangeMessage),
 }
 
-pub struct HasFullImage(pub bool);
+pub(crate) struct HasFullImage(pub bool);
 
 impl StreamState {
     pub(crate) fn new() -> Self {

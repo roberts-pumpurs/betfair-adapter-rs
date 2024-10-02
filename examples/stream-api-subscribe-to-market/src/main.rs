@@ -36,7 +36,6 @@ async fn main() -> eyre::Result<()> {
     let bf_provider = UnauthenticatedBetfairRpcProvider::new(secret_provider.clone())?
         .authenticate()
         .await?;
-
     // get market id
     let market_book = bf_provider
         .send_request(list_market_catalogue::Parameters {

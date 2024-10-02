@@ -18,7 +18,7 @@ pub mod logout {
 }
 mod shared;
 
-#[allow(clippy::all)]
+#[expect(clippy::all)]
 pub mod types {
     include!(concat!(env!("OUT_DIR"), "/mod.rs"));
 }

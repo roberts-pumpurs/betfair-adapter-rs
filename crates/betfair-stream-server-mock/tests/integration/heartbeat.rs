@@ -3,13 +3,13 @@ use betfair_stream_server_mock::{ClientState, StreamAPIBackend, SubSate};
 use tokio_stream::StreamExt;
 
 #[rstest::rstest]
-#[timeout(std::time::Duration::from_secs(5))]
+#[timeout(core::time::Duration::from_secs(5))]
 #[test_log::test(tokio::test)]
 async fn successful_heartbeat() {
     let mock = StreamAPIBackend::new().await;
 
     let h1 = tokio::spawn({
-        let duration = std::time::Duration::from_millis(800); // 0.8 seconds
+        let duration = core::time::Duration::from_millis(800); // 0.8 seconds
         let url = mock.url.clone().into();
         async move {
             let bf_mock = betfair_rpc_server_mock::Server::new_with_stream_url(url).await;
@@ -32,7 +32,7 @@ async fn successful_heartbeat() {
     });
 
     // Sleep for 2 second to allow the connection to be established
-    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+    tokio::time::sleep(core::time::Duration::from_secs(2)).await;
 
     assert!(!h1.is_finished());
     assert!(!h2.is_finished());

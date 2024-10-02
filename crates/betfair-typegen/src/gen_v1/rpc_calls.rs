@@ -54,14 +54,18 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                     #description
                     pub type ReturnType = #ok_type;
                 },
-                Err(err) => quote! {
-                    compile_error!(#err);
-                },
+                Err(err) => {
+                    let err_msg = err.to_string();
+                    quote! { compile_error!("compile error: {:?}", #err_msg); }
+                }
             },
             |exception| {
                 let err_data_type = match self.type_resolver.resolve_type(&exception.data_type) {
                     Ok(err_type) => err_type,
-                    Err(err) => return quote! { compile_error!(#err); },
+                    Err(err) => {
+                        let err_msg = err.to_string();
+                        return quote! { compile_error!("compile error: {:?}", #err_msg); };
+                    }
                 };
                 let error_docs = exception.description.as_slice().object_comment();
                 let ok_type = match self
@@ -69,7 +73,10 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                     .resolve_type(&data_type.returns.data_type)
                 {
                     Ok(ok_type) => ok_type,
-                    Err(err) => return quote! { compile_error!(#err); },
+                    Err(err) => {
+                        let err_msg = err.to_string();
+                        return quote! { compile_error!("compile error: {:?}", #err_msg); };
+                    }
                 };
                 quote! {
                     #error_docs
@@ -122,9 +129,12 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                             #data_type_,
                         })
                     }
-                    Err(err) => Some(quote! {
-                        compile_error!(#err);
-                    }),
+                    Err(err) => {
+                        let err_msg = err.to_string();
+                        Some(quote! {
+                            compile_error!("compile error: {:?}", #err_msg);
+                        })
+                    }
                 }
             })
             .collect::<Vec<_>>();

@@ -366,6 +366,7 @@ name = "betfair-typegen"
 version = "0.1.0"
 dependencies = [
  "betfair-xml-parser",
+ "eyre",
  "heck 0.4.1",
  "pretty_assertions",
  "proc-macro2",

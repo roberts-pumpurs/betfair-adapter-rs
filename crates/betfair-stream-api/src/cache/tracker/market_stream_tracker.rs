@@ -7,7 +7,7 @@ use super::HasFullImage;
 use crate::cache::primitives::MarketBookCache;
 
 #[derive(Debug)]
-pub struct MarketStreamTracker {
+pub(crate) struct MarketStreamTracker {
     market_state: HashMap<MarketId, MarketBookCache>,
     updates_processed: u64,
 }

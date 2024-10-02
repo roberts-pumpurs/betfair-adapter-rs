@@ -7,14 +7,17 @@ use super::{DataChange, DatasetChangeMessage, UpdateSet2, UpdateSet3};
 use crate::request::market_subscription_message::StreamMarketFilterBettingType;
 
 /// Represents a market change message.
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct MarketChangeMessage(pub DatasetChangeMessage<MarketChange>);
 
+/// Trait for data change operations.
 impl DataChange<Self> for MarketChange {
     fn key() -> &'static str {
         "mc"
     }
 }
 
+/// Implements Deref for MarketChangeMessage.
 impl core::ops::Deref for MarketChangeMessage {
     type Target = DatasetChangeMessage<MarketChange>;
 
@@ -24,6 +27,7 @@ impl core::ops::Deref for MarketChangeMessage {
 }
 
 /// Represents a market change.
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct MarketChange {
     /// Runner Changes - a list of changes to runners (or null if un-changed)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -43,6 +47,7 @@ pub struct MarketChange {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "con")]
     pub conflated: Option<bool>,
+    /// Market definition details.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub market_definition: Option<Box<MarketDefinition>>,
     /// Market Id - the id of the market
@@ -176,7 +181,7 @@ pub struct MarketDefinition {
     pub status: StreamMarketDefinitionStatus,
 }
 
-///
+/// Represents the status of a market definition.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum StreamMarketDefinitionStatus {
@@ -350,12 +355,14 @@ pub struct RunnerDefinition {
     pub status: Option<StreamRunnerDefinitionStatus>,
 }
 
+/// Implements comparison for RunnerDefinition.
 impl PartialOrd for RunnerDefinition {
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         self.sort_priority.partial_cmp(&other.sort_priority)
     }
 }
 
+/// Implements ordering for RunnerDefinition.
 impl Ord for RunnerDefinition {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         self.sort_priority.cmp(&other.sort_priority)
@@ -368,12 +375,19 @@ impl Ord for RunnerDefinition {
 )]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum StreamRunnerDefinitionStatus {
+    /// The runner is currently active in the market.
     #[default]
     Active,
+    /// The runner has won the event.
     Winner,
+    /// The runner has lost the event.
     Loser,
+    /// The runner has been removed from the market.
     Removed,
+    /// The runner was removed but is considered vacant.
     RemovedVacant,
+    /// The runner is hidden from the market view.
     Hidden,
+    /// The runner has been placed in the market.
     Placed,
 }

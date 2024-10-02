@@ -1,3 +1,7 @@
+//! This crate provides functionality to generate Betfair certificates for non-interactive bot
+//! usage. It includes methods for creating SSL/TLS certificates and key pairs.
+
+use eyre::WrapErr;
 use rand::rngs::OsRng;
 use rcgen::{
     date_time_ymd, Certificate, CertificateParams, DistinguishedName, DnType,
@@ -5,7 +9,6 @@ use rcgen::{
 };
 use rsa::pkcs8::EncodePrivateKey;
 use rsa::RsaPrivateKey;
-use eyre::WrapErr;
 
 /// Generate a Betfair certificate for non-interactive bot usage
 /// Reference:
@@ -90,7 +93,8 @@ pub fn rcgen_cert(
 
     let private_key = RsaPrivateKey::new(&mut OsRng, 2048)?;
     let private_key_der = private_key.to_pkcs8_der()?;
-    let key_pair = rcgen::KeyPair::try_from(private_key_der.as_bytes()).wrap_err("failed to create keypair")?;
+    let key_pair = rcgen::KeyPair::try_from(private_key_der.as_bytes())
+        .wrap_err("failed to create keypair")?;
     let cert = params.self_signed(&key_pair)?;
     Ok((cert, key_pair))
 }

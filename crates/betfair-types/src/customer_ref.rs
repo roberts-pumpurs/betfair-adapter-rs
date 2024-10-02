@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 /// digits, chars : - . _ + * : ; ~ only. Please note: There is a time window associated
 /// with the de-duplication of duplicate submissions which is 60 seconds. NB:  This field
 /// does not persist into the placeOrders response/Order Stream API and should not be confused
-/// with customerOrderRef, which is separate field that can be sent in the PlaceInstruction.
+/// with customerOrderRef, which is separate field that can be sent in the `PlaceInstruction`.
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct CustomerRef(String);
 
@@ -22,7 +22,7 @@ impl CustomerRef {
         {
             return Err(CustomerRefParseError::InvalidCharacters)
         }
-        Ok(CustomerRef(customer_ref))
+        Ok(Self(customer_ref))
     }
 }
 

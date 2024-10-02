@@ -7,7 +7,7 @@
 
 mod tls;
 
-use std::net::SocketAddr;
+use core::net::SocketAddr;
 use std::sync::Arc;
 
 use betfair_stream_api::CERTIFICATE;
@@ -39,16 +39,16 @@ impl StreamAPIBackend {
         let (cert, key) = tls::generate_cert().unwrap();
         let server_config = tls::rustls_config(cert.as_str(), key.as_str());
 
-        let url = Url::parse(&format!("http://{}", listener_addr)).unwrap();
+        let url = Url::parse(&format!("http://{listener_addr}")).unwrap();
 
         let _ = CERTIFICATE.set(cert.clone());
 
         Self {
             listener_addr,
-            cert,
-            server_config,
-            url,
             listener,
+            server_config,
+            cert,
+            url,
         }
     }
 
@@ -63,7 +63,7 @@ impl StreamAPIBackend {
             ConnState::Connected,
         )));
 
-        ClientStateW::new(tls_stream, client_state.clone())
+        ClientStateW::new(tls_stream, client_state)
     }
 }
 
@@ -73,14 +73,17 @@ pub struct ClientStateW {
 }
 
 impl ClientStateW {
-    pub fn new(socket: TlsStream<TcpStream>, state: Arc<tokio::sync::Mutex<ClientState>>) -> Self {
+    pub const fn new(
+        socket: TlsStream<TcpStream>,
+        state: Arc<tokio::sync::Mutex<ClientState>>,
+    ) -> Self {
         Self { socket, state }
     }
 
     pub async fn process(self) {
         let mut socket = Framed::new(self.socket, StreamAPIServerCodec);
         loop {
-            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            tokio::time::sleep(core::time::Duration::from_millis(100)).await;
             let client_state = self.state.lock().await.clone();
 
             let new_client_state = match client_state {
@@ -88,7 +91,7 @@ impl ClientStateW {
                     socket
                         .feed(ResponseMessage::Connection(ConnectionMessage {
                             id: Some(1),
-                            connection_id: Some("conn_id_fake123".to_string()),
+                            connection_id: Some("conn_id_fake123".to_owned()),
                         }))
                         .await
                         .unwrap();
@@ -116,7 +119,7 @@ impl ClientStateW {
                         .feed(ResponseMessage::Status(StatusMessage {
                             id,
                             connection_closed: None,
-                            connection_id: Some("conn_id_fake123".to_string()),
+                            connection_id: Some("conn_id_fake123".to_owned()),
                             connections_available: Some(42),
                             error_code: None,
                             error_message: None,
@@ -143,7 +146,7 @@ impl ClientStateW {
                                 .feed(ResponseMessage::Status(StatusMessage {
                                     id: Some(1),
                                     connection_closed: None,
-                                    connection_id: Some("conn_id_fake123".to_string()),
+                                    connection_id: Some("conn_id_fake123".to_owned()),
                                     connections_available: None,
                                     error_code: None,
                                     error_message: None,
@@ -168,18 +171,18 @@ impl ClientStateW {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
 pub enum ConnState {
     Connected,
     WaitingForAuthInfo,
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
 pub struct SubSate {
     pub heartbeat_counter: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
 pub enum ClientState {
     Init(ConnState),
     LoggedIn(SubSate),

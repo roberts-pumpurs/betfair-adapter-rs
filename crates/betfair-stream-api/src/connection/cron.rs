@@ -21,19 +21,19 @@ use crate::tls_sream::RawStreamApiConnection;
 use crate::{CacheEnabledMessages, ExternalUpdates, HeartbeatStrategy, MetadataUpdates};
 
 #[derive(Debug, Clone)]
-pub enum AsyncTaskStopReason {
+pub(crate) enum AsyncTaskStopReason {
     FatalError(FatalError),
     NeedsRestart(NeedsRestart),
 }
 
 #[derive(Debug, Clone)]
-pub struct FatalError;
+pub(crate) struct FatalError;
 
 #[derive(Debug, Clone)]
-pub struct NeedsRestart;
+pub(crate) struct NeedsRestart;
 
 #[derive(Debug)]
-pub struct StreamConnectioProcessor {
+pub(crate) struct StreamConnectionProcessor {
     pub sender: tokio::sync::mpsc::Sender<ExternalUpdates<ResponseMessage>>,
     pub command_reader: tokio::sync::broadcast::Receiver<RequestMessage>,
     pub command_sender: tokio::sync::broadcast::Sender<RequestMessage>,
@@ -43,8 +43,8 @@ pub struct StreamConnectioProcessor {
     pub last_time_token_refreshed: Option<(std::time::Instant, SessionToken)>,
 }
 
-impl StreamConnectioProcessor {
-    pub async fn connect_and_process_loop(&mut self) -> Result<Never, FatalError> {
+impl StreamConnectionProcessor {
+    pub(crate) async fn connect_and_process_loop(&mut self) -> Result<Never, FatalError> {
         loop {
             // todo use `backoff` crate
             match self.connect_and_process_internal().await {
@@ -150,7 +150,7 @@ impl StreamConnectioProcessor {
     }
 }
 
-#[allow(clippy::pattern_type_mismatch)]
+#[expect(clippy::pattern_type_mismatch)]
 async fn get_session_token(
     last_time_token_refreshed: &mut Option<(std::time::Instant, SessionToken)>,
     provider: &UnauthenticatedBetfairRpcProvider,
@@ -187,7 +187,7 @@ async fn get_session_token(
     Ok(session_token)
 }
 
-pub async fn handle_stream_connection(
+pub(crate) async fn handle_stream_connection(
     connection: RawStreamApiConnection,
     sender: tokio::sync::mpsc::Sender<ExternalUpdates<ResponseMessage>>,
     mut command_reader: tokio::sync::broadcast::Receiver<RequestMessage>,
@@ -267,7 +267,7 @@ pub async fn handle_stream_connection(
     }
 }
 
-pub async fn cache_loop(
+pub(crate) async fn cache_loop(
     mut receiver: tokio::sync::mpsc::Receiver<ExternalUpdates<ResponseMessage>>,
     external_sender: tokio::sync::mpsc::Sender<ExternalUpdates<CacheEnabledMessages>>,
 ) -> Result<Never, FatalError> {

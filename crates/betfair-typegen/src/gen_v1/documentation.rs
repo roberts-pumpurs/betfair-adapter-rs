@@ -7,7 +7,7 @@ use crate::aping_ast::types::Comment;
 use crate::aping_ast::Aping;
 
 impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
-    #[allow(clippy::unused_self)]
+    #[expect(clippy::unused_self)]
     pub(crate) fn generate_top_level_docs(&self, aping: &Aping) -> TokenStream {
         let description = aping.top_level_docs().module_comment();
         let namespace = aping.namespace().module_comment();

@@ -11,6 +11,7 @@ use rust_decimal::Decimal;
 
 use super::runner_book_cache::RunnerBookCache;
 
+/// A cache for market book data, including market and runner information.
 #[derive(Debug, PartialEq, Eq, Clone, serde::Serialize, serde::Deserialize)]
 pub struct MarketBookCache {
     market_id: MarketId,
@@ -21,7 +22,9 @@ pub struct MarketBookCache {
     runners: HashMap<(SelectionId, Option<Decimal>), RunnerBookCache>,
 }
 
+/// Represents the market book cache.
 impl MarketBookCache {
+    /// Creates a new instance of `MarketBookCache`.
     #[must_use]
     pub fn new(market_id: MarketId, publish_time: DateTime<Utc>) -> Self {
         Self {
@@ -34,6 +37,7 @@ impl MarketBookCache {
         }
     }
 
+    /// Checks if the market is closed.
     #[must_use]
     pub fn is_closed(&self) -> bool {
         !self
@@ -42,6 +46,7 @@ impl MarketBookCache {
             .is_some_and(|x| x.status == StreamMarketDefinitionStatus::Open)
     }
 
+    /// Updates the cache with the latest market changes.
     pub fn update_cache(
         &mut self,
         market_change: MarketChange,
@@ -128,6 +133,7 @@ impl MarketBookCache {
         }
     }
 
+    /// Updates the market definition with the given market definition.
     pub fn update_market_definition(&mut self, market_definition: MarketDefinition) {
         self.market_definition = Some(Box::new(market_definition.clone()));
 
@@ -147,6 +153,7 @@ impl MarketBookCache {
         }
     }
 
+    /// Adds a runner from a change.
     fn add_runner_from_change(&mut self, runner_change: RunnerChange) {
         let Some(selection_id) = runner_change.id.clone() else {
             return;
@@ -157,6 +164,8 @@ impl MarketBookCache {
         };
         self.runners.insert(key, runner);
     }
+
+    /// Adds a runner from a definition.
     fn add_runner_from_definition(&mut self, runner_definition: RunnerDefinition) {
         let Some(selection_id) = runner_definition.id.clone() else {
             return;
@@ -168,22 +177,26 @@ impl MarketBookCache {
         self.runners.insert(key, runner);
     }
 
+    /// Returns the publish time of the market.
     #[must_use]
     pub const fn publish_time(&self) -> DateTime<Utc> {
         self.publish_time
     }
 
+    /// Returns a reference to the runners in the market.
     #[must_use]
     pub const fn runners(&self) -> &HashMap<(SelectionId, Option<Decimal>), RunnerBookCache> {
         &self.runners
     }
 
-    #[allow(clippy::borrowed_box)]
+    /// Returns the market definition if it exists.
+    #[expect(clippy::borrowed_box)]
     #[must_use]
     pub const fn market_definition(&self) -> Option<&Box<MarketDefinition>> {
         self.market_definition.as_ref()
     }
 
+    /// Returns the market ID.
     #[must_use]
     pub const fn market_id(&self) -> &MarketId {
         &self.market_id

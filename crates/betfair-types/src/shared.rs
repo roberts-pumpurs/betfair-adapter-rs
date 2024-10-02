@@ -16,7 +16,7 @@ impl AsRef<Result<SuccessResponse, ErrorValues>> for Response {
     }
 }
 
-impl std::ops::Deref for Response {
+impl core::ops::Deref for Response {
     type Target = Result<SuccessResponse, ErrorValues>;
 
     fn deref(&self) -> &Self::Target {
@@ -24,7 +24,7 @@ impl std::ops::Deref for Response {
     }
 }
 
-impl std::ops::DerefMut for Response {
+impl core::ops::DerefMut for Response {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
@@ -57,13 +57,13 @@ impl<'de> Deserialize<'de> for Response {
                                 .to_owned(),
                         ),
                     };
-                    return Ok(Response(Ok(success_response)))
+                    return Ok(Self(Ok(success_response)))
                 }
                 "FAIL" => {
                     if let Some(error) = value.get("error") {
                         let login_error =
                             ErrorValues::deserialize(error).map_err(serde::de::Error::custom)?;
-                        return Ok(Response(Err(login_error)))
+                        return Ok(Self(Err(login_error)))
                     }
                 }
                 _ => {}
