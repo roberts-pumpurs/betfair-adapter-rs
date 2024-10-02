@@ -21,11 +21,12 @@ enum Args {
         #[clap(short, long, default_value_t = false)]
         write: bool,
     },
+    SubscribeToMarket,
     /// Generate a Betfair certificate for non-interactive bot usage
     /// Reference:
     /// https://docs.developer.betfair.com/display/1smk3cen4v3lu3yomq5qye0ni/Non-Interactive+(bot)+login
     GenBetfairCertificate {
-        /// The country name (2 letter idnetifier) for the certificate
+        /// The country name (2 letter identifier) for the certificate
         #[clap(short, long, default_value = "GB")]
         country_name: String,
         /// The state or province name for the certificate (a city, neighborhood, or other locality
@@ -131,6 +132,10 @@ fn main() -> eyre::Result<()> {
             } else {
                 cmd!(sh, "typos").run()?;
             }
+        }
+        Args::SubscribeToMarket => {
+            println!("stream-api-subscribe to market");
+            cmd!(sh, "cargo run --bin stream-api-subscribe-to-market").run()?;
         }
         Args::GenBetfairCertificate {
             country_name,
