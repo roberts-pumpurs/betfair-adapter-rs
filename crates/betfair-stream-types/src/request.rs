@@ -20,15 +20,15 @@ pub enum RequestMessage {
     /// Represents an authentication message.
     #[serde(rename = "authentication")]
     Authentication(authentication_message::AuthenticationMessage),
-    
+
     /// Represents a heartbeat message.
     #[serde(rename = "heartbeat")]
     Heartbeat(heartbeat_message::HeartbeatMessage),
-    
+
     /// Represents a market subscription message.
     #[serde(rename = "marketSubscription")]
     MarketSubscription(market_subscription_message::MarketSubscriptionMessage),
-    
+
     /// Represents an order subscription message.
     #[serde(rename = "orderSubscription")]
     OrderSubscription(order_subscription_message::OrderSubscriptionMessage),

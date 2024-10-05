@@ -6,7 +6,7 @@ pub struct BetfairUrl<T> {
 }
 
 impl<T> BetfairUrl<T> {
-    /// Creates a new BetfairUrl instance.
+    /// Creates a new `BetfairUrl` instance.
     #[must_use]
     pub const fn new(url: url::Url) -> Self {
         Self {
@@ -32,15 +32,15 @@ impl<T> From<url::Url> for BetfairUrl<T> {
 #[derive(Debug, Clone)]
 pub struct RestBase;
 
-/// Base struct for KeepAlive URLs.
+/// Base struct for `KeepAlive` URLs.
 #[derive(Debug, Clone)]
 pub struct KeepAlive;
 
-/// Base struct for BotLogin URLs.
+/// Base struct for `BotLogin` URLs.
 #[derive(Debug, Clone)]
 pub struct BotLogin;
 
-/// Base struct for InteractiveLogin URLs.
+/// Base struct for `InteractiveLogin` URLs.
 #[derive(Debug, Clone)]
 pub struct InteractiveLogin;
 
@@ -83,7 +83,7 @@ pub mod jurisdiction {
     pub struct CustomUrl<T>(pub super::BetfairUrl<T>);
 
     impl<T> CustomUrl<T> {
-        /// Creates a new CustomUrl instance.
+        /// Creates a new `CustomUrl` instance.
         #[must_use]
         pub const fn new(url: url::Url) -> Self {
             Self(super::BetfairUrl::new(url))

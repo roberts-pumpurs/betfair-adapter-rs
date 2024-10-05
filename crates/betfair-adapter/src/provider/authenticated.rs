@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use core::marker::PhantomData;
 
 use betfair_types::keep_alive;
 use betfair_types::types::BetfairRpcRequest;
@@ -82,38 +82,39 @@ impl AuthenticatedBetfairRpcProvider {
     /// prevent session expiry. If you don't call Keep Alive within the specified timeout period,
     /// the session will expire. Session times aren't determined or extended based on API activity.
     #[tracing::instrument(skip_all, ret, err)]
-    pub async fn keep_alive(&self) -> Result<(), ApiError> {
-        let _res = self
-            .authenticated_client
-            .get(self.base.keep_alive.url().clone())
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<keep_alive::Response>()
-            .await?
-            .0
-            .map_err(ApiError::KeepAliveError)?;
+    pub async fn keep_alive(&self) -> Result<BetfairRequest<keep_alive::Response, ()>, ApiError> {
+        let endpoint = self.base.keep_alive.url();
+        let client = self.authenticated_client.clone();
+        let reqwest_req = client
+            .request(reqwest::Method::GET, endpoint.as_str())
+            .build()?;
 
-        Ok(())
+        Ok(BetfairRequest {
+            request: reqwest_req,
+            client,
+            result: PhantomData,
+            err: PhantomData,
+        })
     }
 
     /// You can use Logout to terminate your existing session.
     #[tracing::instrument(skip_all, ret, err)]
-    pub async fn logout(&self) -> Result<(), ApiError> {
-        let _res = self
-            .authenticated_client
-            .get(self.base.logout.url().clone())
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<keep_alive::Response>()
-            .await?
-            .0
-            .map_err(ApiError::LogoutError)?;
+    pub async fn logout(&self) -> Result<BetfairRequest<keep_alive::Response, ()>, ApiError> {
+        let endpoint = self.base.logout.url();
+        let client = self.authenticated_client.clone();
+        let reqwest_req = client
+            .request(reqwest::Method::GET, endpoint.as_str())
+            .build()?;
 
-        Ok(())
+        Ok(BetfairRequest {
+            request: reqwest_req,
+            client,
+            result: PhantomData,
+            err: PhantomData,
+        })
     }
 
+    /// Update the internal client to get a new auth token
     pub async fn update_auth_token(&mut self) -> Result<(), ApiError> {
         let (session_token, authenticated_client) = self.base.bot_log_in().await?;
         self.session_token = session_token;
@@ -123,6 +124,7 @@ impl AuthenticatedBetfairRpcProvider {
 }
 
 /// Encalpsulated HTTP request for the Betfair API
+#[derive(Debug)]
 pub struct BetfairRequest<T, E> {
     request: reqwest::Request,
     client: reqwest::Client,
@@ -149,6 +151,7 @@ impl<T, E> BetfairRequest<T, E> {
 }
 
 /// The raw response of the Betfair API request
+#[derive(Debug)]
 pub struct BetfairResponse<T, E> {
     response: reqwest::Response,
     result: PhantomData<T>,
@@ -212,7 +215,7 @@ fn parse_betfair_error<E>(bytes: &[u8], status: reqwest::StatusCode) -> Result<E
 where
     E: serde::de::DeserializeOwned,
 {
-    let json = String::from_utf8_lossy(bytes.as_ref());
+    let json = String::from_utf8_lossy(bytes);
     tracing::error!(
         status = %status,
         body = %json,

@@ -10,7 +10,8 @@ use crate::{
 
 /// Represents an unauthenticated Betfair RPC provider.
 impl UnauthenticatedBetfairRpcProvider {
-    /// Creates a new instance of `UnauthenticatedBetfairRpcProvider` using the provided secret provider.
+    /// Creates a new instance of `UnauthenticatedBetfairRpcProvider` using the provided secret
+    /// provider.
     pub fn new(secret_provider: secret::SecretProvider) -> Result<Self, ApiError> {
         let config = BetfairConfigBuilder::new_with_global_jurisdiction(secret_provider);
         Self::new_with_config(config)

@@ -17,7 +17,7 @@ impl DataChange<Self> for MarketChange {
     }
 }
 
-/// Implements Deref for MarketChangeMessage.
+/// Implements Deref for `MarketChangeMessage`.
 impl core::ops::Deref for MarketChangeMessage {
     type Target = DatasetChangeMessage<MarketChange>;
 
@@ -355,14 +355,14 @@ pub struct RunnerDefinition {
     pub status: Option<StreamRunnerDefinitionStatus>,
 }
 
-/// Implements comparison for RunnerDefinition.
+/// Implements comparison for `RunnerDefinition`.
 impl PartialOrd for RunnerDefinition {
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         self.sort_priority.partial_cmp(&other.sort_priority)
     }
 }
 
-/// Implements ordering for RunnerDefinition.
+/// Implements ordering for `RunnerDefinition`.
 impl Ord for RunnerDefinition {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         self.sort_priority.cmp(&other.sort_priority)

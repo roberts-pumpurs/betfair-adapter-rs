@@ -90,7 +90,6 @@ pub enum CacheEnabledMessages {
     Status(StatusMessage),
 }
 
-
 /// Represents various metadata updates related to the connection state.
 #[derive(Debug, Clone)]
 pub enum MetadataUpdates {

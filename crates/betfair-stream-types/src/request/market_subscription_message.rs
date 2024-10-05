@@ -148,13 +148,15 @@ impl Default for Fields {
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize, TypedBuilder)]
 #[serde(rename_all = "camelCase")]
 /// Represents filters for market subscriptions.
-/// 
-/// This struct allows you to specify various criteria to filter the markets you want to subscribe to.
-/// 
+///
+/// This struct allows you to specify various criteria to filter the markets you want to subscribe
+/// to.
+///
 /// Fields:
 /// - `country_codes`: Optional list of country codes to filter markets by country.
 /// - `betting_types`: Optional list of betting types to filter the markets.
-/// - `turn_in_play_enabled`: Optional flag indicating if the market allows betting while the event is in play.
+/// - `turn_in_play_enabled`: Optional flag indicating if the market allows betting while the event
+///   is in play.
 /// - `market_types`: Optional list of market types to filter the markets.
 /// - `venues`: Optional list of venues to filter the markets.
 /// - `market_ids`: Optional list of specific market IDs to subscribe to.
@@ -167,47 +169,47 @@ pub struct MarketFilter {
     #[builder(default, setter(strip_option))]
     /// Optional list of country codes to filter markets by country.
     pub country_codes: Option<Vec<CountryCode>>,
-    
+
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
     /// Optional list of betting types to filter the markets.
     pub betting_types: Option<Vec<StreamMarketFilterBettingType>>,
-    
+
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
     /// Optional flag indicating if the market allows betting while the event is in play.
     pub turn_in_play_enabled: Option<bool>,
-    
+
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
     /// Optional list of market types to filter the markets.
     pub market_types: Option<Vec<MarketType>>,
-    
+
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
     /// Optional list of venues to filter the markets.
     pub venues: Option<Vec<Venue>>,
-    
+
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
     /// Optional list of specific market IDs to subscribe to.
     pub market_ids: Option<Vec<MarketId>>,
-    
+
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
     /// Optional list of event type IDs to filter the markets.
     pub event_type_ids: Option<Vec<EventTypeId>>,
-    
+
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
     /// Optional list of specific event IDs to subscribe to.
     pub event_ids: Option<Vec<EventId>>,
-    
+
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
     /// Optional flag indicating if the market is a Best Starting Price market.
     pub bsp_market: Option<bool>,
-    
+
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
     /// Optional list of race types to filter the markets.

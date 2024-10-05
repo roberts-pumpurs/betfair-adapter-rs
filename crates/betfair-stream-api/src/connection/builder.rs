@@ -19,7 +19,7 @@ pub enum HeartbeatStrategy {
     Interval(Duration),
 }
 
-/// Builder for creating a StreamApi instance.
+/// Builder for creating a `StreamApi` instance.
 #[expect(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct StreamApiBuilder {
@@ -34,7 +34,7 @@ pub struct StreamApiBuilder {
 }
 
 impl StreamApiBuilder {
-    /// Creates a new StreamApiBuilder with the specified provider and heartbeat strategy.
+    /// Creates a new `StreamApiBuilder` with the specified provider and heartbeat strategy.
     #[must_use]
     pub fn new(
         provider: betfair_adapter::UnauthenticatedBetfairRpcProvider,
@@ -50,13 +50,13 @@ impl StreamApiBuilder {
         }
     }
 
-    /// Runs the StreamApi with the default Tokio runtime.
+    /// Runs the `StreamApi` with the default Tokio runtime.
     #[must_use]
     pub fn run_with_default_runtime(&self) -> StreamApi<ResponseMessage> {
         self.run(&Handle::current())
     }
 
-    /// Runs the StreamApi with the specified Tokio runtime handle.
+    /// Runs the `StreamApi` with the specified Tokio runtime handle.
     #[must_use]
     pub fn run(&self, rt_handle: &tokio::runtime::Handle) -> StreamApi<ResponseMessage> {
         let (join_set, data_feed) = self.run_internal(rt_handle);
@@ -68,7 +68,7 @@ impl StreamApiBuilder {
         )
     }
 
-    /// Runs the StreamApi with caching enabled.
+    /// Runs the `StreamApi` with caching enabled.
     #[must_use]
     pub fn run_with_cache(
         &self,
@@ -85,7 +85,7 @@ impl StreamApiBuilder {
         )
     }
 
-    /// Internal method to run the StreamApi and return a join set and data feed.
+    /// Internal method to run the `StreamApi` and return a join set and data feed.
     fn run_internal(
         &self,
         rt_handle: &tokio::runtime::Handle,
