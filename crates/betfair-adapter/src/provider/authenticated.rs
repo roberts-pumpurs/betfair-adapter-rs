@@ -79,7 +79,7 @@ impl AuthenticatedBetfairRpcProvider {
     /// prevent session expiry. If you don't call Keep Alive within the specified timeout period,
     /// the session will expire. Session times aren't determined or extended based on API activity.
     #[tracing::instrument(skip_all, ret, err)]
-    pub async fn keep_alive(&self) -> Result<BetfairRequest<keep_alive::Response, ()>, ApiError> {
+    pub fn keep_alive(&self) -> Result<BetfairRequest<keep_alive::Response, ()>, ApiError> {
         let endpoint = self.base.keep_alive.url();
         let client = self.authenticated_client.clone();
         let reqwest_req = client
@@ -96,7 +96,7 @@ impl AuthenticatedBetfairRpcProvider {
 
     /// You can use Logout to terminate your existing session.
     #[tracing::instrument(skip_all, ret, err)]
-    pub async fn logout(&self) -> Result<BetfairRequest<keep_alive::Response, ()>, ApiError> {
+    pub fn logout(&self) -> Result<BetfairRequest<keep_alive::Response, ()>, ApiError> {
         let endpoint = self.base.logout.url();
         let client = self.authenticated_client.clone();
         let reqwest_req = client
