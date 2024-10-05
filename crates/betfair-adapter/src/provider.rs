@@ -1,4 +1,4 @@
-mod authenticated;
+pub(crate) mod authenticated;
 mod unauthenticated;
 
 use crate::{secret, urls, SessionToken};
