@@ -1,12 +1,14 @@
+use std::marker::PhantomData;
+
 use betfair_types::keep_alive;
 use betfair_types::types::BetfairRpcRequest;
+use tracing::instrument;
 
 use crate::{ApiError, AuthenticatedBetfairRpcProvider};
 
 impl AuthenticatedBetfairRpcProvider {
-    
     /// Sends a request and returns the response or an error.
-    /// 
+    ///
     /// # Parameters
     /// - `request`: The request to be sent.
     ///
@@ -27,7 +29,7 @@ impl AuthenticatedBetfairRpcProvider {
             .json(&request)
             .send()
             .await?;
-    
+
         if full.status().is_success() {
             let text = full.text().await?;
             if text.trim().is_empty() {
@@ -41,6 +43,37 @@ impl AuthenticatedBetfairRpcProvider {
             let res = serde_json::from_str::<T::Error>(&text)?;
             Err(res.into())
         }
+    }
+
+    /// Create a request
+    ///
+    /// # Parameters
+    /// - `request`: The request to be sent.
+    ///
+    /// # Returns
+    /// A result containing either the response or an `ApiError`.
+    pub async fn build_request<T>(
+        &self,
+        request: T,
+    ) -> Result<BetfairRequest<T::Res, T::Error>, ApiError>
+    where
+        T: BetfairRpcRequest + serde::Serialize + core::fmt::Debug,
+        T::Res: serde::de::DeserializeOwned + core::fmt::Debug,
+        T::Error: serde::de::DeserializeOwned,
+    {
+        let endpoint = self.base.rest_base.url().join(T::method())?;
+        let client = self.authenticated_client.clone();
+        let reqwest_req = client
+            .request(reqwest::Method::POST, endpoint.as_str())
+            .json(&request)
+            .build()?;
+
+        Ok(BetfairRequest {
+            request: reqwest_req,
+            client,
+            result: PhantomData,
+            err: PhantomData,
+        })
     }
 
     /// You can use Keep Alive to extend the session timeout period. The minimum session time is
@@ -87,4 +120,105 @@ impl AuthenticatedBetfairRpcProvider {
         self.authenticated_client = authenticated_client;
         Ok(())
     }
+}
+
+/// Encalpsulated HTTP request for the Betfair API
+pub struct BetfairRequest<T, E> {
+    request: reqwest::Request,
+    client: reqwest::Client,
+    result: PhantomData<T>,
+    err: PhantomData<E>,
+}
+
+impl<T, E> BetfairRequest<T, E> {
+    /// execute an Amplifier API request
+    #[instrument(name = "execute_request", skip(self), fields(method = %self.request.method(), url = %self.request.url()))]
+    pub async fn execute(self) -> Result<BetfairResponse<T, E>, ApiError> {
+        let response = self.client.execute(self.request).await?;
+
+        // Capture the current span
+        let span = tracing::Span::current();
+
+        Ok(BetfairResponse {
+            response,
+            result: PhantomData,
+            err: PhantomData,
+            span,
+        })
+    }
+}
+
+/// The raw response of the Betfair API request
+pub struct BetfairResponse<T, E> {
+    response: reqwest::Response,
+    result: PhantomData<T>,
+    err: PhantomData<E>,
+    // this span carries the context of the `BetfairRequest`
+    span: tracing::Span,
+}
+
+impl<T, E> BetfairResponse<T, E> {
+    /// Only check if the returtned HTTP response is of error type; don't parse the data
+    ///
+    /// Useful when you don't care about the actual response besides if it was an error.
+    #[instrument(name = "response_ok", skip(self), err, parent = &self.span)]
+    pub fn ok(self) -> Result<(), ApiError> {
+        self.response.error_for_status()?;
+        Ok(())
+    }
+
+    /// Check if the returned HTTP result is an error;
+    /// Only parse the error type if we received an error.
+    ///
+    /// Useful when you don't care about the actual response besides if it was an error.
+    #[instrument(name = "parse_response_json_err", skip(self), err, parent = &self.span)]
+    pub async fn json_err(self) -> Result<Result<(), E>, ApiError>
+    where
+        E: serde::de::DeserializeOwned,
+    {
+        let status = self.response.status();
+        if status.is_success() {
+            Ok(Ok(()))
+        } else {
+            let bytes = self.response.bytes().await?;
+            let res = parse_betfair_error::<E>(&bytes, status)?;
+            Ok(Err(res))
+        }
+    }
+
+    /// Parse the response json
+    #[instrument(name = "parse_response_json", skip(self), err, parent = &self.span)]
+    pub async fn json(self) -> Result<Result<T, E>, ApiError>
+    where
+        T: serde::de::DeserializeOwned,
+        E: serde::de::DeserializeOwned,
+    {
+        let status = self.response.status();
+        let bytes = self.response.bytes().await?;
+        if status.is_success() {
+            let json = String::from_utf8_lossy(bytes.as_ref());
+            tracing::debug!(response_body = %json, "Response JSON");
+
+            let res = serde_json::from_slice::<T>(&bytes)?;
+            Ok(Ok(res))
+        } else {
+            let res = parse_betfair_error::<E>(&bytes, status)?;
+            Ok(Err(res))
+        }
+    }
+}
+
+fn parse_betfair_error<E>(bytes: &[u8], status: reqwest::StatusCode) -> Result<E, ApiError>
+where
+    E: serde::de::DeserializeOwned,
+{
+    let json = String::from_utf8_lossy(bytes.as_ref());
+    tracing::error!(
+        status = %status,
+        body = %json,
+        "Failed to execute request"
+    );
+
+    let error = serde_json::from_slice::<E>(bytes)?;
+    Ok(error)
 }
