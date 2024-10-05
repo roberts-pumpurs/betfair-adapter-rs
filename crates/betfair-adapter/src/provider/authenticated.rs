@@ -52,10 +52,7 @@ impl AuthenticatedBetfairRpcProvider {
     ///
     /// # Returns
     /// A result containing either the response or an `ApiError`.
-    pub async fn build_request<T>(
-        &self,
-        request: T,
-    ) -> Result<BetfairRequest<T::Res, T::Error>, ApiError>
+    pub fn build_request<T>(&self, request: T) -> Result<BetfairRequest<T::Res, T::Error>, ApiError>
     where
         T: BetfairRpcRequest + serde::Serialize + core::fmt::Debug,
         T::Res: serde::de::DeserializeOwned + core::fmt::Debug,
