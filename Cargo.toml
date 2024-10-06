@@ -76,12 +76,12 @@ rand = { version = "0.8", features = ["small_rng"] }
 chrono = { version = "0.4", default-features = false, features = ["serde", "clock", "std"] }
 eyre = "0.6"
 thiserror = "1.0"
-heck = "0.4"
+heck = "0.5"
 nanoid = "0.4"
-typed-builder = "0.18"
+typed-builder = "0.20"
 redact = { version = "0.1", features = ["serde"] }
 trait-variant = "0.1"
-itertools = "0.12"
+itertools = "0.13"
 backoff = { version = "0.4", features = ["tokio"] }
 log = "0.4"
 
@@ -89,7 +89,7 @@ log = "0.4"
 tokio = { version = "1.0", features = ["full", "tracing"] }
 tokio-util = { version = "0.7", features = ["codec"] }
 tokio-stream = { version = "0.1", features = ["sync"] }
-tokio-rustls = "0.25"
+tokio-rustls = { version = "0.26", default-features = false, features = ["tls12"] }
 futures-concurrency = "7.4"
 futures-util = "0.3"
 futures = "0.3"
@@ -107,8 +107,8 @@ hyper = { version = "1", features = ["full"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "http2", "gzip", "deflate", "rustls-tls", "stream"] }
 url = "2"
 http = "1"
-rustls = "0.22"
-rustls-native-certs = "0.7"
+rustls = { version = "0.23", default-features = false }
+rustls-native-certs = "0.8"
 
 # tls
 rustls-pemfile = "2"
@@ -121,9 +121,9 @@ proc-macro2 = "1"
 syn = "2"
 
 # Testnig
-rstest = { version = "0.18" }
+rstest = "0.23"
 proptest = "1"
-wiremock = "0.5"
+wiremock = "0.6"
 test-log = { version = "0.2", features = ["trace"], default-features = false }
 pretty_assertions = "1"
 json-rpc-types = "1"

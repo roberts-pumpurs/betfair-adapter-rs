@@ -184,11 +184,8 @@ fn tls_connector() -> Result<tokio_rustls::TlsConnector, StreamError> {
     use tokio_rustls::TlsConnector;
 
     let mut roots = rustls::RootCertStore::empty();
-    let native_certs = rustls_native_certs::load_native_certs().map_err(|err| {
-        tracing::error!(?err, "Cannot load native certificates");
-        StreamError::LocalCertificateLoadError
-    })?;
-    for cert in native_certs {
+    let native_certs = rustls_native_certs::load_native_certs();
+    for cert in native_certs.certs {
         roots.add(cert).map_err(|err| {
             tracing::error!(?err, "Cannot set native certificate");
             StreamError::CannotSetNativeCertificate
