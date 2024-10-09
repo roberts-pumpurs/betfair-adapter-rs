@@ -1,16 +1,8 @@
-// #![warn(missing_docs, unreachable_pub, unused_crate_dependencies)]
-// #![deny(unused_must_use, rust_2018_idioms)]
-// #![doc(test(
-//     no_crate_inject,
-//     attr(deny(warnings, rust_2018_idioms), allow(dead_code, unused_variables))
-// ))]
-
 mod tls;
 
 use core::net::SocketAddr;
 use std::sync::Arc;
 
-use betfair_stream_api::CERTIFICATE;
 use betfair_stream_types::request::authentication_message::AuthenticationMessage;
 use betfair_stream_types::request::RequestMessage;
 use betfair_stream_types::response::connection_message::ConnectionMessage;
@@ -33,7 +25,9 @@ pub struct StreamAPIBackend {
 }
 
 impl StreamAPIBackend {
+    #[cfg(feature = "integration-test")]
     pub async fn new() -> Self {
+        use betfair_stream_api::CERTIFICATE;
         let listener = TcpListener::bind("0.0.0.0:0").await.unwrap();
         let listener_addr = listener.local_addr().unwrap();
         let (cert, key) = tls::generate_cert().unwrap();
