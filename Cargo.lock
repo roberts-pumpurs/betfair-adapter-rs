@@ -296,6 +296,7 @@ dependencies = [
  "betfair-adapter",
  "betfair-rpc-server-mock",
  "betfair-stream-api",
+ "betfair-stream-server-mock",
  "betfair-stream-types",
  "chrono",
  "eyre",
