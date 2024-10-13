@@ -30,7 +30,12 @@ pub enum StreamError {
     HostStringNotPresent,
     /// Indicates an inability to look up the host.
     #[error("Unable to look up host {host}:{port}")]
-    UnableToLookUpHost { host: String, port: u16 },
+    UnableToLookUpHost {
+        /// The host string.
+        host: String,
+        /// The port number.
+        port: u16,
+    },
     /// Indicates an inability to convert a domain to a server name.
     #[error("Unable to convert domain to server name")]
     UnableConvertDomainToServerName,

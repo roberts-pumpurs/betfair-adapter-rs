@@ -1,3 +1,16 @@
+//! # Betfair Stream Server Mock
+//!
+//! This crate provides a mock implementation of the Betfair Stream API,
+//! allowing for testing and development of applications that interact with
+//! the Betfair streaming service. It handles TLS connections, client state
+//! management, and message encoding/decoding.
+//!
+//! ## Features
+//! - Integration testing support
+//! - TLS support for secure connections
+//! - Client state management
+//! - Message handling for authentication and subscriptions
+
 mod tls;
 
 use core::net::SocketAddr;
@@ -16,15 +29,23 @@ use tokio_util::bytes;
 use tokio_util::codec::{Decoder, Encoder, Framed};
 use url::Url;
 
+/// Represents the backend for the Stream API, handling connections and configurations.
 pub struct StreamAPIBackend {
+    /// The address the listener is bound to.
     pub listener_addr: SocketAddr,
+    /// The TCP listener for incoming connections.
     pub listener: TcpListener,
+    /// The server configuration for TLS.
     pub server_config: Arc<rustls::ServerConfig>,
+    /// The certificate used for TLS connections.
     pub cert: String,
+    /// The URL for the Stream API.
     pub url: Url,
 }
 
 impl StreamAPIBackend {
+    /// Creates a new instance of `StreamAPIBackend`.
+    /// This function is only available when the "integration-test" feature is enabled.
     #[cfg(feature = "integration-test")]
     pub async fn new() -> Self {
         use betfair_stream_api::CERTIFICATE;
@@ -46,6 +67,7 @@ impl StreamAPIBackend {
         }
     }
 
+    /// Accepts the next incoming connection and returns a `ClientStateW`.
     pub async fn process_next(&self) -> ClientStateW {
         let acceptor = TlsAcceptor::from(Arc::clone(&self.server_config));
         let (socket, _tt) = self.listener.accept().await.unwrap();
@@ -61,12 +83,16 @@ impl StreamAPIBackend {
     }
 }
 
+/// Represents the state of a client connection.
 pub struct ClientStateW {
+    /// The TLS stream for the client connection.
     socket: TlsStream<TcpStream>,
+    /// The current state of the client, wrapped in a mutex for safe concurrent access.
     pub state: Arc<tokio::sync::Mutex<ClientState>>,
 }
 
 impl ClientStateW {
+    /// Creates a new instance of `ClientStateW`.
     pub const fn new(
         socket: TlsStream<TcpStream>,
         state: Arc<tokio::sync::Mutex<ClientState>>,
@@ -74,6 +100,7 @@ impl ClientStateW {
         Self { socket, state }
     }
 
+    /// Processes incoming messages from the client and manages the client state.
     pub async fn process(self) {
         let mut socket = Framed::new(self.socket, StreamAPIServerCodec);
         loop {
@@ -165,29 +192,39 @@ impl ClientStateW {
     }
 }
 
+/// Represents the connection states for a client.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
 pub enum ConnState {
+    /// The client is connected.
     Connected,
+    /// The client is waiting for authentication information.
     WaitingForAuthInfo,
 }
 
+/// Represents the state of a logged-in client, including a heartbeat counter.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
 pub struct SubSate {
+    /// The number of heartbeats sent by the client.
     pub heartbeat_counter: u64,
 }
 
+/// Represents the various states a client can be in.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
 pub enum ClientState {
+    /// The client is initializing.
     Init(ConnState),
+    /// The client is logged in.
     LoggedIn(SubSate),
 }
 
+/// Codec for encoding and decoding messages for the Stream API.
 pub struct StreamAPIServerCodec;
 
 impl Decoder for StreamAPIServerCodec {
     type Item = RequestMessage;
     type Error = eyre::Error;
 
+    /// Decodes a message from the provided buffer.
     fn decode(&mut self, src: &mut bytes::BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         // Check if there is a newline character in the buffer
         if let Some(newline_index) = src.iter().position(|&b| b == b'\n') {
@@ -208,6 +245,7 @@ impl Decoder for StreamAPIServerCodec {
 impl Encoder<ResponseMessage> for StreamAPIServerCodec {
     type Error = eyre::Error;
 
+    /// Encodes a response message into the provided buffer.
     fn encode(
         &mut self,
         item: ResponseMessage,

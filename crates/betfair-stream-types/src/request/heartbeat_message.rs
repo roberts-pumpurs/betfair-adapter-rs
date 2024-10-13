@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+/// Heartbeat message structure.
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HeartbeatMessage {

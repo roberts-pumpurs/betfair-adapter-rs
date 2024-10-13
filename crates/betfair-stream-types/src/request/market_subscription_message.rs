@@ -6,6 +6,8 @@ use typed_builder::TypedBuilder;
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Represents a message for subscribing to market updates.
+/// This struct contains various fields to manage the subscription and its parameters.
 pub struct MarketSubscriptionMessage {
     /// Client generated unique id to link request with response (like json rpc)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -26,12 +28,14 @@ pub struct MarketSubscriptionMessage {
     /// subscription
     #[serde(skip_serializing_if = "Option::is_none")]
     pub initial_clk: Option<String>,
+    /// The market filter to apply to the subscription.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub market_filter: Option<Box<MarketFilter>>,
     /// Conflate Milliseconds - the conflation rate (looped back on initial image after validation:
     /// bounds are 0 to 120000)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub conflate_ms: Option<i64>,
+    /// The market data filter to apply to the subscription.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub market_data_filter: Option<Box<MarketDataFilter>>,
 }
@@ -53,10 +57,12 @@ pub struct MarketDataFilter {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default, setter(strip_option))]
+    /// The fields to subscribe to.
     pub fields: Option<Vec<Fields>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
+/// Represents an error indicating an invalid ladder level.
 pub struct InvalidLadderLevel;
 
 impl core::error::Error for InvalidLadderLevel {}
@@ -67,11 +73,18 @@ impl core::fmt::Display for InvalidLadderLevel {
 }
 
 #[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Default, Serialize, Deserialize)]
-// For depth-based ladders the number of levels to send (1 to 10). 1 is best price to back or lay
-// etc.
+/// Represents a ladder level for depth-based data.
+///
+/// For depth-based ladders the number of levels to send (1 to 10). 1 is best price to back or lay
+/// etc.
 pub struct LadderLevel(u8);
 
 impl LadderLevel {
+    /// Creates a new `LadderLevel` from a given level.
+    ///
+    /// # Arguments
+    ///
+    /// * `level` - A u8 representing the ladder level.
     pub fn new(level: u8) -> Result<Self, InvalidLadderLevel> {
         if !(1..=10).contains(&level) {
             return Err(InvalidLadderLevel)

@@ -1,43 +1,52 @@
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
+/// A struct representing a size value using a Decimal.
 #[derive(
     Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize, Default,
 )]
 pub struct Size(Decimal);
 
 impl Size {
+    /// Creates a new `Size` instance with the given Decimal value.
     #[must_use]
     pub const fn new(size: Decimal) -> Self {
         Self(size)
     }
 
+    /// Adds two `Size` instances, returning `None` if the operation overflows.
     pub fn checked_add(&self, other: &Self) -> Option<Self> {
         self.0.checked_add(other.0).map(Self)
     }
 
+    /// Subtracts one `Size` from another, returning `None` if the operation overflows.
     pub fn checked_sub(&self, other: &Self) -> Option<Self> {
         self.0.checked_sub(other.0).map(Self)
     }
 
+    /// Multiplies two `Size` instances, returning `None` if the operation overflows.
     pub fn checked_mul(&self, other: &Self) -> Option<Self> {
         self.0.checked_mul(other.0).map(Self)
     }
 
+    /// Divides one `Size` by another, returning `None` if the operation overflows.
     pub fn checked_div(&self, other: &Self) -> Option<Self> {
         self.0.checked_div(other.0).map(Self)
     }
 
+    /// Adds two `Size` instances, saturating at the numeric limits.
     #[must_use]
     pub fn saturating_add(&self, other: &Self) -> Self {
         Self(self.0.saturating_add(other.0))
     }
 
+    /// Subtracts one `Size` from another, saturating at the numeric limits.
     #[must_use]
     pub fn saturating_sub(&self, other: &Self) -> Self {
         Self(self.0.saturating_sub(other.0))
     }
 
+    /// Multiplies two `Size` instances, saturating at the numeric limits.
     #[must_use]
     pub fn saturating_mul(&self, other: &Self) -> Self {
         Self(self.0.saturating_mul(other.0))

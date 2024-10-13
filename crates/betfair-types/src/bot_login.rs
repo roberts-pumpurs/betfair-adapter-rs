@@ -2,6 +2,7 @@ use redact::Secret;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 
+/// Represents the response from the bot login process, which can either be a success or an error.
 #[derive(Debug)]
 #[repr(transparent)]
 pub struct BotLoginResponse(pub Result<SuccessResponse, LoginError>);
@@ -14,13 +15,16 @@ impl core::ops::Deref for BotLoginResponse {
     }
 }
 
+/// Represents a successful login response containing the session token.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SuccessResponse {
     #[serde(serialize_with = "redact::expose_secret")]
+    /// The session token for the logged-in user, which is sensitive information.
     pub session_token: redact::Secret<String>,
 }
 
+/// Enum representing the possible login errors that can occur during the login process.
 #[derive(Debug, Serialize, Deserialize)]
 pub enum LoginError {
     #[doc = "the username or password are invalid"]

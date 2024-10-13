@@ -206,10 +206,8 @@ version = "0.1.0"
 dependencies = [
  "betfair-types",
  "eyre",
- "pretty_assertions",
  "redact",
  "reqwest",
- "rstest",
  "rust_decimal",
  "rust_decimal_macros",
  "serde",

@@ -14,6 +14,14 @@ pub struct OrderSubscriber {
 }
 
 impl OrderSubscriber {
+    /// Creates a new instance of the `OrderSubscriber`.
+    ///
+    /// # Parameters
+    /// - `stream_api_connection`: A reference to the `StreamApi` connection.
+    /// - `filter`: An `OrderFilter` to apply.
+    ///
+    /// # Returns
+    /// A new instance of `OrderSubscriber`.
     #[must_use]
     pub fn new<T>(stream_api_connection: &StreamApi<T>, filter: OrderFilter) -> Self {
         let command_sender = stream_api_connection.command_sender().clone();
@@ -122,6 +130,7 @@ impl OrderSubscriber {
         Ok(())
     }
 
+    /// Returns a reference to the order filter.
     #[must_use]
     pub const fn filter(&self) -> &OrderFilter {
         &self.filter

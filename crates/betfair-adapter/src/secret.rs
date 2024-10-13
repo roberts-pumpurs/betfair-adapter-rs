@@ -1,23 +1,35 @@
+//! Module for secret management.
+
+/// A struct that holds the application key and username for the secret provider.
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct SecretProvider {
+    /// The application key.
     pub application_key: ApplicationKey,
+    /// The username.
     pub username: Username,
+    /// The password.
     pub password: Password,
+    /// The identity.
     pub identity: Identity,
 }
 
+/// A secret for the application key.
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct ApplicationKey(pub redact::Secret<String>);
 
+/// A secret for the session token.
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct SessionToken(pub redact::Secret<String>);
 
+/// A secret for the username.
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct Username(pub redact::Secret<String>);
 
+/// A secret for the password.
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct Password(pub redact::Secret<String>);
 
+/// A secret for the identity.
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct Identity(
     #[serde(deserialize_with = "serde_utils::deserialize_identity")]
@@ -25,6 +37,7 @@ pub struct Identity(
 );
 
 impl ApplicationKey {
+    /// Creates a new application key from a string.
     #[must_use]
     pub const fn new(application_key: String) -> Self {
         Self(redact::Secret::new(application_key))
@@ -32,19 +45,22 @@ impl ApplicationKey {
 }
 
 impl Username {
+    /// Creates a new username from a string.
     #[must_use]
     pub const fn new(username: String) -> Self {
         Self(redact::Secret::new(username))
     }
 }
 impl SessionToken {
+    /// Creates a new session token from a string.
     #[must_use]
-    pub const fn new(username: String) -> Self {
-        Self(redact::Secret::new(username))
+    pub const fn new(session_token: String) -> Self {
+        Self(redact::Secret::new(session_token))
     }
 }
 
 impl Password {
+    /// Creates a new password from a string.
     #[must_use]
     pub const fn new(password: String) -> Self {
         Self(redact::Secret::new(password))
@@ -52,6 +68,7 @@ impl Password {
 }
 
 impl Identity {
+    /// Creates a new identity from a `reqwest::Identity`.
     #[must_use]
     pub const fn new(identity: reqwest::Identity) -> Self {
         Self(redact::Secret::new(identity))
@@ -59,6 +76,7 @@ impl Identity {
 }
 
 mod serde_utils {
+    /// Utility functions for serializing and deserializing custom types.
     use serde::{Deserialize, Deserializer};
 
     pub(crate) fn deserialize_identity<'de, D>(

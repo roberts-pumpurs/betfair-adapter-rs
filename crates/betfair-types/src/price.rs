@@ -4,12 +4,15 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 
+/// Enum representing errors that can occur while parsing prices.
 #[derive(thiserror::Error, Clone, Debug, PartialEq, Eq)]
 pub enum PriceParseError {
+    /// Error indicating that the specified price is invalid.
     #[error("InvalidPriceSpecified: {0}")]
     InvalidPriceSpecified(Decimal),
 }
 
+/// Represents a price using a decimal.
 #[derive(Debug, PartialEq, PartialOrd, Clone, Serialize, Deserialize, Eq, Hash, Ord)]
 pub struct Price(rust_decimal::Decimal);
 
@@ -67,6 +70,12 @@ impl From<Price> for rust_decimal::Decimal {
 }
 
 impl Price {
+    /// Creates a new `Price` instance from a decimal value, ensuring it falls within Betfair's
+    /// valid price range.
+    ///
+    /// # Arguments
+    ///
+    /// * `price` - A decimal value representing the price.
     pub fn new(price: rust_decimal::Decimal) -> Result<Self, PriceParseError> {
         let price = Self(Self::adjust_price_to_betfair_boundaries(price)?);
         Ok(price)

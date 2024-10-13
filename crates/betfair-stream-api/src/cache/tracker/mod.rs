@@ -15,11 +15,14 @@ use super::primitives::{MarketBookCache, OrderBookCache};
 /// Separate stream struct to hold market/order caches
 #[derive(Debug)]
 pub(crate) struct StreamState {
+    #[expect(dead_code)] // Allow dead code warning for this field
     pub(crate) stream_id: Option<u64>,
     pub(crate) update_clk: Option<Clock>,
     pub(crate) max_latency_ms: Option<u64>,
+    #[expect(dead_code)] // Allow dead code warning for this field
     pub(crate) unique_id: Option<i32>,
     pub(crate) initial_clock: Option<InitialClock>,
+    #[expect(dead_code)] // Allow dead code warning for this field
     pub(crate) time_created: chrono::DateTime<chrono::Utc>,
     pub(crate) time_updated: chrono::DateTime<chrono::Utc>,
     pub(crate) market_stream_tracker: MarketStreamTracker,
