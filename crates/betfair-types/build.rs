@@ -1,3 +1,31 @@
+//! # Betfair Type Generation Crate
+//!
+//! This crate provides functionality to generate type bindings for Betfair's API and includes
+//! tools for error handling and logging.
+//!
+//! ## Features
+//!
+//! - Generates Rust type bindings for Betfair's API
+//! - Configurable type generation strategy
+//! - Error handling and logging using the `tracing` ecosystem
+//! - Spelling error checks for the workspace
+//!
+//! ## Usage
+//!
+//! The main entry point of this crate is the `run()` function, which performs the following tasks:
+//!
+//! 1. Retrieves the output directory from the environment
+//! 2. Initializes a `BetfairTypeGenerator` with a specific strategy and settings
+//! 3. Generates the type bindings
+//! 4. Writes the generated bindings to a file in the specified output directory
+//!
+//! The `main()` function sets up the tracing subscriber for logging and error handling,
+//! checks for spelling errors, and then calls the `run()` function.
+//!
+//! ## Error Handling
+//!
+//! This crate uses the `tracing` ecosystem for error handling and logging. Errors are
+//! propagated up the call stack and logged with contextual information.
 use core::error::Error;
 use std::process;
 
@@ -6,6 +34,8 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, Registry};
 
+/// The entry point of the application. Initializes the tracing subscriber
+/// and runs the main logic of the program.
 fn main() {
     let subscriber = Registry::default();
     let filter = EnvFilter::new("debug");
@@ -31,6 +61,11 @@ fn main() {
     }
 }
 
+/// Runs the type generation process for Betfair. It retrieves the output
+/// directory, generates the type bindings, and writes them to a file.
+///
+/// # Returns
+/// Returns `Ok(())` on success, or an error wrapped in `Box<dyn Error>` on failure.
 fn run() -> Result<(), Box<dyn Error>> {
     let out_dir = std::env::var("OUT_DIR").map_err(|er| format!("Failed to get OUT_DIR: {er}"))?;
 

@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+/// Represents the status message returned from the server.
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StatusMessage {
@@ -33,20 +34,34 @@ pub struct StatusMessage {
 )]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ErrorCode {
+    /// No application key provided
     #[default]
     NoAppKey,
+    /// Invalid application key
     InvalidAppKey,
+    /// No session available
     NoSession,
+    /// Invalid session information
     InvalidSessionInformation,
+    /// Not authorized to perform the action
     NotAuthorized,
+    /// Invalid input provided
     InvalidInput,
+    /// Invalid clock value
     InvalidClock,
+    /// An unexpected error occurred
     UnexpectedError,
+    /// Request timed out
     Timeout,
+    /// Subscription limit exceeded
     SubscriptionLimitExceeded,
+    /// Invalid request format
     InvalidRequest,
+    /// Connection failed
     ConnectionFailed,
+    /// Maximum connection limit exceeded
     MaxConnectionLimitExceeded,
+    /// Too many requests made in a short period
     TooManyRequests,
 }
 
@@ -56,7 +71,9 @@ pub enum ErrorCode {
 )]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum StatusCode {
+    /// Indicates that the request was successful
     #[default]
     Success,
+    /// Indicates that the request failed
     Failure,
 }

@@ -120,7 +120,7 @@ impl AuthenticatedBetfairRpcProvider {
     }
 }
 
-/// Encalpsulated HTTP request for the Betfair API
+/// Encapsulated HTTP request for the Betfair API
 #[derive(Debug)]
 pub struct BetfairRequest<T, E> {
     request: reqwest::Request,
@@ -158,7 +158,7 @@ pub struct BetfairResponse<T, E> {
 }
 
 impl<T, E> BetfairResponse<T, E> {
-    /// Only check if the returtned HTTP response is of error type; don't parse the data
+    /// Only check if the returned HTTP response is of error type; don't parse the data
     ///
     /// Useful when you don't care about the actual response besides if it was an error.
     #[instrument(name = "response_ok", skip(self), err, parent = &self.span)]

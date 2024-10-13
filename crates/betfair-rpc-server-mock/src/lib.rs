@@ -1,3 +1,27 @@
+//! This crate provides a mock server for interacting with the Betfair API.
+//!
+//! It allows you to simulate Betfair API responses for testing purposes,
+//! without making actual calls to the real Betfair servers.
+//!
+//! # Example Usage
+//!
+//! ```rust
+//! # use betfair_mock_server::*;
+//! # use betfair_adapter::UnauthenticatedBetfairRpcProvider;
+//! # use betfair_types::account::GetAccountFundsReq;
+//! # use serde_json::json;
+//! # use wiremock::matchers::path;
+//! #[tokio::test]
+//! async fn test_mock_server() {
+//!     let server = Server::new().await;
+//!     let client = server.client().await;
+//!
+//!     let response = json!({"availableToBetBalance": 100.0});
+//!     server.mock_authenticated_rpc_from_json::<GetAccountFundsReq>(response).mount(&server.bf_api_mock_server).await;
+//!
+//!     // ... your test logic here ...
+//! }
+//! ```
 use betfair_adapter::jurisdiction::CustomUrl;
 use betfair_adapter::{
     ApplicationKey, BetfairConfigBuilder, BotLogin, Identity, InteractiveLogin, KeepAlive, Logout,
@@ -12,31 +36,59 @@ use wiremock::{Mock, MockServer, ResponseTemplate};
 mod urlencoded_matcher;
 use urlencoded_matcher::FormEncodedBodyMatcher;
 
+/// The username for the mock server.
 pub const USERNAME: &str = "usrn";
+/// The password for the mock server.
 pub const PASSWORD: &str = "pasw";
+/// The application key for the mock server.
 pub const APP_KEY: &str = "qa{n}pCPTV]EYTLGVO";
+/// The logout URL for the mock server.
 pub const LOGOUT: &str = "/login/";
+/// The login URL for the mock server.
 pub const LOGIN_URL: &str = "/login/";
+/// The bot login URL for the mock server.
 pub const BOT_LOGIN_URL: &str = "/cert-login/";
+/// The keep alive URL for the mock server.
 pub const KEEP_ALIVE_URL: &str = "/keep-alive/";
+/// The REST URL for the mock server.
 pub const REST_URL: &str = "/rpc/v1/";
+/// The stream URL for the mock server.
 pub const STREAM_URL: &str = "/stream/";
+/// The session token for the mock server.
 pub const SESSION_TOKEN: &str = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
 
 #[must_use]
+/// Constructs the path for a Betfair RPC request.
+///
+/// Combines the base REST URL with the specific method name of the request.
+///
+/// # Type Parameters
+///
+/// * `T`: A type implementing the `BetfairRpcRequest` trait.
+///
+/// # Returns
+///
+/// A `String` representing the full path for the RPC request.
 pub fn rpc_path<T: BetfairRpcRequest>() -> String {
     format!("{REST_URL}{}", T::method())
 }
 
+/// The mock server.
 pub struct Server {
+    /// The mock server.
     pub bf_api_mock_server: MockServer,
+    /// The mock settings.
     pub mock_settings: MockSettings,
 }
 
 #[derive(Debug, Clone)]
+/// Settings for the mock server.
 pub struct MockSettings {
+    /// The period for the keep alive.
     pub keep_alive_period: core::time::Duration,
+    /// The period for the health check.
     pub health_check_period: core::time::Duration,
+    /// The stream URL.
     pub stream_url: CustomUrl<Stream>,
 }
 
@@ -51,16 +103,19 @@ impl Default for MockSettings {
 }
 
 impl Server {
+    /// Creates a new mock server with default settings.
     pub async fn new() -> Self {
         Self::new_with_settings(MockSettings::default()).await
     }
 
+    /// Creates a new mock server with a custom stream URL.
     pub async fn new_with_stream_url(stream_url: CustomUrl<Stream>) -> Self {
         let mut settings = MockSettings::default();
         settings.stream_url = stream_url;
         Self::new_with_settings(settings).await
     }
 
+    /// Creates a new mock server with custom settings.
     pub async fn new_with_settings(mock_settings: MockSettings) -> Self {
         let mock_server = MockServer::start().await;
         let login_response = json!(
@@ -94,6 +149,7 @@ impl Server {
         UnauthenticatedBetfairRpcProvider::new_with_config(config).unwrap()
     }
 
+    /// Creates a secrets provider for the mock server.
     #[must_use]
     pub fn secrets_provider(&self) -> SecretProvider {
         let identity = reqwest::Identity::from_pem(CERTIFICATE.as_bytes()).unwrap();
@@ -106,6 +162,7 @@ impl Server {
         }
     }
 
+    /// Creates a Betfair configuration for the mock server.
     #[must_use]
     pub fn betfair_config<'a>(
         &self,
@@ -131,6 +188,7 @@ impl Server {
         }
     }
 
+    /// Creates a mock for a successful response.
     pub fn mock_success(
         &self,
         http_method: &str,
@@ -149,6 +207,7 @@ impl Server {
         )
     }
 
+    /// Creates a mock for an error response.
     pub fn mock_error(
         &self,
         http_method: &str,
@@ -167,6 +226,7 @@ impl Server {
         )
     }
 
+    /// Creates a mock for a response with a custom response code.
     pub fn mock_low(
         &self,
         http_method: &str,
@@ -192,6 +252,7 @@ impl Server {
             .named(name)
     }
 
+    /// Creates a mock for a keep alive response.
     pub fn mock_keep_alive(&self) -> Mock {
         let response = json!(
             {
@@ -205,6 +266,7 @@ impl Server {
         self.mock_success("GET", path(KEEP_ALIVE_URL), "Keep alive", true, response)
     }
 
+    /// Creates a mock for an authenticated RPC response.
     pub fn mock_authenticated_rpc<T: BetfairRpcRequest>(&self, response: T::Res) -> Mock
     where
         T::Res: serde::Serialize,
@@ -212,6 +274,7 @@ impl Server {
         self.mock_authenticated_rpc_from_json::<T>(serde_json::to_value(&response).unwrap())
     }
 
+    /// Creates a mock for an authenticated error response.
     pub fn mock_authenticated_error<T: BetfairRpcRequest>(&self, response: T::Error) -> Mock
     where
         T::Error: serde::Serialize,
@@ -225,6 +288,7 @@ impl Server {
         )
     }
 
+    /// Creates a mock for an authenticated RPC response from a JSON value.
     pub fn mock_authenticated_rpc_from_json<T: BetfairRpcRequest>(
         &self,
         response: serde_json::Value,
@@ -239,6 +303,7 @@ impl Server {
     }
 }
 
+/// The certificate for the mock server.
 pub const CERTIFICATE: &str = "-----BEGIN CERTIFICATE-----
 MIIC3zCCAcegAwIBAgIJALAul9kzR0W/MA0GCSqGSIb3DQEBBQUAMA0xCzAJBgNV
 BAYTAmx2MB4XDTIyMDgwMjE5MTE1NloXDTIzMDgwMjE5MTE1NlowDTELMAkGA1UE

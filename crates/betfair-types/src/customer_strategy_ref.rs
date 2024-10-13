@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 pub struct CustomerStrategyRef([char; 15]);
 
 impl CustomerStrategyRef {
+    /// Creates a new instance of `CustomerStrategyRef` with the given character array.
     #[must_use]
     pub const fn new(customer_strategy_ref: [char; 15]) -> Self {
         Self(customer_strategy_ref)

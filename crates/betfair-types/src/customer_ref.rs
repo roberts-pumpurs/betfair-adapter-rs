@@ -10,6 +10,11 @@ use serde::{Deserialize, Serialize};
 pub struct CustomerRef(String);
 
 impl CustomerRef {
+    /// Creates a new `CustomerRef` from a string.
+    ///
+    /// # Arguments
+    ///
+    /// * `customer_ref` - A string representing the customer reference.
     pub fn new(customer_ref: String) -> Result<Self, CustomerRefParseError> {
         if customer_ref.len() > 32 {
             return Err(CustomerRefParseError::TooLong)
@@ -26,10 +31,13 @@ impl CustomerRef {
     }
 }
 
+/// An error that occurs when parsing a customer reference.
 #[derive(Debug, thiserror::Error)]
 pub enum CustomerRefParseError {
+    /// Customer reference too long
     #[error("Customer reference too long")]
     TooLong,
+    /// Customer reference contains invalid characters
     #[error("Customer reference contains invalid characters")]
     InvalidCharacters,
 }

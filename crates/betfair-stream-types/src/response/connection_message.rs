@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+/// Represents a connection message with an optional id and connection id.
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConnectionMessage {

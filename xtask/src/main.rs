@@ -10,6 +10,8 @@ enum Args {
     Test {
         #[clap(short, long, default_value_t = false)]
         coverage: bool,
+        #[clap(short, long, default_value_t = false)]
+        integration: bool,
         #[clap(last = true)]
         args: Vec<String>,
     },
@@ -55,7 +57,7 @@ fn main() -> eyre::Result<()> {
             cmd!(sh, "cargo install --locked cargo-deny").run()?;
             cmd!(sh, "cargo deny check").run()?;
         }
-        Args::Test { args, coverage } => {
+        Args::Test { args, coverage, integration} => {
             println!("cargo test");
             cmd!(sh, "cargo install cargo-nextest").run()?;
 
@@ -69,11 +71,17 @@ fn main() -> eyre::Result<()> {
                     sh.set_var(key, val);
                 }
             }
-            cmd!(
+
+            let mut test_command = cmd!(
                 sh,
                 "cargo nextest run --workspace --tests --all-targets --no-fail-fast {args...}"
-            )
-            .run()?;
+            );
+
+            if integration {
+                test_command = test_command.arg("--features").arg("integration-test");
+            }
+
+            test_command.run()?;
 
             if coverage {
                 cmd!(sh, "mkdir -p target/coverage").run()?;
