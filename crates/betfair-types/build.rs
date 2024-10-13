@@ -8,7 +8,6 @@
 //! - Generates Rust type bindings for Betfair's API
 //! - Configurable type generation strategy
 //! - Error handling and logging using the `tracing` ecosystem
-//! - Spelling error checks for the workspace
 //!
 //! ## Usage
 //!
