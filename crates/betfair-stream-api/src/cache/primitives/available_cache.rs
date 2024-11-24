@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 /// Data structure to hold prices/traded amount
 #[derive(Debug, PartialEq, PartialOrd, Clone, Serialize, Deserialize, Eq, Hash, Ord)]
 pub struct Available<T: UpdateSet> {
-    book: BTreeMap<T::Key, T::Value>,
+    pub book: BTreeMap<T::Key, T::Value>,
 }
 
 impl<T: UpdateSet> Available<T> {
