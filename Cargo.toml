@@ -75,7 +75,7 @@ rust_decimal_macros = "1"
 rand = { version = "0.8", features = ["small_rng"] }
 chrono = { version = "0.4", default-features = false, features = ["serde", "clock", "std"] }
 eyre = "0.6"
-thiserror = "1.0"
+thiserror = "2.0"
 heck = "0.5"
 nanoid = "0.4"
 typed-builder = "0.20"
