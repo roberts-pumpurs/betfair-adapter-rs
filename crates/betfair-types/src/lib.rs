@@ -18,18 +18,21 @@ pub mod logout {
 }
 mod shared;
 
+/// The generated types
 #[expect(clippy::all)]
 pub mod types {
     include!(concat!(env!("OUT_DIR"), "/mod.rs"));
 }
 
 impl types::sports_aping::MarketId {
+    /// Construct a new market id
     pub fn new(id: impl Into<String>) -> Self {
         Self(std::sync::Arc::new(id.into()))
     }
 }
 
 impl types::sports_aping::BetId {
+    /// construct a new bet id
     pub fn new(id: impl Into<String>) -> Self {
         Self(std::sync::Arc::new(id.into()))
     }
