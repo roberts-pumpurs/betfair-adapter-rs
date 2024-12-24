@@ -1,6 +1,7 @@
 [package]
 name = "betfair-stream-types"
 readme = "../../README.md"
+description.workspace = true
 version.workspace = true
 authors.workspace = true
 repository.workspace = true
