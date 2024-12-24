@@ -19,8 +19,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PLZ_TOKEN }}
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup repo
+        uses: ./.github/actions/setup-repo
+
       - name: Run release-plz
         uses: MarcoIeni/release-plz-action@v0.5
         with:
@@ -41,8 +43,10 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PLZ_TOKEN }}
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup repo
+        uses: ./.github/actions/setup-repo
+
       - name: Run release-plz
         uses: MarcoIeni/release-plz-action@v0.5
         with:
