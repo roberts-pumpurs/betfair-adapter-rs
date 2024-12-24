@@ -1,3 +1,5 @@
+//! Order book cache
+
 use std::collections::HashMap;
 
 use betfair_adapter::betfair_types::handicap::Handicap;

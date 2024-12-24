@@ -1,3 +1,5 @@
+//! Runner book cache (used for market book Stream API caching)
+
 use betfair_adapter::betfair_types::price::Price;
 use betfair_adapter::betfair_types::size::Size;
 use betfair_adapter::betfair_types::types::sports_aping::SelectionId;
@@ -9,6 +11,7 @@ use rust_decimal::Decimal;
 
 use super::available_cache::Available;
 
+/// Runner book cache (used for market book Stream API caching)
 #[derive(Debug, PartialEq, Eq, Clone, serde::Serialize, serde::Deserialize)]
 pub struct RunnerBookCache {
     selection_id: SelectionId,
@@ -121,11 +124,11 @@ impl RunnerBookCache {
         self.definition = Some(definition);
     }
 
-    pub const fn total_matched(&self) -> Option<Size> {
+    #[must_use] pub const fn total_matched(&self) -> Option<Size> {
         self.total_matched
     }
 
-    pub const fn selection_id(&self) -> &SelectionId {
+    #[must_use] pub const fn selection_id(&self) -> &SelectionId {
         &self.selection_id
     }
 
@@ -180,59 +183,59 @@ impl RunnerBookCache {
         self.starting_price_lay.update(spl);
     }
 
-    pub const fn last_price_traded(&self) -> Option<&Price> {
+    #[must_use] pub const fn last_price_traded(&self) -> Option<&Price> {
         self.last_price_traded.as_ref()
     }
 
-    pub const fn traded(&self) -> &Available<UpdateSet2> {
+    #[must_use] pub const fn traded(&self) -> &Available<UpdateSet2> {
         &self.traded
     }
 
-    pub const fn available_to_back(&self) -> &Available<UpdateSet2> {
+    #[must_use] pub const fn available_to_back(&self) -> &Available<UpdateSet2> {
         &self.available_to_back
     }
 
-    pub const fn best_available_to_back(&self) -> &Available<UpdateSet3> {
+    #[must_use] pub const fn best_available_to_back(&self) -> &Available<UpdateSet3> {
         &self.best_available_to_back
     }
 
-    pub const fn best_display_available_to_back(&self) -> &Available<UpdateSet3> {
+    #[must_use] pub const fn best_display_available_to_back(&self) -> &Available<UpdateSet3> {
         &self.best_display_available_to_back
     }
 
-    pub const fn available_to_lay(&self) -> &Available<UpdateSet2> {
+    #[must_use] pub const fn available_to_lay(&self) -> &Available<UpdateSet2> {
         &self.available_to_lay
     }
 
-    pub const fn best_available_to_lay(&self) -> &Available<UpdateSet3> {
+    #[must_use] pub const fn best_available_to_lay(&self) -> &Available<UpdateSet3> {
         &self.best_available_to_lay
     }
 
-    pub const fn best_display_available_to_lay(&self) -> &Available<UpdateSet3> {
+    #[must_use] pub const fn best_display_available_to_lay(&self) -> &Available<UpdateSet3> {
         &self.best_display_available_to_lay
     }
 
-    pub const fn starting_price_back(&self) -> &Available<UpdateSet2> {
+    #[must_use] pub const fn starting_price_back(&self) -> &Available<UpdateSet2> {
         &self.starting_price_back
     }
 
-    pub const fn starting_price_lay(&self) -> &Available<UpdateSet2> {
+    #[must_use] pub const fn starting_price_lay(&self) -> &Available<UpdateSet2> {
         &self.starting_price_lay
     }
 
-    pub const fn starting_price_near(&self) -> Option<&Price> {
+    #[must_use] pub const fn starting_price_near(&self) -> Option<&Price> {
         self.starting_price_near.as_ref()
     }
 
-    pub const fn starting_price_far(&self) -> Option<&Price> {
+    #[must_use] pub const fn starting_price_far(&self) -> Option<&Price> {
         self.starting_price_far.as_ref()
     }
 
-    pub const fn handicap(&self) -> Option<Decimal> {
+    #[must_use] pub const fn handicap(&self) -> Option<Decimal> {
         self.handicap
     }
 
-    pub const fn definition(&self) -> Option<&RunnerDefinition> {
+    #[must_use] pub const fn definition(&self) -> Option<&RunnerDefinition> {
         self.definition.as_ref()
     }
 }

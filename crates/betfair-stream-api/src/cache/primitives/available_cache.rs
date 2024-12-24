@@ -44,6 +44,8 @@ impl<T: UpdateSet> Available<T> {
     }
 }
 
+/// Helper trait fro working with fields that have either 2 or 3 tuple elements (present in the
+/// Stream API ladder)
 pub trait UpdateSet {
     type Key: core::hash::Hash + PartialEq + Eq + Ord + Serialize + DeserializeOwned;
     type Value: PartialEq + Serialize + DeserializeOwned;

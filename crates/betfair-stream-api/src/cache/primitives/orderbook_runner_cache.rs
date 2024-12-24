@@ -1,3 +1,5 @@
+//! Cache of a runner in an order book (used for order book caching)
+
 use std::collections::HashMap;
 
 use betfair_adapter::betfair_types::customer_strategy_ref::CustomerStrategyRef;
@@ -9,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use super::available_cache::Available;
 
+/// Cache of a runner in an order book (used for order book caching)
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct OrderBookRunner {
     pub market_id: MarketId,

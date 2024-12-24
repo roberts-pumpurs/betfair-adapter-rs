@@ -1,4 +1,3 @@
-use std::sync::Arc;
 
 use betfair_adapter::betfair_types::types::sports_aping::{
     list_market_catalogue, MarketFilter, MarketProjection, MarketSort,

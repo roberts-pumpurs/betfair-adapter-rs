@@ -14,32 +14,38 @@ use super::primitives::{MarketBookCache, OrderBookCache};
 
 /// Separate stream struct to hold market/order caches
 #[derive(Debug)]
-pub(crate) struct StreamState {
-    pub(crate) stream_id: Option<u64>,
-    pub(crate) update_clk: Option<Clock>,
-    pub(crate) max_latency_ms: Option<u64>,
-    pub(crate) unique_id: Option<i32>,
-    pub(crate) initial_clock: Option<InitialClock>,
-    pub(crate) time_created: chrono::DateTime<chrono::Utc>,
-    pub(crate) time_updated: chrono::DateTime<chrono::Utc>,
-    pub(crate) market_stream_tracker: MarketStreamTracker,
-    pub(crate) order_stream_tracker: OrderStreamTracker,
+pub struct StreamState {
+    pub stream_id: Option<u64>,
+    pub update_clk: Option<Clock>,
+    pub max_latency_ms: Option<u64>,
+    pub unique_id: Option<i32>,
+    pub initial_clock: Option<InitialClock>,
+    pub time_created: chrono::DateTime<chrono::Utc>,
+    pub time_updated: chrono::DateTime<chrono::Utc>,
+    pub market_stream_tracker: MarketStreamTracker,
+    pub order_stream_tracker: OrderStreamTracker,
 }
 
-pub(crate) enum Updates<'a> {
+pub enum Updates<'a> {
     Market(Vec<&'a MarketBookCache>),
     Order(Vec<&'a OrderBookCache>),
 }
 
-pub(crate) enum IncomingMessage {
+pub enum IncomingMessage {
     Market(MarketChangeMessage),
     Order(OrderChangeMessage),
 }
 
-pub(crate) struct HasFullImage(pub bool);
+pub struct HasFullImage(pub bool);
+
+impl Default for StreamState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl StreamState {
-    pub(crate) fn new() -> Self {
+    #[must_use] pub fn new() -> Self {
         Self {
             stream_id: None,
             update_clk: None,
@@ -53,7 +59,7 @@ impl StreamState {
         }
     }
 
-    pub(crate) fn calculate_updates(&mut self, msg: IncomingMessage) -> Option<Updates<'_>> {
+    pub fn calculate_updates(&mut self, msg: IncomingMessage) -> Option<Updates<'_>> {
         let change_type = match msg {
             IncomingMessage::Market(ref msg) => msg.change_type,
             IncomingMessage::Order(ref msg) => msg.change_type,

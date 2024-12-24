@@ -25,11 +25,11 @@ impl CustomerOrderRef {
             return Err(CustomerOrderRefParseError::InvalidCharacters);
         }
 
-        Ok(Self(s.to_string()))
+        Ok(Self(s.to_owned()))
     }
 
     /// Returns a reference to the inner string.
-    pub fn as_str(&self) -> &str {
+    #[must_use] pub fn as_str(&self) -> &str {
         &self.0
     }
 }
@@ -53,7 +53,7 @@ impl Serialize for CustomerOrderRef {
 }
 
 impl<'de> Deserialize<'de> for CustomerOrderRef {
-    fn deserialize<D>(deserializer: D) -> Result<CustomerOrderRef, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {

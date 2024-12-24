@@ -128,10 +128,10 @@ mod internal {
     }
 }
 
-pub(crate) struct StreamAPIClientCodec;
+pub struct StreamAPIClientCodec;
 
 #[derive(Debug, thiserror::Error)]
-pub(crate) enum CodecError {
+pub enum CodecError {
     #[error("Serde error: {0}")]
     Serde(#[from] serde_json::Error),
     #[error("IO Error {0}")]
@@ -143,20 +143,24 @@ impl Decoder for StreamAPIClientCodec {
     type Error = CodecError;
 
     fn decode(&mut self, src: &mut bytes::BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        use itertools::Itertools;
+        // Find position of `\n` first
+        if let Some(pos) = src.iter().position(|&byte| byte == b'\n') {
+            // Check if the preceding byte is `\r`
+            let delimiter_size = if pos > 0 && src[pos - 1] == b'\r' {
+                2
+            } else {
+                1
+            };
 
-        // Check if there is a newline character in the buffer
-        if let Some(line) = src
-            .iter()
-            .tuple_windows::<(_, _)>()
-            .position(|(char_a, char_b)| char_a == &b'\r' && char_b == &b'\n')
-            .map(|idx| src.split_to(idx.saturating_add(2)))
-        {
-            if let Some((json, _delimiters)) = line.split_last_chunk::<2>() {
-                // Deserialize the JSON data
-                let data = serde_json::from_slice::<Self::Item>(json)?;
-                return Ok(Some(data))
-            }
+            // Extract up to and including the delimiter
+            let line = src.split_to(pos + 1);
+
+            // Separate out the delimiter bytes
+            let (json_part, _) = line.split_at(line.len().saturating_sub(delimiter_size));
+
+            // Now we can parse it as JSON
+            let data = serde_json::from_slice::<Self::Item>(json_part)?;
+            return Ok(Some(data));
         }
         Ok(None)
     }
