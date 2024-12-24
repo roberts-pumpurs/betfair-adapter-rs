@@ -59,15 +59,15 @@ unused_must_use = { level = "deny", priority = -1 }
 
 [workspace.dependencies]
 # Our crates
-betfair-adapter = { path = "crates/betfair-adapter" }
-betfair-types = { path = "crates/betfair-types" }
-betfair-stream-types = { path = "crates/betfair-stream-types" }
-betfair-stream-server-mock = { path = "crates/betfair-stream-server-mock" }
-betfair-stream-api = { path = "crates/betfair-stream-api" }
-betfair-xml-parser = { path = "crates/betfair-xml-parser" }
-betfair-rpc-server-mock = { path = "crates/betfair-rpc-server-mock" }
-betfair-typegen = { path = "crates/betfair-typegen" }
-betfair-cert-gen = { path = "crates/betfair-cert-gen" }
+betfair-adapter = { path = "crates/betfair-adapter", version = "0" }
+betfair-types = { path = "crates/betfair-types", version = "0" }
+betfair-stream-types = { path = "crates/betfair-stream-types", version = "0" }
+betfair-stream-server-mock = { path = "crates/betfair-stream-server-mock", version = "0" }
+betfair-stream-api = { path = "crates/betfair-stream-api", version = "0" }
+betfair-xml-parser = { path = "crates/betfair-xml-parser", version = "0" }
+betfair-rpc-server-mock = { path = "crates/betfair-rpc-server-mock", version = "0" }
+betfair-typegen = { path = "crates/betfair-typegen", version = "0" }
+betfair-cert-gen = { path = "crates/betfair-cert-gen", version = "0" }
 
 # Utils
 rust_decimal = "1"
