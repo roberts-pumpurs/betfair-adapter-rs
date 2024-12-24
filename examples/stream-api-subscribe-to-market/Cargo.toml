@@ -2,6 +2,7 @@
 name = "stream-api-subscribe-to-market"
 
 readme = "../README.md"
+publish = false
 version = { workspace = true }
 authors = { workspace = true }
 repository = { workspace = true }
