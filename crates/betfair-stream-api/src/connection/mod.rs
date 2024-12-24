@@ -30,7 +30,7 @@ pub struct StreamApi<T> {
 
 impl<T> StreamApi<T> {
     /// Creates a new instance of `StreamApi`.
-    pub(crate) const fn new(
+    pub const fn new(
         join_set: JoinSet<Result<Never, FatalError>>,
         data_feed: tokio::sync::mpsc::Receiver<ExternalUpdates<T>>,
         command_sender: tokio::sync::broadcast::Sender<RequestMessage>,

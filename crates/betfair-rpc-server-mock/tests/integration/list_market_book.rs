@@ -107,7 +107,7 @@ async fn single_market_book() {
     let result = client
         .send_request(
             list_market_book::Parameters::builder()
-                .market_ids(vec![MarketId("1.206502771".to_owned())])
+                .market_ids(vec![MarketId::new("1.206502771")])
                 .price_projection(
                     PriceProjection::builder()
                         .virtualise(true)
@@ -127,7 +127,7 @@ async fn single_market_book() {
     assert_eq!(result.len(), 1);
     let result = result.first().unwrap();
     let expected = MarketBook {
-        market_id: MarketId("1.206502771".to_owned()),
+        market_id: MarketId::new("1.206502771"),
         is_market_data_delayed: false,
         status: Some(betfair_types::types::sports_aping::MarketStatus::Open),
         bet_delay: Some(0),

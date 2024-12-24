@@ -214,7 +214,7 @@ mod tests {
     use crate::cache::primitives::available_cache::Available;
 
     fn init() -> (MarketId, DateTime<Utc>, MarketBookCache) {
-        let market_id = MarketId("1.23456789".to_owned());
+        let market_id = MarketId::new("1.23456789");
         let publish_time = Utc::now();
         let market_book_cache = MarketBookCache::new(market_id.clone(), publish_time);
         (market_id, publish_time, market_book_cache)

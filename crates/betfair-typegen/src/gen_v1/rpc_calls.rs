@@ -215,7 +215,7 @@ mod test {
                 pub struct Parameters {
                     #[doc = "A Display name for the application."]
                     #[serde (rename = "appName")]
-                    pub app_name: String,
+                    pub app_name: std::sync::Arc<String>,
                 }
 
                 #[doc = "Create 2 application keys for given user; one active and the other delayed"]
@@ -288,7 +288,7 @@ mod test {
                     #[serde (skip_serializing_if = "Option::is_none")]
                     #[builder (default , setter (strip_option))]
                     #[serde (rename = "appName")]
-                    pub app_name: Option<String>,
+                    pub app_name: Option<std::sync::Arc<String> >,
                 }
 
                 #[doc = "Create 2 application keys for given user; one active and the other delayed"]

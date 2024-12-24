@@ -22,3 +22,15 @@ mod shared;
 pub mod types {
     include!(concat!(env!("OUT_DIR"), "/mod.rs"));
 }
+
+impl types::sports_aping::MarketId {
+    pub fn new(id: impl Into<String>) -> Self {
+        Self(std::sync::Arc::new(id.into()))
+    }
+}
+
+impl types::sports_aping::BetId {
+    pub fn new(id: impl Into<String>) -> Self {
+        Self(std::sync::Arc::new(id.into()))
+    }
+}

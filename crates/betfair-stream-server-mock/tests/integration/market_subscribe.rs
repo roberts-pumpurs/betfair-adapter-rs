@@ -26,7 +26,7 @@ async fn market_subscription() {
             ),
         );
 
-            let market_id = MarketId("1.23456789".to_owned());
+            let market_id = MarketId::new("1.23456789");
             ms.subscribe_to_market(market_id).unwrap();
 
             while let Some(value) = stream.next().await {

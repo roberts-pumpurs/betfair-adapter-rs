@@ -18,7 +18,7 @@ impl TypeResolverV1 {
         fn transform_to_rust_types(input: &str) -> String {
             // TODO make this a configurable thing
             match input {
-                "string" => "String".to_owned(),
+                "string" => "std::sync::Arc<String>".to_owned(),
                 "int" | "i32" => "i32".to_owned(),
                 "i64" => "i64".to_owned(),
                 "double" | "float" => "rust_decimal::Decimal".to_owned(),

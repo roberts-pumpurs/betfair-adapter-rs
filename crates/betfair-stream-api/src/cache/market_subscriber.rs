@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use betfair_adapter::betfair_types::types::sports_aping::MarketId;
 use betfair_stream_types::request::market_subscription_message::{
     Fields, LadderLevel, MarketDataFilter, MarketFilter, MarketSubscriptionMessage,
@@ -101,7 +103,7 @@ impl MarketSubscriber {
     pub fn unsubscribe_from_all_markets(
         &mut self,
     ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
-        let market_that_does_not_exist = MarketId("1.23456789".to_owned());
+        let market_that_does_not_exist = MarketId(Arc::new("1.23456789".to_owned()));
         self.filter = MarketFilter::default();
 
         let req = RequestMessage::MarketSubscription(MarketSubscriptionMessage {

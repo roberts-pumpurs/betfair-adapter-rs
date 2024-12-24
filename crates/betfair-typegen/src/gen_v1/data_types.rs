@@ -277,7 +277,7 @@ mod test {
                 #[serde(skip_serializing_if="Option::is_none")]
                 #[serde (rename = "textQuery")]
                 #[builder(default, setter(strip_option))]
-                pub text_query: Option<String>,
+                pub text_query: Option<std::sync::Arc<String> >,
             }
         };
         assert_eq!(actual.to_string(), expected.to_string());
@@ -421,7 +421,7 @@ mod test {
             #[doc = "Type of price data returned by listMarketBook operation"]
             #[derive(Debug , Deserialize , Serialize , Clone , PartialEq , Eq , Hash)]
             #[serde (rename_all = "camelCase")]
-            pub struct MarketProjection(pub String);
+            pub struct MarketProjection(pub std::sync::Arc<String>);
         };
         assert_eq!(actual.to_string(), expected.to_string());
     }

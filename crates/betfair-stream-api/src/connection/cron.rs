@@ -27,7 +27,7 @@ pub(crate) enum AsyncTaskStopReason {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct FatalError;
+pub struct FatalError;
 
 #[derive(Debug, Clone)]
 pub(crate) struct NeedsRestart;

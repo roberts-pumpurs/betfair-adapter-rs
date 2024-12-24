@@ -1,3 +1,5 @@
+//! Stream API client for Betfair
+
 mod cache;
 mod connection;
 mod error;
@@ -14,9 +16,12 @@ pub use connection::{CacheEnabledMessages, ExternalUpdates, MetadataUpdates, Str
 pub use error::StreamError;
 pub use futures::StreamExt;
 
+/// Extension to connect to the betfair stream
 pub trait BetfairProviderExt {
+    /// connect to the stream
     fn connect_to_stream(&self) -> StreamApiBuilder;
 
+    /// connect to the stream using a heartbeat configuration
     fn connect_to_stream_with_hb(&self, hb: HeartbeatStrategy) -> StreamApiBuilder;
 }
 
