@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/*", "examples/*", "xtask"]
 
 [workspace.package]
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Roberts Pumpurs <roberts@pumpurlabs.com>"]
 repository = "https://github.com/roberts-pumpurs/betfair-adapter-rs"
 homepage = "https://github.com/roberts-pumpurs/betfair-adapter-rs"
