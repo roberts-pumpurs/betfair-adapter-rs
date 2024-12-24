@@ -1,12 +1,12 @@
 [package]
 name = "betfair-stream-types"
-readme = "../README.md"
-version = { workspace = true }
-authors = { workspace = true }
-repository = { workspace = true }
-homepage = { workspace = true }
-license = { workspace = true }
-edition = { workspace = true }
+readme = "../../README.md"
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [lints]
 workspace = true

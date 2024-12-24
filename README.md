@@ -10,6 +10,8 @@
 
 https://docs.developer.betfair.com/display/1smk3cen4v3lu3yomq5qye0ni/Sample+Code
 
+## Utilities for interacting with Betfair from Rust
+
 ## Development setup
 
 ```bash
