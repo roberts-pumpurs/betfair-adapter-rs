@@ -9,6 +9,20 @@ repository = "https://github.com/roberts-pumpurs/betfair-adapter-rs"
 homepage = "https://github.com/roberts-pumpurs/betfair-adapter-rs"
 license = "MIT/Apache-2.0"
 edition = "2021"
+description = """
+Utilities for interacting with Betfair from Rust
+"""
+keywords = ["auth", "betfair", "stream", "async", "rpc", "trading"]
+categories = ["api", "authentication", "stream", "realtime", "asynchronous"]
+documentation = "https://github.com/roberts-pumpurs/betfair-adapter-rs"
+exclude = [
+  "/.github/",
+  "/xtask/",
+  "/supabase/",
+  "/certs/",
+  "/crates/stream-api-subscribe-to-market",
+  "/crates/stream-api-subscribe-to-orders",
+]
 
 [workspace.lints.clippy]
 cargo = { priority = -1, level = "deny" }
