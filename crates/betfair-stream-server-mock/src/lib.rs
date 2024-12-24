@@ -25,7 +25,6 @@ pub struct StreamAPIBackend {
 }
 
 impl StreamAPIBackend {
-    #[cfg(feature = "integration-test")]
     pub async fn new() -> Self {
         use betfair_stream_api::CERTIFICATE;
         let listener = TcpListener::bind("0.0.0.0:0").await.unwrap();

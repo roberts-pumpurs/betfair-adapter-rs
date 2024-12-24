@@ -128,12 +128,16 @@ mod internal {
     }
 }
 
+/// Defines the encoding and decoding of Betfair stream api data structures using tokio
 pub struct StreamAPIClientCodec;
 
+/// Errors that can arise while decoding or encoding betfair stream api data
 #[derive(Debug, thiserror::Error)]
 pub enum CodecError {
+    /// serde error
     #[error("Serde error: {0}")]
     Serde(#[from] serde_json::Error),
+    /// io error
     #[error("IO Error {0}")]
     IoError(#[from] std::io::Error),
 }
@@ -200,19 +204,17 @@ fn tls_connector() -> Result<tokio_rustls::TlsConnector, StreamError> {
     {
         use crate::CERTIFICATE;
 
-        let cert = rustls_pemfile::certs(
-            &mut CERTIFICATE
-                .get()
-                .ok_or(StreamError::CustomCertificateNotSet)?
-                .as_bytes(),
-        )
-        .next()
-        .ok_or(StreamError::InvalidCustomCertificate)?
-        .map_err(|_| StreamError::InvalidCustomCertificate)?;
-        roots.add(cert).map_err(|err| {
-            tracing::error!(?err, "Cannot set native certificate");
-            StreamError::CustomCertificateNotSet
-        })?;
+        if let Some(cert) = CERTIFICATE.clone().take() {
+            let mut cert = cert.as_bytes();
+            let cert = rustls_pemfile::certs(&mut cert)
+                .next()
+                .ok_or(StreamError::InvalidCustomCertificate)?
+                .map_err(|_| StreamError::InvalidCustomCertificate)?;
+            roots.add(cert).map_err(|err| {
+                tracing::error!(?err, "Cannot set native certificate");
+                StreamError::CustomCertificateNotSet
+            })?;
+        }
     };
 
     let config = rustls::ClientConfig::builder()

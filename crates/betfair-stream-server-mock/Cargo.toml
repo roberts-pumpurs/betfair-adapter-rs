@@ -22,7 +22,7 @@ rustls.workspace = true
 eyre.workspace = true
 rustls-pemfile.workspace = true
 rcgen.workspace = true
-betfair-stream-api = { workspace = true }
+betfair-stream-api = { workspace = true, features = ["integration-test"] }
 
 [dev-dependencies]
 chrono.workspace = true
@@ -37,7 +37,3 @@ rust_decimal.workspace = true
 eyre.workspace = true
 pretty_assertions.workspace = true
 betfair-rpc-server-mock.workspace = true
-betfair-stream-server-mock = { workspace = true, features = ["integration-test"] }
-
-[features]
-integration-test = ["betfair-stream-api/integration-test"]
