@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-xml-parser-v0.2.0...betfair-xml-parser-v0.2.1) - 2025-04-06
+
+### Other
+
+- misc formatting
+
 ## [0.2.0](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-xml-parser-v0.1.2...betfair-xml-parser-v0.2.0) - 2025-04-06
 
 ### Other
