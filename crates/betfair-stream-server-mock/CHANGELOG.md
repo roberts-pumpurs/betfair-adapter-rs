@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-stream-server-mock-v0.1.2...betfair-stream-server-mock-v0.2.0) - 2025-04-06
+
+### Other
+
+- update Cargo.toml dependencies
+
 ## [0.1.2](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-stream-server-mock-v0.1.1...betfair-stream-server-mock-v0.1.2) - 2024-12-24
 
 ### Other
