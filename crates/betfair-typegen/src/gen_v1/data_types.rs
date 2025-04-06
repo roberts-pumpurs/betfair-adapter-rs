@@ -100,7 +100,7 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
 
     fn generate_struct_value(&self, struct_value: &StructValue) -> TokenStream {
         fn generate_struct_field<T: CodeInjector>(
-            gen: &GenV1GeneratorStrategy<T>,
+            generator: &GenV1GeneratorStrategy<T>,
             struct_field: &StructField,
         ) -> TokenStream {
             let description = struct_field
@@ -124,14 +124,17 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                 }
             };
             let original_name = struct_field.name.0.as_str();
-            let data_type = match gen.type_resolver.resolve_type(&struct_field.data_type) {
+            let data_type = match generator
+                .type_resolver
+                .resolve_type(&struct_field.data_type)
+            {
                 Ok(type_) => type_,
                 Err(err) => {
                     let err_msg = err.to_string();
                     return quote! { compile_error!(#err_msg); };
                 }
             };
-            let struct_parameter_derives = gen.code_injector.struct_parameter_derives();
+            let struct_parameter_derives = generator.code_injector.struct_parameter_derives();
             if struct_field.mandatory {
                 quote! {
                     #description
