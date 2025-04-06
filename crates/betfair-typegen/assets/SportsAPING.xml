@@ -2856,6 +2856,9 @@
 
     <simpleType name="ExecutionReportErrorCode" type="string">
         <validValues>
+            <value name="INVALID_BET_SIZE">
+                <description>Bet size is invalid for your currency or your regulator</description>
+            </value>
             <value name="ERROR_IN_ORDER">
                 <description>The action failed because the parent order failed</description>
             </value>
