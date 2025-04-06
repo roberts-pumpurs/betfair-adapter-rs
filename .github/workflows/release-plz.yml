@@ -24,8 +24,8 @@ jobs:
       - name: Setup repo
         uses: ./.github/actions/setup-repo
 
-      - name: Run release-plz
-        uses: MarcoIeni/release-plz-action@v0.5
+      - name: Run release-plz      
+        uses: release-plz/action@v0.5
         with:
           command: release
         env:
@@ -50,7 +50,7 @@ jobs:
         uses: ./.github/actions/setup-repo
 
       - name: Run release-plz
-        uses: MarcoIeni/release-plz-action@v0.5
+        uses: release-plz/action@v0.5
         with:
           command: release-pr
         env:
