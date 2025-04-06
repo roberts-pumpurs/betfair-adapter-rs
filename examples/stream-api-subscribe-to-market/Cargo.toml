@@ -12,7 +12,7 @@ edition = { workspace = true }
 
 [dependencies]
 tokio.workspace = true
-betfair-stream-api = { workspace = true, default-features = false }
+betfair-stream-api = { workspace = true }
 betfair-adapter.workspace = true
 eyre.workspace = true
 color-eyre.workspace = true

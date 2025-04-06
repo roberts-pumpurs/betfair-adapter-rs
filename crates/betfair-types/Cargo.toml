@@ -18,7 +18,6 @@ typed-builder.workspace = true
 redact.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
-tracing.workspace = true
 
 [build-dependencies]
 betfair-typegen.workspace = true

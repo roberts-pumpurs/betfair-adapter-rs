@@ -35,7 +35,6 @@ rustls.workspace = true
 chrono.workspace = true
 eyre.workspace = true
 rustls-native-certs.workspace = true
-itertools.workspace = true
 backoff.workspace = true
 rustls-pemfile = { workspace = true, optional = true }
 pin-project.workspace = true

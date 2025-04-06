@@ -15,5 +15,4 @@ workspace = true
 [dependencies]
 rcgen.workspace = true
 rsa.workspace = true
-rand.workspace = true
 eyre.workspace = true
