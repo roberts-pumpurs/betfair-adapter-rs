@@ -2856,6 +2856,9 @@
 
     <simpleType name="ExecutionReportErrorCode" type="string">
         <validValues>
+            <value name="ERROR_IN_ORDER">
+                <description>The action failed because the parent order failed</description>
+            </value>
             <value name="ERROR_IN_MATCHER">
                 <description>The matcher's not healthy</description>
             </value>
