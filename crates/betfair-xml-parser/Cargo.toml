@@ -2,12 +2,12 @@
 name = "betfair-xml-parser"
 readme = "../../README.md"
 description.workspace = true
-version.workspace = true
-authors.workspace = true
-repository.workspace = true
-homepage.workspace = true
-license.workspace = true
-edition.workspace = true
+version = { workspace = true }
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
 
 [lints]
 workspace = true
