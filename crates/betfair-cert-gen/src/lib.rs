@@ -2,7 +2,6 @@
 //! usage. It includes methods for creating SSL/TLS certificates and key pairs.
 
 use eyre::WrapErr;
-use rand::rngs::OsRng;
 use rcgen::{
     date_time_ymd, Certificate, CertificateParams, DistinguishedName, DnType,
     ExtendedKeyUsagePurpose, IsCa, KeyPair, KeyUsagePurpose,
@@ -91,7 +90,7 @@ pub fn rcgen_cert(
         .distinguished_name
         .push(DnType::CommonName, common_name);
 
-    let private_key = RsaPrivateKey::new(&mut OsRng, 2048)?;
+    let private_key = RsaPrivateKey::new(&mut rsa::rand_core::OsRng, 2048)?;
     let private_key_der = private_key.to_pkcs8_der()?;
     let key_pair = rcgen::KeyPair::try_from(private_key_der.as_bytes())
         .wrap_err("failed to create keypair")?;

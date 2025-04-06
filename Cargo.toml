@@ -86,16 +86,16 @@ betfair-cert-gen = { path = "crates/betfair-cert-gen", version = "0" }
 # Utils
 rust_decimal = "1"
 rust_decimal_macros = "1"
-rand = { version = "0.8", features = ["small_rng"] }
+rand = { version = "0.9", features = ["small_rng"] }
 chrono = { version = "0.4", default-features = false, features = ["serde", "clock", "std"] }
 eyre = "0.6"
-thiserror = "1.0"
+thiserror = "2.0"
 heck = "0.5"
 nanoid = "0.4"
-typed-builder = "0.20"
+typed-builder = "0.21"
 redact = { version = "0.1", features = ["serde"] }
 trait-variant = "0.1"
-itertools = "0.13"
+itertools = "0.14"
 backoff = { version = "0.4", features = ["tokio"] }
 log = "0.4"
 
@@ -135,7 +135,7 @@ proc-macro2 = "1"
 syn = "2"
 
 # Testnig
-rstest = "0.23"
+rstest = "0.25"
 proptest = "1"
 wiremock = "0.6"
 test-log = { version = "0.2", features = ["trace"], default-features = false }
