@@ -98,6 +98,7 @@ trait-variant = "0.1"
 itertools = "0.14"
 backoff = { version = "0.4", features = ["tokio"] }
 log = "0.4"
+backon = "1.5"
 
 # Async
 tokio = { version = "1.0", features = ["full", "tracing"] }
