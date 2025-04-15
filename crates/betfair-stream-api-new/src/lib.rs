@@ -68,22 +68,37 @@ impl BetfairStreamConnection {
         mut from_stream_tx: Sender<ResponseMessage>,
         mut to_stream_rx: Receiver<RequestMessage>,
     ) -> eyre::Result<()> {
-        // Connect (with handshake) using retry/backoff logic.
-        let mut stream = self.connect_with_retry(&mut from_stream_tx).await?;
-        tracing::info!("Connected to {}", self.server_addr);
+        'retry: loop {
+            // Connect (with handshake) using retry/backoff logic.
+            let mut stream = self.connect_with_retry(&mut from_stream_tx).await?;
+            tracing::info!("Connected to {}", self.server_addr);
 
-        loop {
-            let stream_next = pin!(stream.next());
-            let to_stream_rx_next = pin!(to_stream_rx.recv());
-            match select(to_stream_rx_next, stream_next).await {
-                future::Either::Left((request, _)) => {
-                    if request.is_some() {
-                        stream.send(request.unwrap()).await?;
+            loop {
+                let stream_next = pin!(stream.next());
+                let to_stream_rx_next = pin!(to_stream_rx.recv());
+                match select(to_stream_rx_next, stream_next).await {
+                    future::Either::Left((request, _)) => {
+                        let Some(request) = request else {
+                            continue 'retry;
+                        };
+
+                        let Ok(()) = stream.send(request).await else {
+                            continue 'retry;
+                        };
                     }
-                }
-                future::Either::Right((message, _)) => {
-                    if message.is_some() {
-                        from_stream_tx.send(message.unwrap().unwrap()).await?;
+                    future::Either::Right((message, _)) => {
+                        let Some(message) = message else {
+                            continue 'retry;
+                        };
+
+                        match message {
+                            Ok(message) => {
+                                let Ok(()) = from_stream_tx.send(message).await else {
+                                    continue 'retry;
+                                };
+                            }
+                            Err(err) => tracing::warn!(?err, "reading message error"),
+                        }
                     }
                 }
             }
