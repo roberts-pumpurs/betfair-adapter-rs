@@ -23,12 +23,12 @@ impl OrderStreamTracker {
     pub(crate) fn process(
         &mut self,
         msg: OrderChangeMessage,
-    ) -> (Option<Vec<&OrderBookCache>>, HasFullImage) {
+    ) -> (Vec<&OrderBookCache>, HasFullImage) {
         let mut updated_caches = Vec::new();
         let mut img = HasFullImage(false);
         let Some(publish_time) = msg.publish_time else {
             tracing::warn!("No publish time in market change message");
-            return (None, img);
+            return (updated_caches, img);
         };
 
         if let Some(data) = msg.0.data {
@@ -63,18 +63,14 @@ impl OrderStreamTracker {
             }
         }
 
-        if updated_caches.is_empty() {
-            (None, img)
-        } else {
-            (Some(updated_caches), img)
-        }
+        (updated_caches, img)
     }
 
     pub(crate) fn clear_stale_cache(&mut self, publish_time: chrono::DateTime<chrono::Utc>) {
         let max_cache_age = chrono::Duration::hours(8);
         self.market_state.retain(|_, cached_item| {
-            !(cached_item.is_closed() &&
-                (publish_time.signed_duration_since(cached_item.publish_time())) > max_cache_age)
+            !(cached_item.is_closed()
+                && (publish_time.signed_duration_since(cached_item.publish_time())) > max_cache_age)
         });
     }
 }

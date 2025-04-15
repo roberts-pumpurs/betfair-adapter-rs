@@ -1,12 +1,10 @@
 use std::sync::Arc;
 
 use betfair_adapter::betfair_types::types::sports_aping::MarketId;
+use betfair_stream_types::request::RequestMessage;
 use betfair_stream_types::request::market_subscription_message::{
     Fields, LadderLevel, MarketDataFilter, MarketFilter, MarketSubscriptionMessage,
 };
-use betfair_stream_types::request::RequestMessage;
-
-use crate::StreamApi;
 
 /// A wrapper around a `StreamListener` that allows subscribing to markets with a somewhat ergonomic
 /// API.
