@@ -1,10 +1,11 @@
 //! Betfair stream client
-use backon::{BackoffBuilder, ExponentialBackoff, ExponentialBuilder};
+use backon::{BackoffBuilder, ExponentialBuilder};
 use betfair_adapter::{ApplicationKey, SessionToken};
 use betfair_stream_types::{
     request::{RequestMessage, authentication_message},
     response::{
         ResponseMessage,
+        connection_message::ConnectionMessage,
         status_message::{StatusCode, StatusMessage},
     },
 };
@@ -29,22 +30,62 @@ use tokio_util::{
 
 /// A Betfair Stream API client that handles connection, handshake, incoming/outgoing messages,
 /// heartbeat and automatic reconnects.
-pub struct BetfairStreamConnection {
+pub struct BetfairStreamConnection<T: MessageProcessor> {
     /// TCP address of the Betfair server (for example: "betfair.server.com:1234")
     pub server_addr: url::Url,
     /// Heartbeat interval (used only if heartbeat_enabled is true)
     pub heartbeat_interval: Option<Duration>,
     pub session_token: SessionToken,
     pub application_key: ApplicationKey,
+    pub processor: T,
 }
 
-pub struct BetfairStreamClient {
+pub struct BetfairStreamClient<T: MessageProcessor> {
     pub send_to_stream: Sender<RequestMessage>,
-    pub sink: Receiver<ResponseMessage>,
+    pub sink: Receiver<T::Output>,
 }
 
-impl BetfairStreamConnection {
-    pub async fn start(self) -> (BetfairStreamClient, JoinHandle<eyre::Result<()>>) {
+pub struct Cache {
+    // todo build in-memory cache of orders and markets
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CachedMessage {
+    Connection(ConnectionMessage),
+    MarketChange(/* todo create a cache wrapper */),
+    OrderChange(/* todo createe a cache wrapper */),
+    Status(StatusMessage),
+}
+
+impl MessageProcessor for Cache {
+    type Output = CachedMessage;
+
+    fn process_message(&mut self, message: ResponseMessage) -> Self::Output {
+        match message {
+            ResponseMessage::Connection(connection_message) => {
+                CachedMessage::Connection(connection_message)
+            }
+            ResponseMessage::MarketChange(market_change_message) => todo!(),
+            ResponseMessage::OrderChange(order_change_message) => todo!(),
+            ResponseMessage::Status(status_message) => CachedMessage::Status(status_message),
+        }
+    }
+}
+pub struct Forwarder;
+impl MessageProcessor for Forwarder {
+    type Output = ResponseMessage;
+
+    fn process_message(&mut self, message: ResponseMessage) -> Self::Output {
+        message
+    }
+}
+pub trait MessageProcessor: Send + Sync + 'static {
+    type Output: Send + Clone + Sync + 'static;
+    fn process_message(&mut self, message: ResponseMessage) -> Self::Output;
+}
+
+impl<T: MessageProcessor> BetfairStreamConnection<T> {
+    pub async fn start(self) -> (BetfairStreamClient<T>, JoinHandle<eyre::Result<()>>) {
         let (to_stream_tx, to_stream_rx) = mpsc::channel(100);
         let (from_stream_tx, from_stream_rx) = mpsc::channel(100);
 
@@ -64,8 +105,8 @@ impl BetfairStreamConnection {
     ///
     /// In case of a lost connection, it will reconnect using exponential backoff.
     pub async fn run(
-        self,
-        mut from_stream_tx: Sender<ResponseMessage>,
+        mut self,
+        mut from_stream_tx: Sender<T::Output>,
         mut to_stream_rx: Receiver<RequestMessage>,
     ) -> eyre::Result<()> {
         'retry: loop {
@@ -93,6 +134,7 @@ impl BetfairStreamConnection {
 
                         match message {
                             Ok(message) => {
+                                let message = self.processor.process_message(message);
                                 let Ok(()) = from_stream_tx.send(message).await else {
                                     continue 'retry;
                                 };
@@ -107,34 +149,34 @@ impl BetfairStreamConnection {
 
     /// Attempt to connect and perform a handshake using exponential backoff.
     async fn connect_with_retry(
-        &self,
-        from_stream_tx: &mut Sender<ResponseMessage>,
+        &mut self,
+        from_stream_tx: &mut Sender<T::Output>,
     ) -> eyre::Result<Framed<tokio_rustls::client::TlsStream<TcpStream>, StreamAPIClientCodec>>
     {
-        let host = self
-            .server_addr
-            .host_str()
-            .ok_or_else(|| eyre::eyre!("invalid betfair url"))?;
-        let port = self.server_addr.port().unwrap_or(443);
-
-        let domain_str = self
-            .server_addr
-            .domain()
-            .ok_or_else(|| eyre::eyre!("domain must be known"))?;
-        let domain = rustls::pki_types::ServerName::try_from(domain_str.to_owned())
-            .wrap_err("failed to parse server name")?;
-
-        let mut backoff = ExponentialBuilder::new().build();
-
-        let mut delay = async move || {
-            if let Some(delay) = backoff.next() {
-                sleep(delay).await;
-                Ok(())
-            } else {
-                eyre::bail!("exceeded retry attempts, could not connect");
-            }
-        };
         loop {
+            let host = self
+                .server_addr
+                .host_str()
+                .ok_or_else(|| eyre::eyre!("invalid betfair url"))?;
+            let port = self.server_addr.port().unwrap_or(443);
+
+            let domain_str = self
+                .server_addr
+                .domain()
+                .ok_or_else(|| eyre::eyre!("domain must be known"))?;
+            let domain = rustls::pki_types::ServerName::try_from(domain_str.to_owned())
+                .wrap_err("failed to parse server name")?;
+
+            let mut backoff = ExponentialBuilder::new().build();
+
+            let mut delay = async move || {
+                if let Some(delay) = backoff.next() {
+                    sleep(delay).await;
+                    Ok(())
+                } else {
+                    eyre::bail!("exceeded retry attempts, could not connect");
+                }
+            };
             // Resolve socket addresses each iteration in case DNS changes
             let Some(socket_addr) = tokio::net::lookup_host((host, port)).await?.next() else {
                 eyre::bail!("no valid socket addresses for {host}:{port}")
@@ -167,17 +209,18 @@ impl BetfairStreamConnection {
     /// In this simple example we send `handshake\n` and expect the reply to contain
     /// the substring `handshake_ok`.
     async fn handshake(
-        &self,
-        from_stream_tx: &mut Sender<ResponseMessage>,
+        &mut self,
+        from_stream_tx: &mut Sender<T::Output>,
         stream: &mut Framed<tokio_rustls::client::TlsStream<TcpStream>, StreamAPIClientCodec>,
-    ) -> eyre::Result<StatusMessage> {
+    ) -> eyre::Result<()> {
         // await con message
         let res = stream.next().await.ok_or_eyre("steam exited")??;
         tracing::info!(?res, "message from stream");
-        from_stream_tx.send(res.clone()).await?;
-        let ResponseMessage::Connection(_con_message) = res else {
+        let ResponseMessage::Connection(_) = &res else {
             eyre::bail!("straem responded with invalid connection message")
         };
+        let message = self.processor.process_message(res);
+        from_stream_tx.send(message.clone()).await?;
 
         // send auth msg
         let msg = authentication_message::AuthenticationMessage {
@@ -188,20 +231,20 @@ impl BetfairStreamConnection {
         stream.send(RequestMessage::Authentication(msg)).await?;
 
         // await status message
-        let res = stream.next().await.ok_or_eyre("steam exited")??;
-        tracing::info!(?res, "message from stream");
-        from_stream_tx.send(res.clone()).await?;
-        let ResponseMessage::Status(status_message) = res else {
+        let message = stream.next().await.ok_or_eyre("steam exited")??;
+        tracing::info!(?message, "message from stream");
+        let ResponseMessage::Status(status_message) = &message else {
             eyre::bail!("straem responded with invalid status message")
         };
-
         // ensure that the authentication was successful
         eyre::ensure!(
             status_message.status_code == Some(StatusCode::Success),
             "authentication was not successful"
         );
+        let message = self.processor.process_message(message);
+        from_stream_tx.send(message.clone()).await?;
 
-        Ok(status_message)
+        Ok(())
     }
 }
 
@@ -266,5 +309,124 @@ impl Encoder<RequestMessage> for StreamAPIClientCodec {
         dst.extend_from_slice(json.as_bytes());
         dst.extend_from_slice(b"\r\n");
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use core::fmt::Write;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn can_resolve_host_ipv4() {
+        let url = url::Url::parse("tcptls://stream-api.betfair.com:443").unwrap();
+        let host = url.host_str().unwrap();
+        let port = url
+            .port()
+            .unwrap_or_else(|| if url.scheme() == "https" { 443 } else { 80 });
+        let socket_addr = tokio::net::lookup_host((host, port))
+            .await
+            .unwrap()
+            .next()
+            .unwrap();
+        assert!(socket_addr.ip().is_ipv4());
+        assert_eq!(socket_addr.port(), 443);
+    }
+
+    #[test]
+    fn can_decode_single_message() {
+        let msg = r#"{"op":"connection","connectionId":"002-051134157842-432409"}"#;
+        let separator = "\r\n";
+        let data = format!("{msg}{separator}");
+
+        let mut codec = StreamAPIClientCodec;
+        let mut buf = bytes::BytesMut::from(data.as_bytes());
+        let msg = codec.decode(&mut buf).unwrap().unwrap();
+
+        assert!(matches!(msg, ResponseMessage::Connection(_)));
+    }
+
+    #[test]
+    fn can_decode_multiple_messages() {
+        // contains two messages
+        let msg_one = r#"{"op":"connection","connectionId":"002-051134157842-432409"}"#;
+        let msg_two = r#"{"op":"ocm","id":3,"clk":"AAAAAAAA","status":503,"pt":1498137379766,"ct":"HEARTBEAT"}"#;
+        let separator = "\r\n";
+        let data = format!("{msg_one}{separator}{msg_two}{separator}");
+
+        let mut codec = StreamAPIClientCodec;
+        let mut buf = bytes::BytesMut::from(data.as_bytes());
+        let msg_one = codec.decode(&mut buf).unwrap().unwrap();
+        let msg_two = codec.decode(&mut buf).unwrap().unwrap();
+
+        assert!(matches!(msg_one, ResponseMessage::Connection(_)));
+        assert!(matches!(msg_two, ResponseMessage::OrderChange(_)));
+    }
+
+    #[test]
+    fn can_decode_multiple_partial_messages() {
+        // contains two messages
+        let msg_one = r#"{"op":"connection","connectionId":"002-051134157842-432409"}"#;
+        let msg_two_pt_one = r#"{"op":"ocm","id":3,"clk""#;
+        let msg_two_pt_two = r#":"AAAAAAAA","status":503,"pt":1498137379766,"ct":"HEARTBEAT"}"#;
+        let separator = "\r\n";
+        let data = format!("{msg_one}{separator}{msg_two_pt_one}");
+
+        let mut codec = StreamAPIClientCodec;
+        let mut buf = bytes::BytesMut::from(data.as_bytes());
+        let msg_one = codec.decode(&mut buf).unwrap().unwrap();
+        let msg_two_attempt = codec.decode(&mut buf).unwrap();
+        assert!(msg_two_attempt.is_none());
+        buf.write_str(msg_two_pt_two).unwrap();
+        buf.write_str(separator).unwrap();
+        let msg_two = codec.decode(&mut buf).unwrap().unwrap();
+
+        assert!(matches!(msg_one, ResponseMessage::Connection(_)));
+        assert!(matches!(msg_two, ResponseMessage::OrderChange(_)));
+    }
+
+    #[test]
+    fn can_decode_subsequent_messages() {
+        // contains two messages
+        let msg_one = r#"{"op":"connection","connectionId":"002-051134157842-432409"}"#;
+        let msg_two = r#"{"op":"ocm","id":3,"clk":"AAAAAAAA","status":503,"pt":1498137379766,"ct":"HEARTBEAT"}"#;
+        let separator = "\r\n";
+        let data = format!("{msg_one}{separator}");
+
+        let mut codec = StreamAPIClientCodec;
+        let mut buf = bytes::BytesMut::from(data.as_bytes());
+        let msg_one = codec.decode(&mut buf).unwrap().unwrap();
+        let msg_two_attempt = codec.decode(&mut buf).unwrap();
+        assert!(msg_two_attempt.is_none());
+        let data = format!("{msg_two}{separator}");
+        buf.write_str(data.as_str()).unwrap();
+        let msg_two = codec.decode(&mut buf).unwrap().unwrap();
+
+        assert!(matches!(msg_one, ResponseMessage::Connection(_)));
+        assert!(matches!(msg_two, ResponseMessage::OrderChange(_)));
+    }
+
+    #[test]
+    fn can_encode_message() {
+        let msg = RequestMessage::Authentication(
+            betfair_stream_types::request::authentication_message::AuthenticationMessage {
+                id: Some(1),
+                session: "sss".to_owned(),
+                app_key: "aaaa".to_owned(),
+            },
+        );
+        let mut codec = StreamAPIClientCodec;
+        let mut buf = bytes::BytesMut::new();
+        codec.encode(msg, &mut buf).unwrap();
+
+        let data = buf.freeze();
+        let data = core::str::from_utf8(&data).unwrap();
+
+        // assert that we have the suffix \r\n
+        assert!(data.ends_with("\r\n"));
+        // assert that we have the prefix {"op":"authentication"
+        assert!(data.starts_with("{\"op\":\"authentication\""));
     }
 }
