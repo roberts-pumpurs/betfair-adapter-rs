@@ -11,7 +11,10 @@ use betfair_stream_types::{
         status_message::{StatusCode, StatusMessage},
     },
 };
-use cache::tracker::StreamState;
+use cache::{
+    primitives::{MarketBookCache, OrderBookCache},
+    tracker::StreamState,
+};
 use eyre::{Context, OptionExt};
 use futures::{
     SinkExt, StreamExt,
@@ -55,8 +58,8 @@ pub struct Cache {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CachedMessage {
     Connection(ConnectionMessage),
-    MarketChange(/* todo create a cache wrapper */),
-    OrderChange(/* todo createe a cache wrapper */),
+    MarketChange(Vec<MarketBookCache>),
+    OrderChange(Vec<OrderBookCache>),
     Status(StatusMessage),
 }
 
@@ -69,10 +72,24 @@ impl MessageProcessor for Cache {
                 CachedMessage::Connection(connection_message)
             }
             ResponseMessage::MarketChange(market_change_message) => {
-                self.state.market_change_update(market_change_message)
+                let data = self
+                    .state
+                    .market_change_update(market_change_message)
+                    .into_iter()
+                    .cloned()
+                    .collect();
+
+                CachedMessage::MarketChange(data)
             }
             ResponseMessage::OrderChange(order_change_message) => {
-                self.state.order_change_update(order_change_message)
+                let data = self
+                    .state
+                    .order_change_update(order_change_message)
+                    .into_iter()
+                    .cloned()
+                    .collect();
+
+                CachedMessage::OrderChange(data)
             }
             ResponseMessage::Status(status_message) => CachedMessage::Status(status_message),
         }

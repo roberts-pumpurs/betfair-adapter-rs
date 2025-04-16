@@ -1,22 +1,26 @@
 use betfair_adapter::betfair_types::customer_strategy_ref::CustomerStrategyRef;
+use betfair_stream_types::request::RequestMessage;
 use betfair_stream_types::request::order_subscription_message::{
     OrderFilter, OrderSubscriptionMessage,
 };
-use betfair_stream_types::request::RequestMessage;
+use tokio::sync::mpsc::Sender;
 
-use crate::StreamApi;
+use crate::{BetfairStreamClient, MessageProcessor};
 
 /// A wrapper around a `StreamListener` that allows subscribing to order updates with a somewhat
 /// ergonomic API.
 pub struct OrderSubscriber {
-    command_sender: tokio::sync::broadcast::Sender<RequestMessage>,
+    command_sender: Sender<RequestMessage>,
     filter: OrderFilter,
 }
 
 impl OrderSubscriber {
     #[must_use]
-    pub fn new<T>(stream_api_connection: &StreamApi<T>, filter: OrderFilter) -> Self {
-        let command_sender = stream_api_connection.command_sender().clone();
+    pub fn new<T: MessageProcessor>(
+        stream_api_connection: &BetfairStreamClient<T>,
+        filter: OrderFilter,
+    ) -> Self {
+        let command_sender = stream_api_connection.send_to_stream.clone();
         Self {
             command_sender,
             filter,
@@ -27,27 +31,27 @@ impl OrderSubscriber {
     ///
     /// # Errors
     /// If the message cannot be sent to the stream.
-    pub fn subscribe_to_strategy_updates(
+    pub async fn subscribe_to_strategy_updates(
         &mut self,
         strategy_ref: CustomerStrategyRef,
-    ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
+    ) -> Result<(), tokio::sync::mpsc::error::SendError<RequestMessage>> {
         if let Some(ref mut strategy_refs) = self.filter.customer_strategy_refs {
             strategy_refs.push(strategy_ref);
         } else {
             self.filter.customer_strategy_refs = Some(vec![strategy_ref]);
         }
 
-        self.resubscribe()
+        self.resubscribe().await
     }
 
     /// Unsubscribe from a market.
     ///
     /// # Errors
     /// If the message cannot be sent to the stream.
-    pub fn unsubscribe_from_strategy_updates(
+    pub async fn unsubscribe_from_strategy_updates(
         &mut self,
         strategy_ref: &CustomerStrategyRef,
-    ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
+    ) -> Result<(), tokio::sync::mpsc::error::SendError<RequestMessage>> {
         if let Some(x) = self.filter.customer_strategy_refs.as_mut() {
             x.retain(|iter_strategy_ref| iter_strategy_ref != strategy_ref);
         }
@@ -58,7 +62,7 @@ impl OrderSubscriber {
             .as_ref()
             .map_or(true, alloc::vec::Vec::is_empty)
         {
-            self.unsubscribe_from_all_markets()?;
+            self.unsubscribe_from_all_markets().await?;
         }
 
         Ok(())
@@ -72,9 +76,9 @@ impl OrderSubscriber {
     ///
     /// # Errors
     /// if the message cannot be sent to the stream.
-    pub fn unsubscribe_from_all_markets(
+    pub async fn unsubscribe_from_all_markets(
         &mut self,
-    ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
+    ) -> Result<(), tokio::sync::mpsc::error::SendError<RequestMessage>> {
         let strategy_that_does_not_exist = CustomerStrategyRef::new([
             'd', 'o', 's', 'e', 'n', 't', ' ', 'e', 'x', 'i', 's', 't', ' ', ' ', ' ',
         ]);
@@ -94,7 +98,7 @@ impl OrderSubscriber {
             })),
             conflate_ms: None,
         });
-        self.command_sender.send(req)?;
+        self.command_sender.send(req).await?;
 
         Ok(())
     }
@@ -105,9 +109,9 @@ impl OrderSubscriber {
     ///
     /// # Errors
     /// if the stream fails to send the message
-    pub fn resubscribe(
+    pub async fn resubscribe(
         &self,
-    ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
+    ) -> Result<(), tokio::sync::mpsc::error::SendError<RequestMessage>> {
         let req = RequestMessage::OrderSubscription(OrderSubscriptionMessage {
             id: None,
             clk: None,         // empty to reset the clock
@@ -117,7 +121,7 @@ impl OrderSubscriber {
             order_filter: Some(Box::new(self.filter.clone())),
             conflate_ms: None,
         });
-        self.command_sender.send(req)?;
+        self.command_sender.send(req).await?;
 
         Ok(())
     }
@@ -131,11 +135,11 @@ impl OrderSubscriber {
     ///
     /// # Errors
     /// if the stream fails to send the message
-    pub fn set_filter(
+    pub async fn set_filter(
         &mut self,
         filter: OrderFilter,
-    ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
+    ) -> Result<(), tokio::sync::mpsc::error::SendError<RequestMessage>> {
         self.filter = filter;
-        self.resubscribe()
+        self.resubscribe().await
     }
 }
