@@ -4,9 +4,9 @@ use betfair_types::keep_alive;
 use betfair_types::types::BetfairRpcRequest;
 use tracing::instrument;
 
-use crate::{ApiError, AuthenticatedBetfairRpcProvider};
+use crate::{ApiError, Authenticated, BetfairRpcClient};
 
-impl AuthenticatedBetfairRpcProvider {
+impl BetfairRpcClient<Authenticated> {
     /// Sends a request and returns the response or an error.
     ///
     /// # Parameters
@@ -22,8 +22,9 @@ impl AuthenticatedBetfairRpcProvider {
         T::Error: serde::de::DeserializeOwned,
         ApiError: From<<T as BetfairRpcRequest>::Error>,
     {
-        let endpoint = self.base.rest_base.url().join(T::method())?;
+        let endpoint = self.rest_base.url().join(T::method())?;
         let full = self
+            .state
             .authenticated_client
             .post(endpoint.as_str())
             .json(&request)
@@ -58,8 +59,8 @@ impl AuthenticatedBetfairRpcProvider {
         T::Res: serde::de::DeserializeOwned + core::fmt::Debug,
         T::Error: serde::de::DeserializeOwned,
     {
-        let endpoint = self.base.rest_base.url().join(T::method())?;
-        let client = self.authenticated_client.clone();
+        let endpoint = self.rest_base.url().join(T::method())?;
+        let client = self.state.authenticated_client.clone();
         let reqwest_req = client
             .request(reqwest::Method::POST, endpoint.as_str())
             .json(&request)
@@ -80,8 +81,8 @@ impl AuthenticatedBetfairRpcProvider {
     /// the session will expire. Session times aren't determined or extended based on API activity.
     #[tracing::instrument(skip_all, ret, err)]
     pub fn keep_alive(&self) -> Result<BetfairRequest<keep_alive::Response, ()>, ApiError> {
-        let endpoint = self.base.keep_alive.url();
-        let client = self.authenticated_client.clone();
+        let endpoint = self.keep_alive.url();
+        let client = self.state.authenticated_client.clone();
         let reqwest_req = client
             .request(reqwest::Method::GET, endpoint.as_str())
             .build()?;
@@ -97,8 +98,8 @@ impl AuthenticatedBetfairRpcProvider {
     /// You can use Logout to terminate your existing session.
     #[tracing::instrument(skip_all, ret, err)]
     pub fn logout(&self) -> Result<BetfairRequest<keep_alive::Response, ()>, ApiError> {
-        let endpoint = self.base.logout.url();
-        let client = self.authenticated_client.clone();
+        let endpoint = self.logout.url();
+        let client = self.state.authenticated_client.clone();
         let reqwest_req = client
             .request(reqwest::Method::GET, endpoint.as_str())
             .build()?;
@@ -113,9 +114,9 @@ impl AuthenticatedBetfairRpcProvider {
 
     /// Update the internal client to get a new auth token
     pub async fn update_auth_token(&mut self) -> Result<(), ApiError> {
-        let (session_token, authenticated_client) = self.base.bot_log_in().await?;
-        self.session_token = session_token;
-        self.authenticated_client = authenticated_client;
+        let (session_token, authenticated_client) = self.bot_log_in().await?;
+        self.state.session_token = session_token;
+        self.state.authenticated_client = authenticated_client;
         Ok(())
     }
 }

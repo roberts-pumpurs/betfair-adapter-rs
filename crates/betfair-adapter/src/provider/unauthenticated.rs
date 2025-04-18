@@ -1,20 +1,40 @@
 use betfair_types::bot_login::BotLoginResponse;
-use reqwest::{header, Client};
+use reqwest::{Client, header};
 
-use super::BetfairRpcProviderBase;
+use super::BetfairRpcClient;
 use crate::secret::{self, SessionToken};
 use crate::{
-    urls, ApiError, ApplicationKey, AuthenticatedBetfairRpcProvider, BetfairConfigBuilder,
-    Identity, UnauthenticatedBetfairRpcProvider,
+    ApiError, ApplicationKey, Authenticated, BetfairConfigBuilder, Identity, Unauthenticated, urls,
 };
 
 /// Represents an unauthenticated Betfair RPC provider.
-impl UnauthenticatedBetfairRpcProvider {
+impl BetfairRpcClient<Unauthenticated> {
     /// Creates a new instance of `UnauthenticatedBetfairRpcProvider` using the provided secret
     /// provider.
     pub fn new(secret_provider: secret::SecretProvider) -> Result<Self, ApiError> {
         let config = BetfairConfigBuilder::new_with_global_jurisdiction(secret_provider);
         Self::new_with_config(config)
+    }
+
+    /// Authenticates the user and returns an `AuthenticatedBetfairRpcProvider`.
+    pub async fn authenticate(self) -> Result<BetfairRpcClient<Authenticated>, ApiError> {
+        let (session_token, authenticated_client) = self.bot_log_in().await?;
+        let state = Authenticated {
+            session_token,
+            authenticated_client,
+        };
+
+        Ok(BetfairRpcClient {
+            state,
+            bot_login_client: self.bot_login_client,
+            rest_base: self.rest_base,
+            keep_alive: self.keep_alive,
+            bot_login: self.bot_login,
+            logout: self.logout,
+            login: self.login,
+            stream: self.stream,
+            secret_provider: self.secret_provider,
+        })
     }
 
     /// Creates a new instance of `UnauthenticatedBetfairRpcProvider` with a specific configuration.
@@ -27,35 +47,7 @@ impl UnauthenticatedBetfairRpcProvider {
             impl urls::RetrieveUrl<urls::InteractiveLogin> + core::fmt::Debug,
             impl urls::RetrieveUrl<urls::Stream> + core::fmt::Debug,
         >,
-    ) -> Result<Self, ApiError> {
-        BetfairRpcProviderBase::new(config).map(Self)
-    }
-
-    /// Authenticates the user and returns an `AuthenticatedBetfairRpcProvider`.
-    pub async fn authenticate(self) -> Result<AuthenticatedBetfairRpcProvider, ApiError> {
-        let (session_token, authenticated_client) = self.0.bot_log_in().await?;
-
-        Ok(AuthenticatedBetfairRpcProvider {
-            base: self.0,
-            session_token,
-            authenticated_client,
-        })
-    }
-}
-
-/// Represents the base for Betfair RPC providers.
-impl BetfairRpcProviderBase {
-    /// Creates a new instance of `BetfairRpcProviderBase` with the given configuration.
-    pub fn new(
-        config: BetfairConfigBuilder<
-            impl urls::RetrieveUrl<urls::RestBase> + core::fmt::Debug,
-            impl urls::RetrieveUrl<urls::KeepAlive> + core::fmt::Debug,
-            impl urls::RetrieveUrl<urls::BotLogin> + core::fmt::Debug,
-            impl urls::RetrieveUrl<urls::Logout> + core::fmt::Debug,
-            impl urls::RetrieveUrl<urls::InteractiveLogin> + core::fmt::Debug,
-            impl urls::RetrieveUrl<urls::Stream> + core::fmt::Debug,
-        >,
-    ) -> Result<Self, ApiError> {
+    ) -> Result<BetfairRpcClient<Unauthenticated>, ApiError> {
         let rest_base = config.rest.url();
         let keep_alive = config.keep_alive.url();
         let bot_login = config.bot_login.url();
@@ -69,6 +61,7 @@ impl BetfairRpcProviderBase {
             login_client(&secret_provider.application_key, &secret_provider.identity)?;
 
         Ok(Self {
+            state: Unauthenticated,
             bot_login_client,
             rest_base,
             keep_alive,
@@ -79,7 +72,9 @@ impl BetfairRpcProviderBase {
             secret_provider,
         })
     }
+}
 
+impl<T> BetfairRpcClient<T> {
     /// Performs a non-interactive login to obtain a session token and authenticated client.
     #[tracing::instrument(skip(self), err)]
     pub(super) async fn bot_log_in(&self) -> Result<(SessionToken, reqwest::Client), ApiError> {

@@ -1,12 +1,10 @@
-
 use betfair_adapter::betfair_types::types::sports_aping::{
-    list_market_catalogue, MarketFilter, MarketProjection, MarketSort,
+    MarketFilter, MarketProjection, MarketSort, list_market_catalogue,
 };
 use betfair_adapter::{
-    ApplicationKey, Identity, Password, SecretProvider, UnauthenticatedBetfairRpcProvider, Username,
+    ApplicationKey, BetfairRpcClient, Identity, Password, SecretProvider, Username,
 };
 use betfair_stream_api::types::request::market_subscription_message::LadderLevel;
-use betfair_stream_api::MarketSubscriber;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
@@ -34,7 +32,7 @@ async fn main() -> eyre::Result<()> {
     };
 
     // login to betfair
-    let bf_provider = UnauthenticatedBetfairRpcProvider::new(secret_provider.clone())?
+    let bf_provider = BetfairRpcClient::new(secret_provider.clone())?
         .authenticate()
         .await?;
     // get market id
@@ -58,7 +56,7 @@ async fn main() -> eyre::Result<()> {
     let mut stream = {
         use betfair_stream_api::BetfairProviderExt;
 
-        UnauthenticatedBetfairRpcProvider::new(secret_provider.clone())?
+        BetfairRpcClient::new(secret_provider.clone())?
             .connect_to_stream()
             .run_with_default_runtime()
             .enable_cache()
@@ -69,7 +67,6 @@ async fn main() -> eyre::Result<()> {
         use betfair_stream_api::types::request::market_subscription_message::{
             Fields, MarketFilter,
         };
-        use betfair_stream_api::StreamExt;
         let mut ms = MarketSubscriber::new(
             &stream,
             MarketFilter::default(),

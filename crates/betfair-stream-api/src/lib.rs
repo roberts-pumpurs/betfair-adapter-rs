@@ -1,14 +1,15 @@
 //! Betfair stream client
 extern crate alloc;
-mod cache;
+pub mod cache;
 use backon::{BackoffBuilder, ExponentialBuilder};
-use betfair_adapter::{ApplicationKey, SessionToken};
+use betfair_adapter::{ApplicationKey, Authenticated, BetfairRpcClient, SessionToken};
+pub use betfair_stream_types as types;
 use betfair_stream_types::{
     request::{RequestMessage, authentication_message},
     response::{
         ResponseMessage,
         connection_message::ConnectionMessage,
-        status_message::{StatusCode, StatusMessage},
+        status_message::{ErrorCode, StatusMessage},
     },
 };
 use cache::{
@@ -37,12 +38,10 @@ use tokio_util::{
 /// A Betfair Stream API client that handles connection, handshake, incoming/outgoing messages,
 /// heartbeat and automatic reconnects.
 pub struct BetfairStreamConnection<T: MessageProcessor> {
-    /// TCP address of the Betfair server (for example: "betfair.server.com:1234")
-    pub server_addr: url::Url,
+    /// betfair cient
+    pub client: BetfairRpcClient<Authenticated>,
     /// Heartbeat interval (used only if heartbeat_enabled is true)
     pub heartbeat_interval: Option<Duration>,
-    pub session_token: SessionToken,
-    pub application_key: ApplicationKey,
     pub processor: T,
 }
 
@@ -109,6 +108,26 @@ pub trait MessageProcessor: Send + Sync + 'static {
 }
 
 impl<T: MessageProcessor> BetfairStreamConnection<T> {
+    pub fn new(client: BetfairRpcClient<Authenticated>) -> BetfairStreamConnection<Cache> {
+        BetfairStreamConnection {
+            client,
+            heartbeat_interval: None,
+            processor: Cache {
+                state: StreamState::new(),
+            },
+        }
+    }
+
+    pub fn new_without_processing(
+        client: BetfairRpcClient<Authenticated>,
+    ) -> BetfairStreamConnection<Forwarder> {
+        BetfairStreamConnection {
+            client,
+            heartbeat_interval: None,
+            processor: Forwarder,
+        }
+    }
+
     pub async fn start(self) -> (BetfairStreamClient<T>, JoinHandle<eyre::Result<()>>) {
         let (to_stream_tx, to_stream_rx) = mpsc::channel(100);
         let (from_stream_tx, from_stream_rx) = mpsc::channel(100);
@@ -134,9 +153,11 @@ impl<T: MessageProcessor> BetfairStreamConnection<T> {
         mut to_stream_rx: Receiver<RequestMessage>,
     ) -> eyre::Result<()> {
         'retry: loop {
+            eyre::ensure!(!to_stream_rx.is_closed(), "stream recipient dropped");
+
             // Connect (with handshake) using retry/backoff logic.
             let mut stream = self.connect_with_retry(&mut from_stream_tx).await?;
-            tracing::info!("Connected to {}", self.server_addr);
+            tracing::info!("Connected to {}", self.client.stream.url());
 
             loop {
                 let stream_next = pin!(stream.next());
@@ -178,14 +199,13 @@ impl<T: MessageProcessor> BetfairStreamConnection<T> {
     ) -> eyre::Result<Framed<tokio_rustls::client::TlsStream<TcpStream>, StreamAPIClientCodec>>
     {
         loop {
-            let host = self
-                .server_addr
+            let server_addr = self.client.stream.url();
+            let host = server_addr
                 .host_str()
                 .ok_or_else(|| eyre::eyre!("invalid betfair url"))?;
-            let port = self.server_addr.port().unwrap_or(443);
+            let port = server_addr.port().unwrap_or(443);
 
-            let domain_str = self
-                .server_addr
+            let domain_str = server_addr
                 .domain()
                 .ok_or_else(|| eyre::eyre!("domain must be known"))?;
             let domain = rustls::pki_types::ServerName::try_from(domain_str.to_owned())
@@ -222,21 +242,30 @@ impl<T: MessageProcessor> BetfairStreamConnection<T> {
                     delay().await?;
                     continue;
                 }
-                Ok(_status) => {
-                    return Ok(tls_stream);
-                }
+                Ok(status) => match status {
+                    StreamAction::Continue => {
+                        return Ok(tls_stream);
+                    }
+                    StreamAction::WaitAndRetry => {
+                        delay().await?;
+                        continue;
+                    }
+                    StreamAction::Reauthenticate => {
+                        self.client.update_auth_token().await?;
+                        delay().await?;
+                        continue;
+                    }
+                    StreamAction::Fatal => eyre::bail!("fatal error in stream processing"),
+                },
             }
         }
     }
 
-    /// Perform the handshake by sending a handshake message and waiting for a valid reply.
-    /// In this simple example we send `handshake\n` and expect the reply to contain
-    /// the substring `handshake_ok`.
     async fn handshake(
         &mut self,
         from_stream_tx: &mut Sender<T::Output>,
         stream: &mut Framed<tokio_rustls::client::TlsStream<TcpStream>, StreamAPIClientCodec>,
-    ) -> eyre::Result<()> {
+    ) -> eyre::Result<StreamAction> {
         // await con message
         let res = stream.next().await.ok_or_eyre("steam exited")??;
         tracing::info!(?res, "message from stream");
@@ -249,8 +278,14 @@ impl<T: MessageProcessor> BetfairStreamConnection<T> {
         // send auth msg
         let msg = authentication_message::AuthenticationMessage {
             id: Some(-1),
-            session: self.session_token.0.expose_secret().clone(),
-            app_key: self.application_key.0.expose_secret().clone(),
+            session: self.client.session_token().0.expose_secret().clone(),
+            app_key: self
+                .client
+                .secret_provider
+                .application_key
+                .0
+                .expose_secret()
+                .clone(),
         };
         stream.send(RequestMessage::Authentication(msg)).await?;
 
@@ -260,16 +295,40 @@ impl<T: MessageProcessor> BetfairStreamConnection<T> {
         let ResponseMessage::Status(status_message) = &message else {
             eyre::bail!("straem responded with invalid status message")
         };
-        // ensure that the authentication was successful
-        eyre::ensure!(
-            status_message.status_code == Some(StatusCode::Success),
-            "authentication was not successful"
-        );
-        let message = self.processor.process_message(message);
-        from_stream_tx.send(message.clone()).await?;
+        let processed_message = self.processor.process_message(message.clone());
+        from_stream_tx.send(processed_message).await?;
 
-        Ok(())
+        let Err(err) = &status_message.0 else {
+            return Ok(StreamAction::Continue);
+        };
+
+        tracing::error!(?err, "stream respondend wit an error");
+        let action = match err.error_code {
+            ErrorCode::NoAppKey => StreamAction::Fatal,
+            ErrorCode::InvalidAppKey => StreamAction::Fatal,
+            ErrorCode::NoSession => StreamAction::Reauthenticate,
+            ErrorCode::InvalidSessionInformation => StreamAction::Reauthenticate,
+            ErrorCode::NotAuthorized => StreamAction::Reauthenticate,
+            ErrorCode::InvalidInput => StreamAction::Fatal,
+            ErrorCode::InvalidClock => StreamAction::Fatal,
+            ErrorCode::UnexpectedError => StreamAction::Fatal,
+            ErrorCode::Timeout => StreamAction::WaitAndRetry,
+            ErrorCode::SubscriptionLimitExceeded => StreamAction::WaitAndRetry,
+            ErrorCode::InvalidRequest => StreamAction::Fatal,
+            ErrorCode::ConnectionFailed => StreamAction::WaitAndRetry,
+            ErrorCode::MaxConnectionLimitExceeded => StreamAction::Fatal,
+            ErrorCode::TooManyRequests => StreamAction::WaitAndRetry,
+        };
+
+        Ok(action)
     }
+}
+
+enum StreamAction {
+    Continue,
+    WaitAndRetry,
+    Reauthenticate,
+    Fatal,
 }
 
 #[tracing::instrument(err)]
