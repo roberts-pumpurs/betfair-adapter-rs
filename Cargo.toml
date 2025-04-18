@@ -103,7 +103,7 @@ backon = "1.5"
 # Async
 tokio = { version = "1.0", features = ["full", "tracing"] }
 tokio-util = { version = "0.7", features = ["codec"] }
-tokio-stream = { version = "0.1", features = ["sync"] }
+tokio-stream = { version = "0.1", features = ["full"] }
 tokio-rustls = { version = "0.26", default-features = false, features = ["tls12"] }
 futures-concurrency = "7.4"
 futures-util = "0.3"

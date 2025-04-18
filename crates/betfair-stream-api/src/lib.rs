@@ -5,7 +5,7 @@ use backon::{BackoffBuilder, ExponentialBuilder};
 use betfair_adapter::{ApplicationKey, Authenticated, BetfairRpcClient, SessionToken};
 pub use betfair_stream_types as types;
 use betfair_stream_types::{
-    request::{RequestMessage, authentication_message},
+    request::{RequestMessage, authentication_message, heartbeat_message::HeartbeatMessage},
     response::{
         ResponseMessage,
         connection_message::ConnectionMessage,
@@ -30,6 +30,7 @@ use tokio::{
     task::JoinHandle,
     time::{interval, sleep},
 };
+use tokio_stream::wrappers::{IntervalStream, ReceiverStream};
 use tokio_util::{
     bytes,
     codec::{Decoder, Encoder, Framed},
@@ -143,25 +144,46 @@ impl<T: MessageProcessor> BetfairStreamConnection<T> {
         )
     }
 
-    /// Start the client. This function will continuously try to connect to Betfair,
-    /// perform the handshake, and then launch I/O tasks for processing messages.
-    ///
-    /// In case of a lost connection, it will reconnect using exponential backoff.
-    pub async fn run(
+    async fn run(
+        self,
+        from_stream_tx: Sender<T::Output>,
+        to_stream_rx: Receiver<RequestMessage>,
+    ) -> eyre::Result<()> {
+        if let Some(hb) = self.heartbeat_interval {
+            let heartbeat_stream = {
+                let mut interval = tokio::time::interval(hb);
+                interval.reset();
+                let interval_stream = IntervalStream::new(interval).fuse();
+                interval_stream
+                    .map(move |_s| HeartbeatMessage { id: Some(123) })
+                    .map(RequestMessage::Heartbeat)
+                    .boxed()
+            };
+            let input_stream = futures::stream::select_all([
+                heartbeat_stream,
+                ReceiverStream::new(to_stream_rx).boxed(),
+            ]);
+
+            self.run_base(from_stream_tx, input_stream).await
+        } else {
+            self.run_base(from_stream_tx, ReceiverStream::new(to_stream_rx))
+                .await
+        }
+    }
+
+    async fn run_base(
         mut self,
         mut from_stream_tx: Sender<T::Output>,
-        mut to_stream_rx: Receiver<RequestMessage>,
+        mut to_stream_rx: impl futures::Stream<Item = RequestMessage> + Unpin,
     ) -> eyre::Result<()> {
         'retry: loop {
-            eyre::ensure!(!to_stream_rx.is_closed(), "stream recipient dropped");
-
             // Connect (with handshake) using retry/backoff logic.
             let mut stream = self.connect_with_retry(&mut from_stream_tx).await?;
             tracing::info!("Connected to {}", self.client.stream.url());
 
             loop {
                 let stream_next = pin!(stream.next());
-                let to_stream_rx_next = pin!(to_stream_rx.recv());
+                let to_stream_rx_next = pin!(to_stream_rx.next());
                 match select(to_stream_rx_next, stream_next).await {
                     future::Either::Left((request, _)) => {
                         let Some(request) = request else {
