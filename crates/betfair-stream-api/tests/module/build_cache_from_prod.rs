@@ -8,7 +8,7 @@ use tokio::fs::File;
 use tokio_util::codec::Framed;
 
 #[tokio::test]
-async fn test_can_build_prod_cache_from_straem_data() {
+async fn test_can_build_prod_cache_from_stream_data() {
     let fixture = PathBuf::new()
         .join(env::current_dir().unwrap())
         .join("fixtures")

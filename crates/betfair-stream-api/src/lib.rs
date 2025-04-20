@@ -300,13 +300,13 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
 
                         tracing::debug!(?request, "sending to betfair");
                         let Ok(()) = stream.send(request).await else {
-                            tracing::warn!("could not send request to straem");
+                            tracing::warn!("could not send request to stream");
                             continue 'retry;
                         };
                     }
                     future::Either::Right((message, _)) => {
                         let Some(message) = message else {
-                            tracing::warn!("straem returned None");
+                            tracing::warn!("stream returned None");
                             continue 'retry;
                         };
 
@@ -421,7 +421,7 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
             .inspect_err(|err| tracing::warn!(?err))
             .map_err(|_| HandshakeErr::Fatal)?;
         let ResponseMessage::Connection(_) = &res else {
-            tracing::warn!("straem responded with invalid connection message");
+            tracing::warn!("stream responded with invalid connection message");
             return Err(HandshakeErr::Reauthenticate);
         };
 
