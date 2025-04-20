@@ -1,10 +1,10 @@
-use heck::ToPascalCase;
+use heck::ToPascalCase as _;
 
 use crate::aping_ast::types::DataTypeParameter;
 extern crate alloc;
-use alloc::borrow::ToOwned;
+use alloc::borrow::ToOwned as _;
 
-use eyre::{Result, WrapErr};
+use eyre::{Result, WrapErr as _};
 
 #[derive(Debug)]
 pub(crate) struct TypeResolverV1;

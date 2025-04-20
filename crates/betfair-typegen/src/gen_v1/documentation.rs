@@ -1,10 +1,10 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use super::injector::CodeInjector;
 use super::GenV1GeneratorStrategy;
-use crate::aping_ast::types::Comment;
+use super::injector::CodeInjector;
 use crate::aping_ast::Aping;
+use crate::aping_ast::types::Comment;
 
 impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
     #[expect(clippy::unused_self)]

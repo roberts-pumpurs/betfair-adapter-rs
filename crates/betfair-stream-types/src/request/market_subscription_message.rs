@@ -74,8 +74,8 @@ pub struct LadderLevel(u8);
 impl LadderLevel {
     pub fn new(level: u8) -> Result<Self, InvalidLadderLevel> {
         if !(1..=10).contains(&level) {
-            return Err(InvalidLadderLevel)
-        };
+            return Err(InvalidLadderLevel);
+        }
 
         Ok(Self(level))
     }

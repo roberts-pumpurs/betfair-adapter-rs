@@ -16,7 +16,7 @@ mod generator;
 
 use betfair_xml_parser::Interface;
 use generator::settings::GeneratorSettings;
-pub use generator::{output, settings, BetfairTypeGenerator};
+pub use generator::{BetfairTypeGenerator, output, settings};
 pub use proc_macro2::TokenStream;
 pub use rust_decimal;
 

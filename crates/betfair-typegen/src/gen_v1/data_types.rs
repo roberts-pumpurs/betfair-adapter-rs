@@ -1,13 +1,13 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use super::injector::CodeInjector;
 use super::GenV1GeneratorStrategy;
+use super::injector::CodeInjector;
 use crate::aping_ast::data_type::{
     DataType, EnumValue, StructField, StructValue, TypeAlias, ValidEnumValue,
 };
 use crate::aping_ast::types::Name;
-use crate::gen_v1::documentation::CommentParse;
+use crate::gen_v1::documentation::CommentParse as _;
 
 impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
     pub(crate) fn generate_data_type(&self, data_type: &DataType) -> TokenStream {
@@ -143,8 +143,8 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                     pub #name: #data_type,
                 }
             } else {
-                let extra = if struct_field.data_type.as_str().eq("double") ||
-                    struct_field.data_type.as_str().eq("float")
+                let extra = if struct_field.data_type.as_str().eq("double")
+                    || struct_field.data_type.as_str().eq("float")
                 {
                     quote! {
                         #[serde(deserialize_with = "super::deserialize_decimal_option", default)]
@@ -221,7 +221,7 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
         ];
 
         if types_to_skip.contains(&type_alias.name.0.as_str()) {
-            return None
+            return None;
         }
         Some(quote! {
             #type_alias_derives

@@ -1,17 +1,17 @@
 use std::sync::Arc;
 
 use betfair_adapter::betfair_types::types::sports_aping::MarketId;
+use betfair_stream_types::request::RequestMessage;
 use betfair_stream_types::request::market_subscription_message::{
     Fields, LadderLevel, MarketDataFilter, MarketFilter, MarketSubscriptionMessage,
 };
-use betfair_stream_types::request::RequestMessage;
 
-use crate::StreamApi;
+use crate::{BetfairStreamClient, MessageProcessor};
 
 /// A wrapper around a `StreamListener` that allows subscribing to markets with a somewhat ergonomic
 /// API.
 pub struct MarketSubscriber {
-    command_sender: tokio::sync::broadcast::Sender<RequestMessage>,
+    command_sender: tokio::sync::mpsc::Sender<RequestMessage>,
     filter: MarketFilter,
     /// The list of market data fields to subscribe to.
     market_data_fields: Vec<Fields>,
@@ -32,13 +32,13 @@ impl MarketSubscriber {
     /// # Returns
     /// A new instance of `MarketSubscriber`.
     #[must_use]
-    pub fn new<T>(
-        stream_api_connection: &StreamApi<T>,
+    pub fn new<T: MessageProcessor>(
+        stream_api_connection: &BetfairStreamClient<T>,
         filter: MarketFilter,
         market_data_fields: Vec<Fields>,
         ladder_level: Option<LadderLevel>,
     ) -> Self {
-        let command_sender = stream_api_connection.command_sender().clone();
+        let command_sender = stream_api_connection.send_to_stream.clone();
         Self {
             command_sender,
             filter,
@@ -54,16 +54,16 @@ impl MarketSubscriber {
     ///
     /// # Errors
     /// If the message cannot be sent to the stream.
-    pub fn subscribe_to_market(
+    pub async fn subscribe_to_market(
         &mut self,
         market_id: MarketId,
-    ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
+    ) -> Result<(), tokio::sync::mpsc::error::SendError<RequestMessage>> {
         if let Some(ref mut market_ids) = self.filter.market_ids {
             market_ids.push(market_id);
         } else {
             self.filter.market_ids = Some(vec![market_id]);
         }
-        self.resubscribe()
+        self.resubscribe().await
     }
 
     /// Unsubscribe from a market using its `MarketId`.
@@ -73,10 +73,10 @@ impl MarketSubscriber {
     ///
     /// # Errors
     /// If the message cannot be sent to the stream.
-    pub fn unsubscribe_from_market(
+    pub async fn unsubscribe_from_market(
         &mut self,
         market_id: &MarketId,
-    ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
+    ) -> Result<(), tokio::sync::mpsc::error::SendError<RequestMessage>> {
         if let Some(x) = self.filter.market_ids.as_mut() {
             x.retain(|iter_market_id| iter_market_id != market_id);
         }
@@ -85,9 +85,9 @@ impl MarketSubscriber {
             .filter
             .market_ids
             .as_ref()
-            .map_or(true, alloc::vec::Vec::is_empty)
+            .is_none_or(alloc::vec::Vec::is_empty)
         {
-            self.unsubscribe_from_all_markets()?;
+            self.unsubscribe_from_all_markets().await?;
         }
 
         Ok(())
@@ -100,9 +100,9 @@ impl MarketSubscriber {
     ///
     /// # Errors
     /// If sending the request to the underlying stream fails.
-    pub fn unsubscribe_from_all_markets(
+    pub async fn unsubscribe_from_all_markets(
         &mut self,
-    ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
+    ) -> Result<(), tokio::sync::mpsc::error::SendError<RequestMessage>> {
         let market_that_does_not_exist = MarketId(Arc::new("1.23456789".to_owned()));
         self.filter = MarketFilter::default();
 
@@ -131,7 +131,7 @@ impl MarketSubscriber {
             })),
         });
 
-        self.command_sender.send(req)?;
+        self.command_sender.send(req).await?;
 
         Ok(())
     }
@@ -140,9 +140,9 @@ impl MarketSubscriber {
     ///
     /// # Errors
     /// If sending the request to the underlying stream fails.
-    pub fn resubscribe(
+    pub async fn resubscribe(
         &self,
-    ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
+    ) -> Result<(), tokio::sync::mpsc::error::SendError<RequestMessage>> {
         let req = RequestMessage::MarketSubscription(MarketSubscriptionMessage {
             id: None,
             clk: None,         // empty to reset the clock
@@ -156,7 +156,7 @@ impl MarketSubscriber {
                 fields: Some(self.market_data_fields.clone()),
             })),
         });
-        self.command_sender.send(req)?;
+        self.command_sender.send(req).await?;
 
         Ok(())
     }
@@ -177,12 +177,12 @@ impl MarketSubscriber {
     ///
     /// # Errors
     /// If the request to change the subscription fails.
-    pub fn set_filter(
+    pub async fn set_filter(
         &mut self,
         filter: MarketFilter,
-    ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
+    ) -> Result<(), tokio::sync::mpsc::error::SendError<RequestMessage>> {
         self.filter = filter;
-        self.resubscribe()
+        self.resubscribe().await
     }
 
     /// Get the current ladder level for depth-based ladders.
@@ -201,12 +201,12 @@ impl MarketSubscriber {
     ///
     /// # Errors
     /// If the request to change the subscription fails.
-    pub fn set_ladder_level(
+    pub async fn set_ladder_level(
         &mut self,
         ladder_level: Option<LadderLevel>,
-    ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
+    ) -> Result<(), tokio::sync::mpsc::error::SendError<RequestMessage>> {
         self.ladder_level = ladder_level;
-        self.resubscribe()
+        self.resubscribe().await
     }
 
     /// Get the current market data fields to subscribe to.
@@ -225,11 +225,11 @@ impl MarketSubscriber {
     ///
     /// # Errors
     /// If the request to change the subscription fails.
-    pub fn set_market_data_fields(
+    pub async fn set_market_data_fields(
         &mut self,
         market_data_fields: Vec<Fields>,
-    ) -> Result<(), tokio::sync::broadcast::error::SendError<RequestMessage>> {
+    ) -> Result<(), tokio::sync::mpsc::error::SendError<RequestMessage>> {
         self.market_data_fields = market_data_fields;
-        self.resubscribe()
+        self.resubscribe().await
     }
 }

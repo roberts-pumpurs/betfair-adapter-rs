@@ -1,10 +1,10 @@
 pub(crate) mod authenticated;
 mod unauthenticated;
 
-use crate::{secret, urls, SessionToken};
+use crate::{SessionToken, secret, urls};
 
 #[derive(Debug, Clone)]
-pub struct BetfairRpcProviderBase {
+pub struct BetfairRpcClient<T> {
     pub bot_login_client: reqwest::Client,
     pub rest_base: urls::BetfairUrl<urls::RestBase>,
     pub keep_alive: urls::BetfairUrl<urls::KeepAlive>,
@@ -13,34 +13,22 @@ pub struct BetfairRpcProviderBase {
     pub login: urls::BetfairUrl<urls::InteractiveLogin>,
     pub stream: urls::BetfairUrl<urls::Stream>,
     pub secret_provider: secret::SecretProvider,
+    pub state: T,
 }
 
 #[derive(Debug, Clone)]
 #[repr(transparent)]
-pub struct UnauthenticatedBetfairRpcProvider(BetfairRpcProviderBase);
+pub struct Unauthenticated;
 
 #[derive(Debug, Clone)]
-pub struct AuthenticatedBetfairRpcProvider {
-    base: BetfairRpcProviderBase,
+pub struct Authenticated {
     session_token: SessionToken,
     authenticated_client: reqwest::Client,
 }
 
-impl AuthenticatedBetfairRpcProvider {
+impl BetfairRpcClient<Authenticated> {
     #[must_use]
     pub const fn session_token(&self) -> &SessionToken {
-        &self.session_token
-    }
-
-    #[must_use]
-    pub const fn base(&self) -> &BetfairRpcProviderBase {
-        &self.base
-    }
-}
-
-impl UnauthenticatedBetfairRpcProvider {
-    #[must_use]
-    pub const fn base(&self) -> &BetfairRpcProviderBase {
-        &self.0
+        &self.state.session_token
     }
 }

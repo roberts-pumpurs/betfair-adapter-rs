@@ -110,12 +110,12 @@ impl GeneratedOutput {
     }
 
     /// Returns the root module file as a mutable `TokenStream`
-    pub fn submodules_mut(&mut self) -> &mut Vec<(String, TokenStream)> {
+    pub const fn submodules_mut(&mut self) -> &mut Vec<(String, TokenStream)> {
         &mut self.submodules
     }
 
     /// Returns the submodules as a mutable slice of tuples of the module name and the `TokenStream`
-    pub fn root_mut(&mut self) -> &mut TokenStream {
+    pub const fn root_mut(&mut self) -> &mut TokenStream {
         &mut self.root
     }
 }

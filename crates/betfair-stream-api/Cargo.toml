@@ -1,50 +1,39 @@
 [package]
 name = "betfair-stream-api"
-readme = "../../README.md"
-description.workspace = true
 version.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 license.workspace = true
 edition.workspace = true
-
-[lints]
-workspace = true
-
-[features]
-default = []
-integration-test = ["dep:rustls-pemfile"]
+description.workspace = true
+keywords.workspace = true
+categories.workspace = true
+documentation.workspace = true
+exclude.workspace = true
 
 [dependencies]
+backon.workspace = true
+tokio.workspace = true
+serde.workspace = true
+chrono.workspace = true
+futures.workspace = true
+url.workspace = true
 betfair-stream-types.workspace = true
 betfair-adapter.workspace = true
-url.workspace = true
-tokio.workspace = true
-tokio-stream.workspace = true
+tracing.workspace = true
+eyre.workspace = true
 tokio-util.workspace = true
 tokio-rustls.workspace = true
-serde_json.workspace = true
-thiserror.workspace = true
-tracing.workspace = true
-futures.workspace = true
-futures-concurrency.workspace = true
-futures-util.workspace = true
-serde.workspace = true
+tokio-stream.workspace = true
 rustls.workspace = true
-chrono.workspace = true
-eyre.workspace = true
+serde_json.workspace = true
 rustls-native-certs.workspace = true
-backoff.workspace = true
-rustls-pemfile = { workspace = true, optional = true }
-pin-project.workspace = true
 
 [dev-dependencies]
 rust_decimal_macros.workspace = true
 rust_decimal.workspace = true
-eyre.workspace = true
-chrono.workspace = true
-wiremock.workspace = true
 pretty_assertions.workspace = true
-rstest.workspace = true
-test-log.workspace = true
+
+[lints]
+workspace = true

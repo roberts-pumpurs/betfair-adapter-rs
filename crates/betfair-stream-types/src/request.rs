@@ -36,7 +36,7 @@ pub enum RequestMessage {
 
 impl RequestMessage {
     /// Sets the ID of the request message.
-    pub fn set_id(&mut self, id: i32) {
+    pub const fn set_id(&mut self, id: i32) {
         match self {
             Self::Authentication(msg) => msg.id = Some(id),
             Self::Heartbeat(msg) => msg.id = Some(id),

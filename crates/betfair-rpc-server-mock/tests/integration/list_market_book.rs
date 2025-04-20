@@ -2,8 +2,8 @@ use betfair_rpc_server_mock::Server;
 use betfair_types::price::Price;
 use betfair_types::size::Size;
 use betfair_types::types::sports_aping::{
-    list_market_book, ExchangePrices, MarketBook, MarketId, PriceData, PriceProjection, PriceSize,
-    Runner, RunnerStatus, SelectionId,
+    ExchangePrices, MarketBook, MarketId, PriceData, PriceProjection, PriceSize, Runner,
+    RunnerStatus, SelectionId, list_market_book,
 };
 use pretty_assertions::assert_eq;
 use rstest::rstest;

@@ -1,13 +1,13 @@
 //! This crate provides functionality to generate Betfair certificates for non-interactive bot
 //! usage. It includes methods for creating SSL/TLS certificates and key pairs.
 
-use eyre::WrapErr;
+use eyre::WrapErr as _;
 use rcgen::{
-    date_time_ymd, Certificate, CertificateParams, DistinguishedName, DnType,
-    ExtendedKeyUsagePurpose, IsCa, KeyPair, KeyUsagePurpose,
+    Certificate, CertificateParams, DistinguishedName, DnType, ExtendedKeyUsagePurpose, IsCa,
+    KeyPair, KeyUsagePurpose, date_time_ymd,
 };
-use rsa::pkcs8::EncodePrivateKey;
 use rsa::RsaPrivateKey;
+use rsa::pkcs8::EncodePrivateKey as _;
 
 /// Generate a Betfair certificate for non-interactive bot usage
 /// Reference:

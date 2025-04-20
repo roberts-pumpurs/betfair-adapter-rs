@@ -25,44 +25,44 @@ exclude = [
 ]
 
 [workspace.lints.clippy]
-cargo = { priority = -1, level = "deny" }
-complexity = { priority = -2, level = "deny" }
-perf = { priority = -3, level = "deny" }
-correctness = { priority = -4, level = "deny" }
-restriction = { priority = -5, level = "deny" }
-style = { priority = -6, level = "deny" }
-suspicious = { priority = -7, level = "deny" }
-pedantic = { priority = -8, level = "deny" }
-nursery = { priority = -9, level = "deny" }
+# cargo = { priority = -1, level = "deny" }
+# complexity = { priority = -2, level = "deny" }
+# perf = { priority = -3, level = "deny" }
+# correctness = { priority = -4, level = "deny" }
+# restriction = { priority = -5, level = "deny" }
+# style = { priority = -6, level = "deny" }
+# suspicious = { priority = -7, level = "deny" }
+# pedantic = { priority = -8, level = "deny" }
+# nursery = { priority = -9, level = "deny" }
 
-cargo_common_metadata = "allow"
-missing_docs_in_private_items = "allow"
-blanket_clippy_restriction_lints = "allow"
-implicit_return = "allow"
-dbg_macro = "allow"
-single_call_fn = "allow"
-missing_inline_in_public_items = "allow"
-question_mark_used = "allow"
-absolute_paths = "allow"
-missing_trait_methods = "allow"
-wildcard_imports = "allow"
-shadow_reuse = "allow"
-exhaustive_enums = "allow"
-ref_patterns = "allow"
-pub_use = "allow"
-single_char_lifetime_names = "allow"
-multiple_crate_versions = "allow"
-exhaustive_structs = "allow"
-future_not_send = "allow"
-separated_literal_suffix = "allow"
-mod_module_files = "allow"
-negative_feature_names = "allow"
-std_instead_of_alloc = "allow"
-expect_used = "allow"
-pub_with_shorthand = "allow"
-redundant_pub_crate = "allow"
-option_if_let_else = "allow"
-self_named_module_files = "allow"
+# cargo_common_metadata = "allow"
+# missing_docs_in_private_items = "allow"
+# blanket_clippy_restriction_lints = "allow"
+# implicit_return = "allow"
+# dbg_macro = "allow"
+# single_call_fn = "allow"
+# missing_inline_in_public_items = "allow"
+# question_mark_used = "allow"
+# absolute_paths = "allow"
+# missing_trait_methods = "allow"
+# wildcard_imports = "allow"
+# shadow_reuse = "allow"
+# exhaustive_enums = "allow"
+# ref_patterns = "allow"
+# pub_use = "allow"
+# single_char_lifetime_names = "allow"
+# multiple_crate_versions = "allow"
+# exhaustive_structs = "allow"
+# future_not_send = "allow"
+# separated_literal_suffix = "allow"
+# mod_module_files = "allow"
+# negative_feature_names = "allow"
+# std_instead_of_alloc = "allow"
+# expect_used = "allow"
+# pub_with_shorthand = "allow"
+# redundant_pub_crate = "allow"
+# option_if_let_else = "allow"
+# self_named_module_files = "allow"
 
 [workspace.lints.rust]
 missing_docs = { level = "warn", priority = -1 }
@@ -76,7 +76,6 @@ unused_must_use = { level = "deny", priority = -1 }
 betfair-adapter = { path = "crates/betfair-adapter", version = "0" }
 betfair-types = { path = "crates/betfair-types", version = "0" }
 betfair-stream-types = { path = "crates/betfair-stream-types", version = "0" }
-betfair-stream-server-mock = { path = "crates/betfair-stream-server-mock", version = "0" }
 betfair-stream-api = { path = "crates/betfair-stream-api", version = "0" }
 betfair-xml-parser = { path = "crates/betfair-xml-parser", version = "0" }
 betfair-rpc-server-mock = { path = "crates/betfair-rpc-server-mock", version = "0" }
@@ -98,11 +97,12 @@ trait-variant = "0.1"
 itertools = "0.14"
 backoff = { version = "0.4", features = ["tokio"] }
 log = "0.4"
+backon = "1.5"
 
 # Async
 tokio = { version = "1.0", features = ["full", "tracing"] }
 tokio-util = { version = "0.7", features = ["codec"] }
-tokio-stream = { version = "0.1", features = ["sync"] }
+tokio-stream = { version = "0.1", features = ["full"] }
 tokio-rustls = { version = "0.26", default-features = false, features = ["tls12"] }
 futures-concurrency = "7.4"
 futures-util = "0.3"

@@ -1,14 +1,14 @@
 use std::env;
 use std::path::PathBuf;
 
-use betfair_stream_api::{cache, tokio_util, StreamAPIClientCodec};
+use betfair_stream_api::{StreamAPIClientCodec, cache};
 use betfair_stream_types::response::ResponseMessage;
-use futures::StreamExt;
+use futures::StreamExt as _;
 use tokio::fs::File;
 use tokio_util::codec::Framed;
 
 #[tokio::test]
-async fn test_can_build_prod_cache_from_straem_data() {
+async fn test_can_build_prod_cache_from_stream_data() {
     let fixture = PathBuf::new()
         .join(env::current_dir().unwrap())
         .join("fixtures")
@@ -21,12 +21,16 @@ async fn test_can_build_prod_cache_from_straem_data() {
     let mut framed = Framed::new(file, StreamAPIClientCodec).take(500);
     while let Some(frame) = framed.next().await {
         let frame = frame.unwrap();
-        let change = match frame {
-            ResponseMessage::MarketChange(mc) => cache::tracker::IncomingMessage::Market(mc),
-            ResponseMessage::OrderChange(oc) => cache::tracker::IncomingMessage::Order(oc),
-            ResponseMessage::Connection(_) | ResponseMessage::Status(_) => unreachable!(),
-        };
-        cached_state.calculate_updates(change);
+        match frame {
+            ResponseMessage::Connection(_) => {}
+            ResponseMessage::MarketChange(msg) => {
+                cached_state.market_change_update(msg);
+            }
+            ResponseMessage::OrderChange(msg) => {
+                cached_state.order_change_update(msg);
+            }
+            ResponseMessage::Status(_) => {}
+        }
     }
     dbg!(cached_state);
 }

@@ -29,7 +29,8 @@ impl CustomerOrderRef {
     }
 
     /// Returns a reference to the inner string.
-    #[must_use] pub fn as_str(&self) -> &str {
+    #[must_use]
+    pub fn as_str(&self) -> &str {
         &self.0
     }
 }
@@ -59,7 +60,7 @@ impl<'de> Deserialize<'de> for CustomerOrderRef {
     {
         struct CustomerOrderRefVisitor;
 
-        impl<'de> Visitor<'de> for CustomerOrderRefVisitor {
+        impl Visitor<'_> for CustomerOrderRefVisitor {
             type Value = CustomerOrderRef;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {

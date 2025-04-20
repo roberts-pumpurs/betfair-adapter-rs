@@ -12,7 +12,7 @@ pub struct CustomerRef(String);
 impl CustomerRef {
     pub fn new(customer_ref: String) -> Result<Self, CustomerRefParseError> {
         if customer_ref.len() > 32 {
-            return Err(CustomerRefParseError::TooLong)
+            return Err(CustomerRefParseError::TooLong);
         }
         const VALID_CHARS: &[char] = &['-', '.', '_', '+', '*', ':', ';', '~'];
 
@@ -20,7 +20,7 @@ impl CustomerRef {
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || VALID_CHARS.contains(&c))
         {
-            return Err(CustomerRefParseError::InvalidCharacters)
+            return Err(CustomerRefParseError::InvalidCharacters);
         }
         Ok(Self(customer_ref))
     }

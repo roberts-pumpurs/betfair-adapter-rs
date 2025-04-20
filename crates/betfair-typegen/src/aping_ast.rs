@@ -4,7 +4,7 @@ pub(crate) mod rpc_calls;
 pub(crate) mod types;
 
 use betfair_xml_parser::Interface;
-use heck::ToPascalCase;
+use heck::ToPascalCase as _;
 use typed_builder::TypedBuilder;
 
 use self::data_type::{
@@ -58,7 +58,7 @@ impl From<Interface> for Aping {
                     aping.insert_exception_type(x);
                 }
                 betfair_xml_parser::InterfaceItems::Operation(ref x) => aping.insert_operation(x),
-            };
+            }
             aping
         });
 
@@ -358,8 +358,8 @@ mod prism_impls {
                     betfair_xml_parser::operation::ParametersItems::SimpleResponse(ref x) => {
                         Some(x.clone())
                     }
-                    betfair_xml_parser::operation::ParametersItems::Request(_) |
-                    betfair_xml_parser::operation::ParametersItems::Exceptions(_) => None,
+                    betfair_xml_parser::operation::ParametersItems::Request(_)
+                    | betfair_xml_parser::operation::ParametersItems::Exceptions(_) => None,
                 })
                 .map(|x| Returns {
                     data_type: x.r#type.clone().into(),
@@ -389,8 +389,8 @@ mod prism_impls {
                     betfair_xml_parser::operation::ParametersItems::Exceptions(ref x) => {
                         Some(x.clone())
                     }
-                    betfair_xml_parser::operation::ParametersItems::Request(_) |
-                    betfair_xml_parser::operation::ParametersItems::SimpleResponse(_) => None,
+                    betfair_xml_parser::operation::ParametersItems::Request(_)
+                    | betfair_xml_parser::operation::ParametersItems::SimpleResponse(_) => None,
                 })
                 .flat_map(|x| x.values)
                 .map(|x| Exception {
@@ -431,8 +431,8 @@ mod prism_impls {
                     betfair_xml_parser::operation::ParametersItems::Request(ref x) => {
                         Some(x.clone())
                     }
-                    betfair_xml_parser::operation::ParametersItems::SimpleResponse(_) |
-                    betfair_xml_parser::operation::ParametersItems::Exceptions(_) => None,
+                    betfair_xml_parser::operation::ParametersItems::SimpleResponse(_)
+                    | betfair_xml_parser::operation::ParametersItems::Exceptions(_) => None,
                 })
                 .flat_map(|x| x.values.unwrap_or_default())
                 .map(|x| {
@@ -473,8 +473,8 @@ mod prism_impls {
                     betfair_xml_parser::operation::ParametersItems::Request(ref x) => {
                         Some(x.clone())
                     }
-                    betfair_xml_parser::operation::ParametersItems::SimpleResponse(_) |
-                    betfair_xml_parser::operation::ParametersItems::Exceptions(_) => None,
+                    betfair_xml_parser::operation::ParametersItems::SimpleResponse(_)
+                    | betfair_xml_parser::operation::ParametersItems::Exceptions(_) => None,
                 })
                 .flat_map(|x| x.values.unwrap_or_default())
                 .filter_map(|x| {

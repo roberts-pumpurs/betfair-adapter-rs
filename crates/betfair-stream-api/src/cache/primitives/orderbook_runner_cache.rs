@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use betfair_adapter::betfair_types::customer_strategy_ref::CustomerStrategyRef;
 use betfair_adapter::betfair_types::types::sports_aping::{BetId, MarketId, SelectionId};
 use betfair_adapter::rust_decimal::Decimal;
-use betfair_stream_types::response::order_change_message::{Order, StrategyMatchChange};
 use betfair_stream_types::response::UpdateSet2;
+use betfair_stream_types::response::order_change_message::{Order, StrategyMatchChange};
 use serde::{Deserialize, Serialize};
 
 use super::available_cache::Available;

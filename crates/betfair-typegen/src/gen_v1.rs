@@ -13,9 +13,9 @@ use proc_macro2::TokenStream;
 use quote::quote;
 
 use self::type_resolver::TypeResolverV1;
+use crate::GeneratorStrategy;
 use crate::aping_ast::Aping;
 use crate::settings::GeneratorSettings;
-use crate::GeneratorStrategy;
 
 /// The first version of `BetfairTypeGen` implementation
 #[derive(Debug)]
