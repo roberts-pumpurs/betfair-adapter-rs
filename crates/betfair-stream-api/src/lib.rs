@@ -45,11 +45,6 @@ use tokio_util::{
 /// heartbeat and automatic reconnects.
 /// Builder for creating a Betfair Streaming API client.
 ///
-/// The builder allows configuring:
-/// - heartbeat interval (`with_heartbeat`)
-/// - custom TLS certificate (`with_custom_tls_cert`)
-/// - message processing via a `MessageProcessor` implementation
-///
 /// # Type Parameters
 ///
 /// - `T`: A type that implements `MessageProcessor`, used to handle incoming `ResponseMessage` objects.
@@ -66,7 +61,9 @@ pub struct BetfairStreamBuilder<T: MessageProcessor> {
 ///
 /// Provides channels to send requests (`send_to_stream`) and receive processed messages (`sink`).
 pub struct BetfairStreamClient<T: MessageProcessor> {
+    /// send a message to the Betfair stream
     pub send_to_stream: Sender<RequestMessage>,
+    /// Receive a message from the stream
     pub sink: Receiver<T::Output>,
 }
 
@@ -77,17 +74,26 @@ pub struct Cache {
     state: StreamState,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-/// Processed message variants produced by the `Cache` processor.
+/// Variants of messages produced by the cache-based processor.
 ///
-/// - `Connection`: initial connection message
-/// - `MarketChange`: updates to market book cache
-/// - `OrderChange`: updates to order book cache
-/// - `Status`: status messages from the stream
+/// `CachedMessage` represents high-level events derived from raw Betfair streaming responses,
+/// enriched with internal cache state for market and order books.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CachedMessage {
+    /// A connection handshake message received from the stream,
+    /// containing connection ID and related metadata.
+    /// Also returned on heartbeat messages.
     Connection(ConnectionMessage),
+
+    /// A batch of market book updates, each describing the current state or changes of a market.
     MarketChange(Vec<MarketBookCache>),
+
+    /// A batch of order book updates, representing new orders, matched orders,
+    /// and cancellations in the order cache.
     OrderChange(Vec<OrderBookCache>),
+
+    /// A status message from the stream, used for heartbeats,
+    /// subscription confirmations, or error notifications.
     Status(StatusMessage),
 }
 
@@ -121,6 +127,7 @@ impl MessageProcessor for Cache {
         }
     }
 }
+
 /// `MessageProcessor` that forwards raw `ResponseMessage` objects without transformation.
 pub struct Forwarder;
 impl MessageProcessor for Forwarder {
@@ -133,12 +140,10 @@ impl MessageProcessor for Forwarder {
 /// Trait for processing incoming Betfair streaming `ResponseMessage` objects into user-defined outputs.
 ///
 /// Implementers can filter or transform messages and control which messages are forwarded to the client sink.
-///
-/// # Associated Types
-///
-/// - `Output`: The processed message type produced by `process_message`.
 pub trait MessageProcessor: Send + Sync + 'static {
+    /// The processed message type produced by `process_message`
     type Output: Send + Clone + Sync + 'static + std::fmt::Debug;
+
     /// Process an incoming `ResponseMessage`.
     ///
     /// Returns `Some(Output)` to forward a processed message, or `None` to drop it.
@@ -146,6 +151,18 @@ pub trait MessageProcessor: Send + Sync + 'static {
 }
 
 impl<T: MessageProcessor> BetfairStreamBuilder<T> {
+    /// Creates a new `BetfairStreamBuilder` with the given authenticated RPC client.
+    ///
+    /// Uses the default `Cache` message processor to maintain market and order caches.
+    /// By default, no heartbeat messages are sent.
+    ///
+    /// # Parameters
+    ///
+    /// * `client` - An authenticated Betfair RPC client for establishing the streaming connection.
+    ///
+    /// # Returns
+    ///
+    /// A `BetfairStreamBuilder` configured with cache-based message processing.
     pub fn new(client: BetfairRpcClient<Authenticated>) -> BetfairStreamBuilder<Cache> {
         BetfairStreamBuilder {
             client,
@@ -156,6 +173,18 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
         }
     }
 
+    /// Creates a new `BetfairStreamBuilder` with raw message forwarding.
+    ///
+    /// Uses the `Forwarder` message processor to forward raw `ResponseMessage` objects without caching.
+    /// By default, no heartbeat messages are sent.
+    ///
+    /// # Parameters
+    ///
+    /// * `client` - An authenticated Betfair RPC client for establishing the streaming connection.
+    ///
+    /// # Returns
+    ///
+    /// A `BetfairStreamBuilder` configured to forward raw messages.
     pub fn new_without_cache(
         client: BetfairRpcClient<Authenticated>,
     ) -> BetfairStreamBuilder<Forwarder> {
@@ -166,11 +195,31 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
         }
     }
 
+    /// Enables periodic heartbeat messages to keep the streaming connection alive.
+    ///
+    /// # Parameters
+    ///
+    /// * `interval` - The duration between heartbeat messages.
+    ///
+    /// # Returns
+    ///
+    /// The updated `BetfairStreamBuilder` with heartbeat enabled.
     pub fn with_heartbeat(mut self, interval: Duration) -> Self {
         self.heartbeat_interval = Some(interval);
         self
     }
 
+    /// Starts the Betfair streaming client and returns handles for interaction.
+    ///
+    /// This will spawn an asynchronous task that manages the connection, handshake,
+    /// incoming/outgoing messages, heartbeats (if enabled), and automatic reconnections.
+    ///
+    /// # Returns
+    ///
+    /// * `BetfairStreamClient<T>` - A client handle providing:
+    ///     - `send_to_stream`: a channel sender for outgoing `RequestMessage`s.
+    ///     - `sink`: a channel receiver for processed messages of type `T::Output`.
+    /// * `JoinHandle<eyre::Result<()>>` - A handle to the background task driving the streaming logic.
     pub async fn start(self) -> (BetfairStreamClient<T>, JoinHandle<eyre::Result<()>>) {
         let (to_stream_tx, to_stream_rx) = mpsc::channel(100);
         let (from_stream_tx, from_stream_rx) = mpsc::channel(100);
