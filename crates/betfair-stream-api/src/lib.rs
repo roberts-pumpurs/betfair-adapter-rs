@@ -39,11 +39,12 @@ use tokio_util::{
 
 /// A Betfair Stream API client that handles connection, handshake, incoming/outgoing messages,
 /// heartbeat and automatic reconnects.
-pub struct BetfairStreamConnection<T: MessageProcessor> {
+pub struct BetfairStreamBuilder<T: MessageProcessor> {
     /// betfair cient
     pub client: BetfairRpcClient<Authenticated>,
     /// Heartbeat interval (used only if heartbeat_enabled is true)
     pub heartbeat_interval: Option<Duration>,
+    pub custom_tls_cert: Option<String>,
     pub processor: T,
 }
 
@@ -107,11 +108,12 @@ pub trait MessageProcessor: Send + Sync + 'static {
     fn process_message(&mut self, message: ResponseMessage) -> Option<Self::Output>;
 }
 
-impl<T: MessageProcessor> BetfairStreamConnection<T> {
-    pub fn new(client: BetfairRpcClient<Authenticated>) -> BetfairStreamConnection<Cache> {
-        BetfairStreamConnection {
+impl<T: MessageProcessor> BetfairStreamBuilder<T> {
+    pub fn new(client: BetfairRpcClient<Authenticated>) -> BetfairStreamBuilder<Cache> {
+        BetfairStreamBuilder {
             client,
             heartbeat_interval: None,
+            custom_tls_cert: None,
             processor: Cache {
                 state: StreamState::new(),
             },
@@ -120,9 +122,10 @@ impl<T: MessageProcessor> BetfairStreamConnection<T> {
 
     pub fn new_without_cache(
         client: BetfairRpcClient<Authenticated>,
-    ) -> BetfairStreamConnection<Forwarder> {
-        BetfairStreamConnection {
+    ) -> BetfairStreamBuilder<Forwarder> {
+        BetfairStreamBuilder {
             client,
+            custom_tls_cert: None,
             heartbeat_interval: None,
             processor: Forwarder,
         }
@@ -130,6 +133,11 @@ impl<T: MessageProcessor> BetfairStreamConnection<T> {
 
     pub fn with_heartbeat(mut self, interval: Duration) -> Self {
         self.heartbeat_interval = Some(interval);
+        self
+    }
+
+    pub fn with_custom_tls_cert(mut self, cert: String) -> Self {
+        self.custom_tls_cert = Some(cert);
         self
     }
 

@@ -76,7 +76,6 @@ unused_must_use = { level = "deny", priority = -1 }
 betfair-adapter = { path = "crates/betfair-adapter", version = "0" }
 betfair-types = { path = "crates/betfair-types", version = "0" }
 betfair-stream-types = { path = "crates/betfair-stream-types", version = "0" }
-betfair-stream-server-mock = { path = "crates/betfair-stream-server-mock", version = "0" }
 betfair-stream-api = { path = "crates/betfair-stream-api", version = "0" }
 betfair-xml-parser = { path = "crates/betfair-xml-parser", version = "0" }
 betfair-rpc-server-mock = { path = "crates/betfair-rpc-server-mock", version = "0" }

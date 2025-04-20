@@ -7,7 +7,7 @@ use betfair_adapter::{
 use betfair_stream_api::cache::market_subscriber::MarketSubscriber;
 use betfair_stream_api::types::request::market_subscription_message::LadderLevel;
 use betfair_stream_api::types::request::market_subscription_message::{self, Fields};
-use betfair_stream_api::{BetfairStreamConnection, Cache, CachedMessage};
+use betfair_stream_api::{BetfairStreamBuilder, Cache, CachedMessage};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
@@ -58,7 +58,7 @@ async fn main() -> eyre::Result<()> {
     let market_id = market_book[0].market_id.clone();
 
     // connect to stream
-    let stream = BetfairStreamConnection::<Cache>::new(bf_client);
+    let stream = BetfairStreamBuilder::<Cache>::new(bf_client);
     let (mut stream, _task) = stream.start().await;
 
     // start processing stream

@@ -33,6 +33,7 @@ rustls-native-certs.workspace = true
 
 [dev-dependencies]
 rust_decimal_macros.workspace = true
+rust_decimal.workspace = true
 pretty_assertions.workspace = true
 
 [lints]

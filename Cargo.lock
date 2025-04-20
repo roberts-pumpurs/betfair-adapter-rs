@@ -263,6 +263,7 @@ dependencies = [
  "eyre",
  "futures",
  "pretty_assertions",
+ "rust_decimal",
  "rust_decimal_macros",
  "rustls",
  "rustls-native-certs",
@@ -274,36 +275,6 @@ dependencies = [
  "tokio-util",
  "tracing",
  "url",
-]
-
-[[package]]
-name = "betfair-stream-server-mock"
-version = "0.2.1"
-dependencies = [
- "betfair-adapter",
- "betfair-rpc-server-mock",
- "betfair-stream-api",
- "betfair-stream-types",
- "chrono",
- "eyre",
- "futures",
- "futures-util",
- "pretty_assertions",
- "rcgen",
- "rstest",
- "rust_decimal",
- "rust_decimal_macros",
- "rustls",
- "rustls-pemfile",
- "serde_json",
- "test-log",
- "tokio",
- "tokio-rustls",
- "tokio-stream",
- "tokio-util",
- "tracing",
- "url",
- "wiremock",
 ]
 
 [[package]]

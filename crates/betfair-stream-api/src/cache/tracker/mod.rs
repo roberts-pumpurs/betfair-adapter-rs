@@ -31,11 +31,6 @@ pub enum Updates<'a> {
     Order(Vec<&'a OrderBookCache>),
 }
 
-pub enum IncomingMessage {
-    Market(MarketChangeMessage),
-    Order(OrderChangeMessage),
-}
-
 pub struct HasFullImage(pub bool);
 
 impl Default for StreamState {

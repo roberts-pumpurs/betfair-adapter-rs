@@ -5,7 +5,7 @@ use betfair_adapter::{
 };
 use betfair_stream_api::cache::order_subscriber::OrderSubscriber;
 use betfair_stream_api::types::request::order_subscription_message::OrderFilter;
-use betfair_stream_api::{BetfairStreamConnection, Cache, CachedMessage};
+use betfair_stream_api::{BetfairStreamBuilder, Cache, CachedMessage};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
@@ -37,7 +37,7 @@ async fn main() -> eyre::Result<()> {
 
     // connect to stream
     let stream =
-        BetfairStreamConnection::<Cache>::new(bf_client).with_heartbeat(Duration::from_secs(5));
+        BetfairStreamBuilder::<Cache>::new(bf_client).with_heartbeat(Duration::from_secs(5));
     let (mut stream, _task) = stream.start().await;
 
     // start processing stream
