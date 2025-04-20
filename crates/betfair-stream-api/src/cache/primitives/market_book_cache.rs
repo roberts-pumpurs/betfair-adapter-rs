@@ -42,10 +42,9 @@ impl MarketBookCache {
     /// Checks if the market is closed.
     #[must_use]
     pub fn is_closed(&self) -> bool {
-        !self
-            .market_definition
+        self.market_definition
             .as_ref()
-            .is_some_and(|x| x.status == StreamMarketDefinitionStatus::Open)
+            .is_none_or(|x| x.status != StreamMarketDefinitionStatus::Open)
     }
 
     /// Updates the cache with the latest market changes.

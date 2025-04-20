@@ -55,10 +55,7 @@ impl StreamState {
         }
     }
 
-    pub fn order_change_update<'a>(
-        &'a mut self,
-        msg: OrderChangeMessage,
-    ) -> Option<Vec<&'a OrderBookCache>> {
+    pub fn order_change_update(&mut self, msg: OrderChangeMessage) -> Option<Vec<&OrderBookCache>> {
         match msg.change_type {
             Some(ChangeType::SubImage) => {
                 self.update_clk(&msg);
@@ -76,10 +73,10 @@ impl StreamState {
         }
     }
 
-    pub fn market_change_update<'a>(
-        &'a mut self,
+    pub fn market_change_update(
+        &mut self,
         msg: MarketChangeMessage,
-    ) -> Option<Vec<&'a MarketBookCache>> {
+    ) -> Option<Vec<&MarketBookCache>> {
         match msg.change_type {
             Some(ChangeType::SubImage) => {
                 self.update_clk(&msg);
@@ -99,7 +96,7 @@ impl StreamState {
 
     fn on_update<T: DeserializeOwned + DataChange<T>>(&mut self, msg: &DatasetChangeMessage<T>) {
         if self.update_clk.is_some() {
-            self.update_clk(&msg);
+            self.update_clk(msg);
         }
         if let (Some(publish_time), Some(max_latency_ms)) = (msg.publish_time, self.max_latency_ms)
         {

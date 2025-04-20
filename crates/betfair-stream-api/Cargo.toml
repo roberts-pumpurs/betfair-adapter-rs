@@ -20,7 +20,6 @@ chrono.workspace = true
 futures.workspace = true
 url.workspace = true
 betfair-stream-types.workspace = true
-betfair-types.workspace = true
 betfair-adapter.workspace = true
 tracing.workspace = true
 eyre.workspace = true

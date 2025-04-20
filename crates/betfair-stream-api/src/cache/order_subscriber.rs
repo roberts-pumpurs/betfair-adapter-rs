@@ -60,7 +60,7 @@ impl OrderSubscriber {
             .filter
             .customer_strategy_refs
             .as_ref()
-            .map_or(true, alloc::vec::Vec::is_empty)
+            .is_none_or(alloc::vec::Vec::is_empty)
         {
             self.unsubscribe_from_all_markets().await?;
         }

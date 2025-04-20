@@ -6,7 +6,7 @@
 //! or using the built-in `Cache` processor for maintaining market and order caches.
 extern crate alloc;
 pub mod cache;
-use backon::{BackoffBuilder, ExponentialBuilder};
+use backon::{BackoffBuilder as _, ExponentialBuilder};
 use betfair_adapter::{Authenticated, BetfairRpcClient};
 pub use betfair_stream_types as types;
 use betfair_stream_types::{
@@ -22,13 +22,13 @@ use cache::{
     tracker::StreamState,
 };
 use core::fmt;
-use eyre::Context;
+use core::{pin::pin, time::Duration};
+use eyre::Context as _;
 use futures::{
-    SinkExt, StreamExt,
+    SinkExt as _, StreamExt as _,
     future::{self, select},
 };
 use std::sync::Arc;
-use std::{pin::pin, time::Duration};
 use tokio::{
     net::TcpStream,
     sync::mpsc::{self, Receiver, Sender},
@@ -110,7 +110,7 @@ impl MessageProcessor for Cache {
                     .state
                     .market_change_update(market_change_message)
                     .map(|markets| markets.into_iter().cloned().collect::<Vec<_>>())
-                    .map(|markets| CachedMessage::MarketChange(markets));
+                    .map(CachedMessage::MarketChange);
 
                 data
             }
@@ -119,7 +119,7 @@ impl MessageProcessor for Cache {
                     .state
                     .order_change_update(order_change_message)
                     .map(|markets| markets.into_iter().cloned().collect::<Vec<_>>())
-                    .map(|markets| CachedMessage::OrderChange(markets));
+                    .map(CachedMessage::OrderChange);
 
                 data
             }
@@ -142,7 +142,7 @@ impl MessageProcessor for Forwarder {
 /// Implementers can filter or transform messages and control which messages are forwarded to the client sink.
 pub trait MessageProcessor: Send + Sync + 'static {
     /// The processed message type produced by `process_message`
-    type Output: Send + Clone + Sync + 'static + std::fmt::Debug;
+    type Output: Send + Clone + Sync + 'static + core::fmt::Debug;
 
     /// Process an incoming `ResponseMessage`.
     ///
@@ -509,7 +509,7 @@ impl fmt::Display for HandshakeErr {
     }
 }
 
-impl std::error::Error for HandshakeErr {}
+impl core::error::Error for HandshakeErr {}
 
 #[tracing::instrument(err)]
 fn tls_connector() -> eyre::Result<tokio_rustls::TlsConnector> {
@@ -578,7 +578,7 @@ impl Encoder<RequestMessage> for StreamAPIClientCodec {
 #[cfg(test)]
 mod tests {
 
-    use core::fmt::Write;
+    use core::fmt::Write as _;
 
     use super::*;
 

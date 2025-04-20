@@ -66,7 +66,7 @@ impl MarketStreamTracker {
             }
             return (Some(updated_caches), img);
         };
-        return (None, img);
+        (None, img)
     }
 
     pub(crate) fn clear_stale_cache(&mut self, publish_time: chrono::DateTime<chrono::Utc>) {
