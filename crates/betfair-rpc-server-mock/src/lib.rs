@@ -1,12 +1,13 @@
 use betfair_adapter::jurisdiction::CustomUrl;
 use betfair_adapter::{
-    ApplicationKey, BetfairConfigBuilder, BotLogin, Identity, InteractiveLogin, KeepAlive, Logout,
-    Password, RestBase, SecretProvider, Stream, UnauthenticatedBetfairRpcProvider, Username,
+    ApplicationKey, Authenticated, BetfairConfigBuilder, BetfairRpcClient, BotLogin, Identity,
+    InteractiveLogin, KeepAlive, Logout, Password, RestBase, SecretProvider, Stream,
+    Unauthenticated, Username,
 };
 use betfair_types::types::BetfairRpcRequest;
 use serde_json::json;
 pub use wiremock;
-use wiremock::matchers::{method, path, PathExactMatcher};
+use wiremock::matchers::{PathExactMatcher, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 mod urlencoded_matcher;
@@ -87,11 +88,11 @@ impl Server {
     }
 
     /// Create a betfair client with the mock server as the base url
-    pub async fn client(&self) -> UnauthenticatedBetfairRpcProvider {
+    pub async fn client(&self) -> BetfairRpcClient<Unauthenticated> {
         let secrets_provider = self.secrets_provider();
         let config = self.betfair_config(secrets_provider);
 
-        UnauthenticatedBetfairRpcProvider::new_with_config(config).unwrap()
+        BetfairRpcClient::new_with_config(config).unwrap()
     }
 
     #[must_use]

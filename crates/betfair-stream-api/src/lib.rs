@@ -16,6 +16,7 @@ use cache::{
     primitives::{MarketBookCache, OrderBookCache},
     tracker::StreamState,
 };
+use core::fmt;
 use eyre::{Context, OptionExt};
 use futures::{
     SinkExt, StreamExt,
@@ -66,32 +67,30 @@ pub enum CachedMessage {
 impl MessageProcessor for Cache {
     type Output = CachedMessage;
 
-    fn process_message(&mut self, message: ResponseMessage) -> Self::Output {
+    fn process_message(&mut self, message: ResponseMessage) -> Option<Self::Output> {
         match message {
             ResponseMessage::Connection(connection_message) => {
-                CachedMessage::Connection(connection_message)
+                Some(CachedMessage::Connection(connection_message))
             }
             ResponseMessage::MarketChange(market_change_message) => {
                 let data = self
                     .state
                     .market_change_update(market_change_message)
-                    .into_iter()
-                    .cloned()
-                    .collect();
+                    .map(|markets| markets.into_iter().cloned().collect::<Vec<_>>())
+                    .map(|markets| CachedMessage::MarketChange(markets));
 
-                CachedMessage::MarketChange(data)
+                data
             }
             ResponseMessage::OrderChange(order_change_message) => {
                 let data = self
                     .state
                     .order_change_update(order_change_message)
-                    .into_iter()
-                    .cloned()
-                    .collect();
+                    .map(|markets| markets.into_iter().cloned().collect::<Vec<_>>())
+                    .map(|markets| CachedMessage::OrderChange(markets));
 
-                CachedMessage::OrderChange(data)
+                data
             }
-            ResponseMessage::Status(status_message) => CachedMessage::Status(status_message),
+            ResponseMessage::Status(status_message) => Some(CachedMessage::Status(status_message)),
         }
     }
 }
@@ -99,13 +98,13 @@ pub struct Forwarder;
 impl MessageProcessor for Forwarder {
     type Output = ResponseMessage;
 
-    fn process_message(&mut self, message: ResponseMessage) -> Self::Output {
-        message
+    fn process_message(&mut self, message: ResponseMessage) -> Option<Self::Output> {
+        Some(message)
     }
 }
 pub trait MessageProcessor: Send + Sync + 'static {
-    type Output: Send + Clone + Sync + 'static;
-    fn process_message(&mut self, message: ResponseMessage) -> Self::Output;
+    type Output: Send + Clone + Sync + 'static + std::fmt::Debug;
+    fn process_message(&mut self, message: ResponseMessage) -> Option<Self::Output>;
 }
 
 impl<T: MessageProcessor> BetfairStreamConnection<T> {
@@ -119,7 +118,7 @@ impl<T: MessageProcessor> BetfairStreamConnection<T> {
         }
     }
 
-    pub fn new_without_processing(
+    pub fn new_without_cache(
         client: BetfairRpcClient<Authenticated>,
     ) -> BetfairStreamConnection<Forwarder> {
         BetfairStreamConnection {
@@ -127,6 +126,11 @@ impl<T: MessageProcessor> BetfairStreamConnection<T> {
             heartbeat_interval: None,
             processor: Forwarder,
         }
+    }
+
+    pub fn with_heartbeat(mut self, interval: Duration) -> Self {
+        self.heartbeat_interval = Some(interval);
+        self
     }
 
     pub async fn start(self) -> (BetfairStreamClient<T>, JoinHandle<eyre::Result<()>>) {
@@ -155,7 +159,16 @@ impl<T: MessageProcessor> BetfairStreamConnection<T> {
                 interval.reset();
                 let interval_stream = IntervalStream::new(interval).fuse();
                 interval_stream
-                    .map(move |_s| HeartbeatMessage { id: Some(123) })
+                    .map(move |instant| HeartbeatMessage {
+                        id: Some(
+                            instant
+                                .into_std()
+                                .elapsed()
+                                .as_secs()
+                                .try_into()
+                                .unwrap_or_default(),
+                        ),
+                    })
                     .map(RequestMessage::Heartbeat)
                     .boxed()
             };
@@ -176,8 +189,15 @@ impl<T: MessageProcessor> BetfairStreamConnection<T> {
         mut from_stream_tx: Sender<T::Output>,
         mut to_stream_rx: impl futures::Stream<Item = RequestMessage> + Unpin,
     ) -> eyre::Result<()> {
+        let mut backoff = ExponentialBuilder::new().build();
         'retry: loop {
-            // Connect (with handshake) using retry/backoff logic.
+            // add exponential recovery
+            let Some(delay) = backoff.next() else {
+                eyre::bail!("connection retry attempts exceeded")
+            };
+            sleep(delay).await;
+
+            // Connect (with handshake) using retry logic.
             let mut stream = self.connect_with_retry(&mut from_stream_tx).await?;
             tracing::info!("Connected to {}", self.client.stream.url());
 
@@ -187,22 +207,32 @@ impl<T: MessageProcessor> BetfairStreamConnection<T> {
                 match select(to_stream_rx_next, stream_next).await {
                     future::Either::Left((request, _)) => {
                         let Some(request) = request else {
+                            tracing::warn!("request returned None");
                             continue 'retry;
                         };
 
+                        tracing::debug!(?request, "sending to betfair");
                         let Ok(()) = stream.send(request).await else {
+                            tracing::warn!("could not send request to straem");
                             continue 'retry;
                         };
                     }
                     future::Either::Right((message, _)) => {
                         let Some(message) = message else {
+                            tracing::warn!("straem returned None");
                             continue 'retry;
                         };
 
                         match message {
                             Ok(message) => {
                                 let message = self.processor.process_message(message);
+                                tracing::debug!(?message, "received from betfair");
+                                let Some(message) = message else {
+                                    continue;
+                                };
+
                                 let Ok(()) = from_stream_tx.send(message).await else {
+                                    tracing::warn!("could not send stream message to sink");
                                     continue 'retry;
                                 };
                             }
@@ -215,11 +245,22 @@ impl<T: MessageProcessor> BetfairStreamConnection<T> {
     }
 
     /// Attempt to connect and perform a handshake using exponential backoff.
+    #[tracing::instrument(skip_all, err)]
     async fn connect_with_retry(
         &mut self,
         from_stream_tx: &mut Sender<T::Output>,
     ) -> eyre::Result<Framed<tokio_rustls::client::TlsStream<TcpStream>, StreamAPIClientCodec>>
     {
+        let mut backoff = ExponentialBuilder::new().build();
+        let mut delay = async || {
+            if let Some(delay) = backoff.next() {
+                sleep(delay).await;
+                Ok(())
+            } else {
+                eyre::bail!("exceeded retry attempts, could not connect");
+            }
+        };
+
         loop {
             let server_addr = self.client.stream.url();
             let host = server_addr
@@ -233,16 +274,6 @@ impl<T: MessageProcessor> BetfairStreamConnection<T> {
             let domain = rustls::pki_types::ServerName::try_from(domain_str.to_owned())
                 .wrap_err("failed to parse server name")?;
 
-            let mut backoff = ExponentialBuilder::new().build();
-
-            let mut delay = async move || {
-                if let Some(delay) = backoff.next() {
-                    sleep(delay).await;
-                    Ok(())
-                } else {
-                    eyre::bail!("exceeded retry attempts, could not connect");
-                }
-            };
             // Resolve socket addresses each iteration in case DNS changes
             let Some(socket_addr) = tokio::net::lookup_host((host, port)).await?.next() else {
                 eyre::bail!("no valid socket addresses for {host}:{port}")
@@ -257,45 +288,55 @@ impl<T: MessageProcessor> BetfairStreamConnection<T> {
             let tls_stream = tls_connector()?.connect(domain.clone(), stream).await?;
             let mut tls_stream = Framed::new(tls_stream, StreamAPIClientCodec);
 
-            let handshake = self.handshake(from_stream_tx, &mut tls_stream).await;
-            match handshake {
-                Err(e) => {
-                    tracing::error!(?e, "Handshake error. Retrying...");
-                    delay().await?;
-                    continue;
-                }
-                Ok(status) => match status {
-                    StreamAction::Continue => {
-                        return Ok(tls_stream);
-                    }
-                    StreamAction::WaitAndRetry => {
+            match self.handshake(from_stream_tx, &mut tls_stream).await {
+                Ok(()) => return Ok(tls_stream),
+                Err(err) => match err {
+                    HandshakeErr::WaitAndRetry => {
                         delay().await?;
                         continue;
                     }
-                    StreamAction::Reauthenticate => {
+                    HandshakeErr::Reauthenticate => {
                         self.client.update_auth_token().await?;
                         delay().await?;
                         continue;
                     }
-                    StreamAction::Fatal => eyre::bail!("fatal error in stream processing"),
+                    HandshakeErr::Fatal => eyre::bail!("fatal error in stream processing"),
                 },
             }
         }
     }
 
+    #[tracing::instrument(err, skip_all)]
     async fn handshake(
         &mut self,
         from_stream_tx: &mut Sender<T::Output>,
         stream: &mut Framed<tokio_rustls::client::TlsStream<TcpStream>, StreamAPIClientCodec>,
-    ) -> eyre::Result<StreamAction> {
+    ) -> Result<(), HandshakeErr> {
         // await con message
-        let res = stream.next().await.ok_or_eyre("steam exited")??;
+        let res = stream
+            .next()
+            .await
+            .transpose()
+            .inspect_err(|err| {
+                tracing::warn!(?err, "error when parsing stream message");
+            })
+            .map_err(|_| HandshakeErr::WaitAndRetry)?
+            .ok_or(HandshakeErr::WaitAndRetry)?;
         tracing::info!(?res, "message from stream");
+        let message = self
+            .processor
+            .process_message(res.clone())
+            .ok_or(HandshakeErr::Fatal)
+            .inspect_err(|err| tracing::error!(?err))?;
+        from_stream_tx
+            .send(message.clone())
+            .await
+            .inspect_err(|err| tracing::warn!(?err))
+            .map_err(|_| HandshakeErr::Fatal)?;
         let ResponseMessage::Connection(_) = &res else {
-            eyre::bail!("straem responded with invalid connection message")
+            tracing::warn!("straem responded with invalid connection message");
+            return Err(HandshakeErr::Reauthenticate);
         };
-        let message = self.processor.process_message(res);
-        from_stream_tx.send(message.clone()).await?;
 
         // send auth msg
         let msg = authentication_message::AuthenticationMessage {
@@ -309,49 +350,79 @@ impl<T: MessageProcessor> BetfairStreamConnection<T> {
                 .expose_secret()
                 .clone(),
         };
-        stream.send(RequestMessage::Authentication(msg)).await?;
+        stream
+            .send(RequestMessage::Authentication(msg))
+            .await
+            .inspect_err(|err| tracing::warn!(?err, "stream exited"))
+            .map_err(|_| HandshakeErr::WaitAndRetry)?;
 
         // await status message
-        let message = stream.next().await.ok_or_eyre("steam exited")??;
+        let message = stream
+            .next()
+            .await
+            .transpose()
+            .inspect_err(|err| {
+                tracing::warn!(?err, "error when parsing stream message");
+            })
+            .map_err(|_| HandshakeErr::WaitAndRetry)?
+            .ok_or(HandshakeErr::WaitAndRetry)?;
+        let processed_message = self
+            .processor
+            .process_message(message.clone())
+            .ok_or(HandshakeErr::Fatal)
+            .inspect_err(|err| tracing::warn!(?err))
+            .map_err(|_| HandshakeErr::Fatal)?;
+        from_stream_tx
+            .send(processed_message)
+            .await
+            .inspect_err(|err| tracing::warn!(?err))
+            .map_err(|_| HandshakeErr::Fatal)?;
         tracing::info!(?message, "message from stream");
         let ResponseMessage::Status(status_message) = &message else {
-            eyre::bail!("straem responded with invalid status message")
+            tracing::warn!("expected status message, got {message:?}");
+            return Err(HandshakeErr::WaitAndRetry);
         };
-        let processed_message = self.processor.process_message(message.clone());
-        from_stream_tx.send(processed_message).await?;
 
         let Err(err) = &status_message.0 else {
-            return Ok(StreamAction::Continue);
+            return Ok(());
         };
 
         tracing::error!(?err, "stream respondend wit an error");
         let action = match err.error_code {
-            ErrorCode::NoAppKey => StreamAction::Fatal,
-            ErrorCode::InvalidAppKey => StreamAction::Fatal,
-            ErrorCode::NoSession => StreamAction::Reauthenticate,
-            ErrorCode::InvalidSessionInformation => StreamAction::Reauthenticate,
-            ErrorCode::NotAuthorized => StreamAction::Reauthenticate,
-            ErrorCode::InvalidInput => StreamAction::Fatal,
-            ErrorCode::InvalidClock => StreamAction::Fatal,
-            ErrorCode::UnexpectedError => StreamAction::Fatal,
-            ErrorCode::Timeout => StreamAction::WaitAndRetry,
-            ErrorCode::SubscriptionLimitExceeded => StreamAction::WaitAndRetry,
-            ErrorCode::InvalidRequest => StreamAction::Fatal,
-            ErrorCode::ConnectionFailed => StreamAction::WaitAndRetry,
-            ErrorCode::MaxConnectionLimitExceeded => StreamAction::Fatal,
-            ErrorCode::TooManyRequests => StreamAction::WaitAndRetry,
+            ErrorCode::NoAppKey => HandshakeErr::Fatal,
+            ErrorCode::InvalidAppKey => HandshakeErr::Fatal,
+            ErrorCode::NoSession => HandshakeErr::Reauthenticate,
+            ErrorCode::InvalidSessionInformation => HandshakeErr::Reauthenticate,
+            ErrorCode::NotAuthorized => HandshakeErr::Reauthenticate,
+            ErrorCode::InvalidInput => HandshakeErr::Fatal,
+            ErrorCode::InvalidClock => HandshakeErr::Fatal,
+            ErrorCode::UnexpectedError => HandshakeErr::Fatal,
+            ErrorCode::Timeout => HandshakeErr::WaitAndRetry,
+            ErrorCode::SubscriptionLimitExceeded => HandshakeErr::WaitAndRetry,
+            ErrorCode::InvalidRequest => HandshakeErr::Fatal,
+            ErrorCode::ConnectionFailed => HandshakeErr::WaitAndRetry,
+            ErrorCode::MaxConnectionLimitExceeded => HandshakeErr::Fatal,
+            ErrorCode::TooManyRequests => HandshakeErr::WaitAndRetry,
         };
 
-        Ok(action)
+        Err(action)
     }
 }
 
-enum StreamAction {
-    Continue,
+#[derive(Debug)]
+enum HandshakeErr {
     WaitAndRetry,
     Reauthenticate,
     Fatal,
 }
+
+impl fmt::Display for HandshakeErr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Stream Handshake Error {:?}", self)
+    }
+}
+
+impl std::error::Error for HandshakeErr {}
 
 #[tracing::instrument(err)]
 fn tls_connector() -> eyre::Result<tokio_rustls::TlsConnector> {

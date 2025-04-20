@@ -35,7 +35,7 @@ impl<'de> Deserialize<'de> for StatusMessage {
         let value = Value::deserialize(deserializer)?;
 
         // Check if it's a success response
-        if let Some(status) = value.get("status_code").and_then(|v| v.as_str()) {
+        if let Some(status) = value.get("statusCode").and_then(|v| v.as_str()) {
             match status {
                 "SUCCESS" => {
                     let response =
@@ -206,6 +206,29 @@ mod tests {
             "statusCode": "FAILURE",
             "errorCode": "INVALID_SESSION_INFORMATION",
             "errorMessage": "Session expired or invalid"
+        }"#;
+
+        let status_message: StatusMessage = serde_json::from_str(json_str).unwrap();
+
+        assert!(status_message.is_err());
+        let error = status_message.as_ref().as_ref().unwrap_err();
+        assert_eq!(error.id, Some(1));
+        assert_eq!(error.error_code, ErrorCode::InvalidSessionInformation);
+        assert_eq!(
+            error.error_message,
+            Some("Session expired or invalid".to_string())
+        );
+    }
+
+    #[test]
+    fn test_status_message_failure_deserialization_2() {
+        let json_str = r#"{
+            "connectionClosed": true,
+            "connectionId": "101-200425105305-1131705",
+            "errorCode": "MAX_CONNECTION_LIMIT_EXCEEDED",
+            "errorMessage": "You have exceeded your max connection limit which is: 10 connection(s).You currently have: 11 active connection(s).",
+            "id": -1,
+            "statusCode": "FAILURE"
         }"#;
 
         let status_message: StatusMessage = serde_json::from_str(json_str).unwrap();

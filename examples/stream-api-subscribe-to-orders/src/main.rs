@@ -1,10 +1,11 @@
 use std::time::Duration;
 
 use betfair_adapter::{
-    ApplicationKey, Identity, Password, SecretProvider, UnauthenticatedBetfairRpcProvider, Username,
+    ApplicationKey, BetfairRpcClient, Identity, Password, SecretProvider, Username,
 };
+use betfair_stream_api::cache::order_subscriber::OrderSubscriber;
 use betfair_stream_api::types::request::order_subscription_message::OrderFilter;
-use betfair_stream_api::{HeartbeatStrategy, OrderSubscriber};
+use betfair_stream_api::{BetfairStreamConnection, Cache, CachedMessage};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
@@ -30,31 +31,36 @@ async fn main() -> eyre::Result<()> {
         password: config.betfair_password,
         identity: config.betfair_identity,
     };
+    let bf_client = BetfairRpcClient::new(secret_provider.clone())?
+        .authenticate()
+        .await?;
 
     // connect to stream
-    let mut stream = {
-        use betfair_stream_api::BetfairProviderExt;
-        UnauthenticatedBetfairRpcProvider::new(secret_provider.clone())?
-            .connect_to_stream_with_hb(HeartbeatStrategy::Interval(Duration::from_secs(5)))
-            .run_with_default_runtime()
-            .enable_cache()
-    };
+    let stream =
+        BetfairStreamConnection::<Cache>::new(bf_client).with_heartbeat(Duration::from_secs(5));
+    let (mut stream, _task) = stream.start().await;
 
     // start processing stream
-    {
-        use betfair_stream_api::StreamExt;
-        let os = OrderSubscriber::new(&stream, OrderFilter::default());
+    let os = OrderSubscriber::new(&stream, OrderFilter::default());
 
-        tokio::spawn(async move {
-            // sleep for a bit to allow the stream to connect
-            tokio::time::sleep(std::time::Duration::from_secs(3)).await;
-            os.resubscribe().unwrap();
-        });
-
-        while let Some(value) = stream.next().await {
-            tracing::info!(?value, "received value from stream");
+    let mut subscribed = false;
+    while let Some(message) = stream.sink.recv().await {
+        tracing::info!(?message, "received value from stream");
+        if let CachedMessage::Status(status_message) = message {
+            match status_message.0 {
+                Ok(_message) => {
+                    if !subscribed {
+                        os.resubscribe().await?;
+                        subscribed = true;
+                    }
+                }
+                Err(err) => {
+                    tracing::error!(?err, "error during auth");
+                }
+            }
         }
     }
+
     Ok(())
 }
 

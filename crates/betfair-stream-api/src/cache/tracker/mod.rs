@@ -63,7 +63,7 @@ impl StreamState {
     pub fn order_change_update<'a>(
         &'a mut self,
         msg: OrderChangeMessage,
-    ) -> Vec<&'a OrderBookCache> {
+    ) -> Option<Vec<&'a OrderBookCache>> {
         match msg.change_type {
             Some(ChangeType::SubImage) => {
                 self.update_clk(&msg);
@@ -72,7 +72,7 @@ impl StreamState {
             Some(ChangeType::Heartbeat) => {
                 self.update_clk(&msg);
                 self.on_heartbeat(&msg);
-                Vec::new()
+                None
             }
             None | Some(ChangeType::ResubDelta) => {
                 self.on_update(&msg);
@@ -84,7 +84,7 @@ impl StreamState {
     pub fn market_change_update<'a>(
         &'a mut self,
         msg: MarketChangeMessage,
-    ) -> Vec<&'a MarketBookCache> {
+    ) -> Option<Vec<&'a MarketBookCache>> {
         match msg.change_type {
             Some(ChangeType::SubImage) => {
                 self.update_clk(&msg);
@@ -93,7 +93,7 @@ impl StreamState {
             Some(ChangeType::Heartbeat) => {
                 self.update_clk(&msg);
                 self.on_heartbeat(&msg);
-                Vec::new()
+                None
             }
             None | Some(ChangeType::ResubDelta) => {
                 self.on_update(&msg);

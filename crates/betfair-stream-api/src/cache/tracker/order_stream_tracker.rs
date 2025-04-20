@@ -23,15 +23,15 @@ impl OrderStreamTracker {
     pub(crate) fn process(
         &mut self,
         msg: OrderChangeMessage,
-    ) -> (Vec<&OrderBookCache>, HasFullImage) {
-        let mut updated_caches = Vec::new();
+    ) -> (Option<Vec<&OrderBookCache>>, HasFullImage) {
         let mut img = HasFullImage(false);
         let Some(publish_time) = msg.publish_time else {
             tracing::warn!("No publish time in market change message");
-            return (updated_caches, img);
+            return (None, img);
         };
 
         if let Some(data) = msg.0.data {
+            let mut updated_caches = Vec::with_capacity(data.len());
             let mut market_ids = Vec::with_capacity(data.len());
             for market_change in data {
                 let market_id = market_change.market_id.clone();
@@ -61,9 +61,9 @@ impl OrderStreamTracker {
                 updated_caches.push(market);
                 self.updates_processed = self.updates_processed.saturating_add(1);
             }
+            return (Some(updated_caches), img);
         }
-
-        (updated_caches, img)
+        return (None, img);
     }
 
     pub(crate) fn clear_stale_cache(&mut self, publish_time: chrono::DateTime<chrono::Utc>) {

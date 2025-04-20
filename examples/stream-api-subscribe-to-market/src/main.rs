@@ -1,10 +1,13 @@
 use betfair_adapter::betfair_types::types::sports_aping::{
-    MarketFilter, MarketProjection, MarketSort, list_market_catalogue,
+    self, MarketProjection, MarketSort, list_market_catalogue,
 };
 use betfair_adapter::{
     ApplicationKey, BetfairRpcClient, Identity, Password, SecretProvider, Username,
 };
+use betfair_stream_api::cache::market_subscriber::MarketSubscriber;
 use betfair_stream_api::types::request::market_subscription_message::LadderLevel;
+use betfair_stream_api::types::request::market_subscription_message::{self, Fields};
+use betfair_stream_api::{BetfairStreamConnection, Cache, CachedMessage};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
@@ -32,13 +35,15 @@ async fn main() -> eyre::Result<()> {
     };
 
     // login to betfair
-    let bf_provider = BetfairRpcClient::new(secret_provider.clone())?
+    let bf_client = BetfairRpcClient::new(secret_provider.clone())?
         .authenticate()
         .await?;
     // get market id
-    let market_book = bf_provider
+    let market_book = bf_client
         .send_request(list_market_catalogue::Parameters {
-            filter: MarketFilter::builder().in_play_only(true).build(),
+            filter: sports_aping::MarketFilter::builder()
+                .in_play_only(true)
+                .build(),
             market_projection: Some(vec![
                 MarketProjection::Event,
                 MarketProjection::Competition,
@@ -53,47 +58,45 @@ async fn main() -> eyre::Result<()> {
     let market_id = market_book[0].market_id.clone();
 
     // connect to stream
-    let mut stream = {
-        use betfair_stream_api::BetfairProviderExt;
-
-        BetfairRpcClient::new(secret_provider.clone())?
-            .connect_to_stream()
-            .run_with_default_runtime()
-            .enable_cache()
-    };
+    let stream = BetfairStreamConnection::<Cache>::new(bf_client);
+    let (mut stream, _task) = stream.start().await;
 
     // start processing stream
-    {
-        use betfair_stream_api::types::request::market_subscription_message::{
-            Fields, MarketFilter,
-        };
-        let mut ms = MarketSubscriber::new(
-            &stream,
-            MarketFilter::default(),
-            vec![
-                Fields::ExAllOffers,
-                Fields::ExBestOffers,
-                Fields::ExBestOffersDisp,
-                Fields::ExLtp,
-                Fields::ExMarketDef,
-                Fields::ExTraded,
-                Fields::ExTradedVol,
-                Fields::SpProjected,
-                Fields::SpTraded,
-            ],
-            Some(LadderLevel::new(1).unwrap()),
-        );
+    let mut ms = MarketSubscriber::new(
+        &stream,
+        market_subscription_message::MarketFilter::default(),
+        vec![
+            Fields::ExAllOffers,
+            Fields::ExBestOffers,
+            Fields::ExBestOffersDisp,
+            Fields::ExLtp,
+            Fields::ExMarketDef,
+            Fields::ExTraded,
+            Fields::ExTradedVol,
+            Fields::SpProjected,
+            Fields::SpTraded,
+        ],
+        Some(LadderLevel::new(1).unwrap()),
+    );
 
-        tokio::spawn(async move {
-            // sleep for a bit to allow the stream to connect
-            tokio::time::sleep(std::time::Duration::from_secs(3)).await;
-            ms.subscribe_to_market(market_id).unwrap();
-        });
-
-        while let Some(value) = stream.next().await {
-            tracing::info!(?value, "received value from stream");
+    let mut subscribed = false;
+    while let Some(message) = stream.sink.recv().await {
+        tracing::info!(?message, "received value from stream");
+        if let CachedMessage::Status(status_message) = message {
+            match status_message.0 {
+                Ok(_message) => {
+                    if !subscribed {
+                        ms.subscribe_to_market(market_id.clone()).await?;
+                        subscribed = true;
+                    }
+                }
+                Err(err) => {
+                    tracing::error!(?err, "error during auth");
+                }
+            }
         }
     }
+
     Ok(())
 }
 
