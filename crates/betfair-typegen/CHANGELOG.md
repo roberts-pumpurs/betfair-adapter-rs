@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-typegen-v0.2.1...betfair-typegen-v0.3.0) - 2025-04-20
+
+### Added
+
+- stream api rewrite ([#31](https://github.com/roberts-pumpurs/betfair-adapter-rs/pull/31))
+
 ## [0.2.1](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-typegen-v0.2.0...betfair-typegen-v0.2.1) - 2025-04-06
 
 ### Added
