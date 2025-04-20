@@ -208,8 +208,8 @@ impl MarketBookCache {
 #[cfg(test)]
 mod tests {
     use betfair_adapter::betfair_types::price::Price;
-    use betfair_stream_types::response::market_change_message::MarketChangeMessage;
     use betfair_stream_types::response::UpdateSet2;
+    use betfair_stream_types::response::market_change_message::MarketChangeMessage;
     use rust_decimal_macros::dec;
 
     use super::*;

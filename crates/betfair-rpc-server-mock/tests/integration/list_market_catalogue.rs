@@ -2,9 +2,10 @@ use std::sync::Arc;
 
 use betfair_rpc_server_mock::Server;
 use betfair_types::types::sports_aping::{
-    list_market_catalogue, Competition, CompetitionId, CountryCode, Event, EventId, EventType,
-    EventTypeId, MarketCatalogue, MarketDescription, MarketFilter, MarketId, MarketProjection,
-    MarketType, PriceLadderDescription, PriceLadderType, RunnerCatalog, SelectionId, TimeRange,
+    Competition, CompetitionId, CountryCode, Event, EventId, EventType, EventTypeId,
+    MarketCatalogue, MarketDescription, MarketFilter, MarketId, MarketProjection, MarketType,
+    PriceLadderDescription, PriceLadderType, RunnerCatalog, SelectionId, TimeRange,
+    list_market_catalogue,
 };
 use pretty_assertions::assert_eq;
 use rstest::rstest;

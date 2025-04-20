@@ -62,30 +62,36 @@ mod tests {
                 assert_eq!(req.name, "RunnerCatalog");
 
                 // Check each index safely
-                assert!(req
-                    .values
-                    .first()
-                    .map_or(false, |val| matches!(val, &DataTypeItems::Description(_))));
-                assert!(req
-                    .values
-                    .get(1)
-                    .map_or(false, |val| matches!(val, &DataTypeItems::Parameter(_))));
-                assert!(req
-                    .values
-                    .get(2)
-                    .map_or(false, |val| matches!(val, &DataTypeItems::Parameter(_))));
-                assert!(req
-                    .values
-                    .get(3)
-                    .map_or(false, |val| matches!(val, &DataTypeItems::Parameter(_))));
-                assert!(req
-                    .values
-                    .get(4)
-                    .map_or(false, |val| matches!(val, &DataTypeItems::Parameter(_))));
-                assert!(req
-                    .values
-                    .get(5)
-                    .map_or(false, |val| matches!(val, &DataTypeItems::Parameter(_))));
+                assert!(
+                    req.values
+                        .first()
+                        .is_some_and(|val| matches!(val, &DataTypeItems::Description(_)))
+                );
+                assert!(
+                    req.values
+                        .get(1)
+                        .is_some_and(|val| matches!(val, &DataTypeItems::Parameter(_)))
+                );
+                assert!(
+                    req.values
+                        .get(2)
+                        .is_some_and(|val| matches!(val, &DataTypeItems::Parameter(_)))
+                );
+                assert!(
+                    req.values
+                        .get(3)
+                        .is_some_and(|val| matches!(val, &DataTypeItems::Parameter(_)))
+                );
+                assert!(
+                    req.values
+                        .get(4)
+                        .is_some_and(|val| matches!(val, &DataTypeItems::Parameter(_)))
+                );
+                assert!(
+                    req.values
+                        .get(5)
+                        .is_some_and(|val| matches!(val, &DataTypeItems::Parameter(_)))
+                );
             }
             Err(err) => {
                 log::error!("Failed to parse XML: {err}");

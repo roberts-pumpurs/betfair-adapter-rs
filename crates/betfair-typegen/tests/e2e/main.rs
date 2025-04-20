@@ -1,4 +1,4 @@
-use betfair_typegen::{gen_v1, BetfairTypeGenerator};
+use betfair_typegen::{BetfairTypeGenerator, gen_v1};
 use rstest::rstest;
 
 #[rstest]
@@ -8,16 +8,20 @@ fn assert_root_module() {
     let settings = betfair_typegen::settings::SimpleGeneratorSettings::aping_only();
     let output = generator.generate(&strategy, &settings);
     let output_mod = output.root_mod().to_string();
-    assert!(output_mod.contains(
-        quote::quote! { pub mod account_aping; }
-            .to_string()
-            .as_str()
-    ));
-    assert!(output_mod.contains(
-        quote::quote! { pub mod heartbeat_aping; }
-            .to_string()
-            .as_str()
-    ));
+    assert!(
+        output_mod.contains(
+            quote::quote! { pub mod account_aping; }
+                .to_string()
+                .as_str()
+        )
+    );
+    assert!(
+        output_mod.contains(
+            quote::quote! { pub mod heartbeat_aping; }
+                .to_string()
+                .as_str()
+        )
+    );
     assert!(output_mod.contains(quote::quote! { pub mod sports_aping; }.to_string().as_str()));
     assert!(!output_mod.contains(quote::quote! { pub mod stream_api; }.to_string().as_str()));
     assert_eq!(output.submodules().len(), 3);

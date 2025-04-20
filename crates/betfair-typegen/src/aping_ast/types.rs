@@ -1,4 +1,4 @@
-use heck::{ToPascalCase, ToSnakeCase};
+use heck::{ToPascalCase as _, ToSnakeCase as _};
 use proc_macro2::{Ident, Span, TokenStream};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Ord, Eq, Hash, Default)]

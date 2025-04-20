@@ -7,6 +7,7 @@ use betfair_adapter::{
 use betfair_stream_api::cache::market_subscriber::MarketSubscriber;
 use betfair_stream_api::types::request::market_subscription_message::LadderLevel;
 use betfair_stream_api::types::request::market_subscription_message::{self, Fields};
+use betfair_stream_api::types::response::status_message::StatusMessage;
 use betfair_stream_api::{BetfairStreamBuilder, Cache, CachedMessage};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -83,14 +84,14 @@ async fn main() -> eyre::Result<()> {
     while let Some(message) = stream.sink.recv().await {
         tracing::info!(?message, "received value from stream");
         if let CachedMessage::Status(status_message) = message {
-            match status_message.0 {
-                Ok(_message) => {
+            match status_message {
+                StatusMessage::Success(_message) => {
                     if !subscribed {
                         ms.subscribe_to_market(market_id.clone()).await?;
                         subscribed = true;
                     }
                 }
-                Err(err) => {
+                StatusMessage::Failure(err) => {
                     tracing::error!(?err, "error during auth");
                 }
             }

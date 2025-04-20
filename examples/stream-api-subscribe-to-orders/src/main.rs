@@ -5,6 +5,7 @@ use betfair_adapter::{
 };
 use betfair_stream_api::cache::order_subscriber::OrderSubscriber;
 use betfair_stream_api::types::request::order_subscription_message::OrderFilter;
+use betfair_stream_api::types::response::status_message::StatusMessage;
 use betfair_stream_api::{BetfairStreamBuilder, Cache, CachedMessage};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -47,14 +48,14 @@ async fn main() -> eyre::Result<()> {
     while let Some(message) = stream.sink.recv().await {
         tracing::info!(?message, "received value from stream");
         if let CachedMessage::Status(status_message) = message {
-            match status_message.0 {
-                Ok(_message) => {
+            match status_message {
+                StatusMessage::Success(_message) => {
                     if !subscribed {
                         os.resubscribe().await?;
                         subscribed = true;
                     }
                 }
-                Err(err) => {
+                StatusMessage::Failure(err) => {
                     tracing::error!(?err, "error during auth");
                 }
             }

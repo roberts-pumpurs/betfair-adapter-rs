@@ -57,13 +57,13 @@ impl<'de> Deserialize<'de> for Response {
                                 .to_owned(),
                         ),
                     };
-                    return Ok(Self(Ok(success_response)))
+                    return Ok(Self(Ok(success_response)));
                 }
                 "FAIL" => {
                     if let Some(error) = value.get("error") {
                         let login_error =
                             ErrorValues::deserialize(error).map_err(serde::de::Error::custom)?;
-                        return Ok(Self(Err(login_error)))
+                        return Ok(Self(Err(login_error)));
                     }
                 }
                 _ => {}

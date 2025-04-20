@@ -122,15 +122,18 @@ mod tests {
                 assert_eq!(exception.name, "APINGException");
                 assert_eq!(exception.prefix, "ANGX");
                 assert_eq!(exception.values.len(), 4);
-                assert!(exception.values.first().map_or(false, |item| {
+                assert!(exception.values.first().is_some_and(|item| {
                     matches!(item, &ExceptionTypeItems::Description(Description {
                         value: Some(ref desc)
                     }) if desc == "This exception is thrown when an operation fails")
                 }));
 
-                assert!(exception.values.get(1).map_or(false, |item| {
-                    matches!(item, &ExceptionTypeItems::Parameter(_))
-                }));
+                assert!(
+                    exception
+                        .values
+                        .get(1)
+                        .is_some_and(|item| { matches!(item, &ExceptionTypeItems::Parameter(_)) })
+                );
             }
             Err(err) => {
                 log::error!("Failed to parse XML: {err}");

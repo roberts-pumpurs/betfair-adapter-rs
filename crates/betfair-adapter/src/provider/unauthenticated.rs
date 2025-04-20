@@ -47,7 +47,7 @@ impl BetfairRpcClient<Unauthenticated> {
             impl urls::RetrieveUrl<urls::InteractiveLogin> + core::fmt::Debug,
             impl urls::RetrieveUrl<urls::Stream> + core::fmt::Debug,
         >,
-    ) -> Result<BetfairRpcClient<Unauthenticated>, ApiError> {
+    ) -> Result<Self, ApiError> {
         let rest_base = config.rest.url();
         let keep_alive = config.keep_alive.url();
         let bot_login = config.bot_login.url();

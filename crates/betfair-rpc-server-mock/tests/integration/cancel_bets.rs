@@ -2,8 +2,9 @@ use betfair_rpc_server_mock::Server;
 use betfair_types::customer_ref::CustomerRef;
 use betfair_types::size::Size;
 use betfair_types::types::sports_aping::{
-    cancel_orders, BetId, CancelInstruction, CancelInstructionReport, ExecutionReportErrorCode,
+    BetId, CancelInstruction, CancelInstructionReport, ExecutionReportErrorCode,
     ExecutionReportStatus, InstructionReportErrorCode, InstructionReportStatus, MarketId,
+    cancel_orders,
 };
 use pretty_assertions::assert_eq;
 use rstest::rstest;

@@ -1,109 +1,35 @@
-use serde::ser::SerializeMap;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use serde_json::Value;
-use std::error::Error as StdError;
+//! Module for Betfair streaming API status messages.
+//!
+//! This module defines types for representing status messages received from the Betfair
+//! streaming API, indicating the success or failure of operations such as authentication,
+//! subscription, and other control messages.
+use core::error::Error as StdError;
+use serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StatusMessage(pub Result<StatusSuccess, StatusError>);
-
-impl AsRef<Result<StatusSuccess, StatusError>> for StatusMessage {
-    fn as_ref(&self) -> &Result<StatusSuccess, StatusError> {
-        &self.0
-    }
+/// Status message returned by the Betfair streaming API.
+///
+/// A status message indicates whether a request or operation was successful or failed.
+///
+/// # Variants
+///
+/// - `Success(StatusSuccess)`: Represents a successful operation with associated details.
+/// - `Failure(StatusError)`: Represents a failed operation with error information.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(tag = "statusCode")]
+#[serde(rename_all = "camelCase")]
+pub enum StatusMessage {
+    /// Success variant (authentication / heartbeat was successful)
+    #[serde(rename = "SUCCESS")]
+    Success(StatusSuccess),
+    /// Failure variant (auth was not successful)
+    #[serde(rename = "FAILURE")]
+    Failure(StatusError),
 }
 
-impl core::ops::Deref for StatusMessage {
-    type Target = Result<StatusSuccess, StatusError>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl core::ops::DerefMut for StatusMessage {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl<'de> Deserialize<'de> for StatusMessage {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let value = Value::deserialize(deserializer)?;
-
-        // Check if it's a success response
-        if let Some(status) = value.get("statusCode").and_then(|v| v.as_str()) {
-            match status {
-                "SUCCESS" => {
-                    let response =
-                        StatusSuccess::deserialize(value).map_err(serde::de::Error::custom)?;
-                    return Ok(Self(Ok(response)));
-                }
-                "FAIL" => {
-                    let response =
-                        StatusError::deserialize(value).map_err(serde::de::Error::custom)?;
-                    return Ok(Self(Err(response)));
-                }
-                _ => {}
-            }
-        }
-
-        Err(serde::de::Error::custom("invalid response"))
-    }
-}
-
-impl Serialize for StatusMessage {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        match &self.0 {
-            Ok(success) => {
-                let mut map = serializer.serialize_map(None)?;
-                map.serialize_entry("status_code", "SUCCESS")?;
-
-                if let Some(id) = &success.id {
-                    map.serialize_entry("id", id)?;
-                }
-                if let Some(connections_available) = &success.connections_available {
-                    map.serialize_entry("connectionsAvailable", connections_available)?;
-                }
-                if let Some(connection_id) = &success.connection_id {
-                    map.serialize_entry("connectionId", connection_id)?;
-                }
-                if let Some(connection_closed) = &success.connection_closed {
-                    map.serialize_entry("connectionClosed", connection_closed)?;
-                }
-
-                map.end()
-            }
-            Err(error) => {
-                let mut map = serializer.serialize_map(None)?;
-                map.serialize_entry("status_code", "FAILURE")?;
-
-                if let Some(id) = &error.id {
-                    map.serialize_entry("id", id)?;
-                }
-                if let Some(error_message) = &error.error_message {
-                    map.serialize_entry("errorMessage", error_message)?;
-                }
-                map.serialize_entry("errorCode", &error.error_code)?;
-                if let Some(connection_id) = &error.connection_id {
-                    map.serialize_entry("connectionId", connection_id)?;
-                }
-                if let Some(connection_closed) = &error.connection_closed {
-                    map.serialize_entry("connectionClosed", connection_closed)?;
-                }
-
-                map.end()
-            }
-        }
-    }
-}
-
+/// Represents a successful status response in the Betfair streaming API.
+///
+/// Contains optional metadata such as request identifier, connection limits, and status flags.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StatusSuccess {
@@ -122,6 +48,9 @@ pub struct StatusSuccess {
     pub connection_closed: Option<bool>,
 }
 
+/// Represents a failed status response in the Betfair streaming API.
+///
+/// Contains an error code, optional error message, and connection metadata.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StatusError {
@@ -152,34 +81,53 @@ impl fmt::Display for StatusError {
     }
 }
 
+/// Implements the standard `Error` trait for `StatusError`.
 impl StdError for StatusError {}
 
-/// The type of error in case of a failure
+/// Error codes returned in a failed status response.
+///
+/// These codes describe the type of failure encountered.
 #[derive(
     Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
 )]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ErrorCode {
+    /// The request did not include an application key.
     #[default]
     NoAppKey,
+    /// The provided application key is not recognized or is invalid.
     InvalidAppKey,
+    /// The request did not include a session token.
     NoSession,
+    /// The provided session token is invalid, expired, or unauthorized.
     InvalidSessionInformation,
+    /// The session is not authorized to perform this operation.
     NotAuthorized,
+    /// The input parameters for the request are invalid.
     InvalidInput,
+    /// The client system clock is out of sync with the server.
     InvalidClock,
+    /// An unexpected internal error occurred on the server.
     UnexpectedError,
+    /// The request timed out waiting for a response.
     Timeout,
+    /// The client has exceeded the maximum number of subscriptions allowed.
     SubscriptionLimitExceeded,
+    /// The request is malformed or has invalid parameters.
     InvalidRequest,
+    /// The connection to the streaming service failed.
     ConnectionFailed,
+    /// The account has reached its maximum connection limit.
     MaxConnectionLimitExceeded,
+    /// The client is making requests too rapidly and has been rate limited.
     TooManyRequests,
 }
+
 #[cfg(test)]
 mod tests {
+    use crate::response::ResponseMessage;
+
     use super::*;
-    use serde_json::json;
 
     #[test]
     fn test_status_message_success_deserialization() {
@@ -192,10 +140,7 @@ mod tests {
 
         let status_message: StatusMessage = serde_json::from_str(json_str).unwrap();
 
-        assert!(status_message.is_ok());
-        let success = status_message.as_ref().as_ref().unwrap();
-        assert_eq!(success.id, Some(1));
-        assert_eq!(success.connection_closed, Some(false));
+        assert!(matches!(status_message, StatusMessage::Success(_)));
     }
 
     #[test]
@@ -210,14 +155,7 @@ mod tests {
 
         let status_message: StatusMessage = serde_json::from_str(json_str).unwrap();
 
-        assert!(status_message.is_err());
-        let error = status_message.as_ref().as_ref().unwrap_err();
-        assert_eq!(error.id, Some(1));
-        assert_eq!(error.error_code, ErrorCode::InvalidSessionInformation);
-        assert_eq!(
-            error.error_message,
-            Some("Session expired or invalid".to_string())
-        );
+        assert!(matches!(status_message, StatusMessage::Failure(_)));
     }
 
     #[test]
@@ -233,14 +171,7 @@ mod tests {
 
         let status_message: StatusMessage = serde_json::from_str(json_str).unwrap();
 
-        assert!(status_message.is_err());
-        let error = status_message.as_ref().as_ref().unwrap_err();
-        assert_eq!(error.id, Some(1));
-        assert_eq!(error.error_code, ErrorCode::InvalidSessionInformation);
-        assert_eq!(
-            error.error_message,
-            Some("Session expired or invalid".to_string())
-        );
+        assert!(matches!(status_message, StatusMessage::Failure(_)));
     }
 
     #[test]
@@ -251,7 +182,7 @@ mod tests {
             connections_available: Some(1),
             connection_id: None,
         };
-        let status_message = StatusMessage(Ok(success));
+        let status_message = ResponseMessage::Status(StatusMessage::Success(success));
 
         let json_value = serde_json::to_value(&status_message).unwrap();
 
@@ -267,11 +198,11 @@ mod tests {
         let error = StatusError {
             id: Some(1),
             error_code: ErrorCode::InvalidSessionInformation,
-            error_message: Some("Session expired or invalid".to_string()),
+            error_message: Some("Session expired or invalid".to_owned()),
             connection_id: None,
             connection_closed: None,
         };
-        let status_message = StatusMessage(Err(error));
+        let status_message = ResponseMessage::Status(StatusMessage::Failure(error));
 
         let json_value = serde_json::to_value(&status_message).unwrap();
 

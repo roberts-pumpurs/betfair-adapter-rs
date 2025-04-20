@@ -1,6 +1,6 @@
 use betfair_types::price::Price;
 use betfair_types::size::Size;
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{DateTime, TimeZone as _, Utc};
 use rust_decimal::Decimal;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize};

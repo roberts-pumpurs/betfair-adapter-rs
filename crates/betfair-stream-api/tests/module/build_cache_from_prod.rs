@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use betfair_stream_api::{StreamAPIClientCodec, cache};
 use betfair_stream_types::response::ResponseMessage;
-use futures::StreamExt;
+use futures::StreamExt as _;
 use tokio::fs::File;
 use tokio_util::codec::Framed;
 

@@ -36,7 +36,7 @@ impl<'de> Deserialize<'de> for CustomerStrategyRef {
     {
         struct CustomerStrategyRefVisitor;
 
-        impl<'de> Visitor<'de> for CustomerStrategyRefVisitor {
+        impl Visitor<'_> for CustomerStrategyRefVisitor {
             type Value = CustomerStrategyRef;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {

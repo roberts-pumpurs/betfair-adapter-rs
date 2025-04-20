@@ -1,8 +1,13 @@
-//! Betfair stream client
+//! Betfair Stream API client implementation.
+//!
+//! This crate provides an asynchronous client for interacting with Betfair's Streaming API.
+//! It manages connection setup, handshake, framing, heartbeats, and automatic reconnections.
+//! Users can customize how incoming messages are handled by implementing the `MessageProcessor` trait
+//! or using the built-in `Cache` processor for maintaining market and order caches.
 extern crate alloc;
 pub mod cache;
 use backon::{BackoffBuilder, ExponentialBuilder};
-use betfair_adapter::{ApplicationKey, Authenticated, BetfairRpcClient, SessionToken};
+use betfair_adapter::{Authenticated, BetfairRpcClient};
 pub use betfair_stream_types as types;
 use betfair_stream_types::{
     request::{RequestMessage, authentication_message, heartbeat_message::HeartbeatMessage},
@@ -17,19 +22,18 @@ use cache::{
     tracker::StreamState,
 };
 use core::fmt;
-use eyre::{Context, OptionExt};
+use eyre::Context;
 use futures::{
     SinkExt, StreamExt,
-    future::{self, Select, select},
+    future::{self, select},
 };
-use std::{error::Error, sync::Arc};
+use std::sync::Arc;
 use std::{pin::pin, time::Duration};
 use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt, BufReader},
     net::TcpStream,
     sync::mpsc::{self, Receiver, Sender},
     task::JoinHandle,
-    time::{interval, sleep},
+    time::sleep,
 };
 use tokio_stream::wrappers::{IntervalStream, ReceiverStream};
 use tokio_util::{
@@ -39,25 +43,47 @@ use tokio_util::{
 
 /// A Betfair Stream API client that handles connection, handshake, incoming/outgoing messages,
 /// heartbeat and automatic reconnects.
+/// Builder for creating a Betfair Streaming API client.
+///
+/// The builder allows configuring:
+/// - heartbeat interval (`with_heartbeat`)
+/// - custom TLS certificate (`with_custom_tls_cert`)
+/// - message processing via a `MessageProcessor` implementation
+///
+/// # Type Parameters
+///
+/// - `T`: A type that implements `MessageProcessor`, used to handle incoming `ResponseMessage` objects.
 pub struct BetfairStreamBuilder<T: MessageProcessor> {
     /// betfair cient
     pub client: BetfairRpcClient<Authenticated>,
     /// Heartbeat interval (used only if heartbeat_enabled is true)
     pub heartbeat_interval: Option<Duration>,
-    pub custom_tls_cert: Option<String>,
+    /// The intermediate processor of messages
     pub processor: T,
 }
 
+/// Handle to a running Betfair Streaming API client.
+///
+/// Provides channels to send requests (`send_to_stream`) and receive processed messages (`sink`).
 pub struct BetfairStreamClient<T: MessageProcessor> {
     pub send_to_stream: Sender<RequestMessage>,
     pub sink: Receiver<T::Output>,
 }
 
+/// Default `MessageProcessor` implementation that maintains market and order caches.
+///
+/// It updates an internal `StreamState` to apply incremental updates to market and order books.
 pub struct Cache {
     state: StreamState,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Processed message variants produced by the `Cache` processor.
+///
+/// - `Connection`: initial connection message
+/// - `MarketChange`: updates to market book cache
+/// - `OrderChange`: updates to order book cache
+/// - `Status`: status messages from the stream
 pub enum CachedMessage {
     Connection(ConnectionMessage),
     MarketChange(Vec<MarketBookCache>),
@@ -95,6 +121,7 @@ impl MessageProcessor for Cache {
         }
     }
 }
+/// `MessageProcessor` that forwards raw `ResponseMessage` objects without transformation.
 pub struct Forwarder;
 impl MessageProcessor for Forwarder {
     type Output = ResponseMessage;
@@ -103,8 +130,18 @@ impl MessageProcessor for Forwarder {
         Some(message)
     }
 }
+/// Trait for processing incoming Betfair streaming `ResponseMessage` objects into user-defined outputs.
+///
+/// Implementers can filter or transform messages and control which messages are forwarded to the client sink.
+///
+/// # Associated Types
+///
+/// - `Output`: The processed message type produced by `process_message`.
 pub trait MessageProcessor: Send + Sync + 'static {
     type Output: Send + Clone + Sync + 'static + std::fmt::Debug;
+    /// Process an incoming `ResponseMessage`.
+    ///
+    /// Returns `Some(Output)` to forward a processed message, or `None` to drop it.
     fn process_message(&mut self, message: ResponseMessage) -> Option<Self::Output>;
 }
 
@@ -113,7 +150,6 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
         BetfairStreamBuilder {
             client,
             heartbeat_interval: None,
-            custom_tls_cert: None,
             processor: Cache {
                 state: StreamState::new(),
             },
@@ -125,7 +161,6 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
     ) -> BetfairStreamBuilder<Forwarder> {
         BetfairStreamBuilder {
             client,
-            custom_tls_cert: None,
             heartbeat_interval: None,
             processor: Forwarder,
         }
@@ -133,11 +168,6 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
 
     pub fn with_heartbeat(mut self, interval: Duration) -> Self {
         self.heartbeat_interval = Some(interval);
-        self
-    }
-
-    pub fn with_custom_tls_cert(mut self, cert: String) -> Self {
-        self.custom_tls_cert = Some(cert);
         self
     }
 
@@ -391,7 +421,7 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
             return Err(HandshakeErr::WaitAndRetry);
         };
 
-        let Err(err) = &status_message.0 else {
+        let StatusMessage::Failure(err) = &status_message else {
             return Ok(());
         };
 

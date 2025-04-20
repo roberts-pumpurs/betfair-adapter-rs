@@ -1,11 +1,11 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use super::injector::CodeInjector;
 use super::GenV1GeneratorStrategy;
+use super::injector::CodeInjector;
 use crate::aping_ast::rpc_calls::RpcCall;
 use crate::aping_ast::types::Name;
-use crate::gen_v1::documentation::CommentParse;
+use crate::gen_v1::documentation::CommentParse as _;
 
 impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
     pub(crate) fn generate_rpc_call(&self, data_type: &RpcCall) -> TokenStream {

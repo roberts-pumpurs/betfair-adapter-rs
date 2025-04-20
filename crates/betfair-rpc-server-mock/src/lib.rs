@@ -1,8 +1,7 @@
 use betfair_adapter::jurisdiction::CustomUrl;
 use betfair_adapter::{
-    ApplicationKey, Authenticated, BetfairConfigBuilder, BetfairRpcClient, BotLogin, Identity,
-    InteractiveLogin, KeepAlive, Logout, Password, RestBase, SecretProvider, Stream,
-    Unauthenticated, Username,
+    ApplicationKey, BetfairConfigBuilder, BetfairRpcClient, BotLogin, Identity, InteractiveLogin,
+    KeepAlive, Logout, Password, RestBase, SecretProvider, Stream, Unauthenticated, Username,
 };
 use betfair_types::types::BetfairRpcRequest;
 use serde_json::json;

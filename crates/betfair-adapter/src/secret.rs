@@ -59,7 +59,7 @@ impl Identity {
 }
 
 mod serde_utils {
-    use serde::{Deserialize, Deserializer};
+    use serde::{Deserialize as _, Deserializer};
 
     pub(crate) fn deserialize_identity<'de, D>(
         deserializer: D,
