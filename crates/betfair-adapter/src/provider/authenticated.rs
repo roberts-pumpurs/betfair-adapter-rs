@@ -1,4 +1,5 @@
 use core::marker::PhantomData;
+use std::sync::Arc;
 
 use betfair_types::keep_alive;
 use betfair_types::types::BetfairRpcRequest;
@@ -111,14 +112,6 @@ impl BetfairRpcClient<Authenticated> {
             err: PhantomData,
         })
     }
-
-    /// Update the internal client to get a new auth token
-    pub async fn update_auth_token(&mut self) -> Result<(), ApiError> {
-        let (session_token, authenticated_client) = self.bot_log_in().await?;
-        self.state.session_token = session_token;
-        self.state.authenticated_client = authenticated_client;
-        Ok(())
-    }
 }
 
 /// Encalpsulated HTTP request for the Betfair API
@@ -131,7 +124,7 @@ pub struct BetfairRequest<T, E> {
 }
 
 impl<T, E> BetfairRequest<T, E> {
-    /// execute an Amplifier API request
+    /// execute an Betfair API request
     #[instrument(name = "execute_request", skip(self), fields(method = %self.request.method(), url = %self.request.url()))]
     pub async fn execute(self) -> Result<BetfairResponse<T, E>, ApiError> {
         let response = self.client.execute(self.request).await?;

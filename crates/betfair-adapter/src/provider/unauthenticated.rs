@@ -1,5 +1,11 @@
+use std::sync::Arc;
+use std::time::Duration;
+
+use backon::{BackoffBuilder, ExponentialBuilder};
 use betfair_types::bot_login::BotLoginResponse;
 use reqwest::{Client, header};
+use tokio::task::JoinHandle;
+use tokio::time::{Instant, interval, sleep};
 
 use super::BetfairRpcClient;
 use crate::secret::{self, SessionToken};
@@ -17,14 +23,39 @@ impl BetfairRpcClient<Unauthenticated> {
     }
 
     /// Authenticates the user and returns an `AuthenticatedBetfairRpcProvider`.
-    pub async fn authenticate(self) -> Result<BetfairRpcClient<Authenticated>, ApiError> {
-        let (session_token, authenticated_client) = self.bot_log_in().await?;
+    pub async fn authenticate(
+        self,
+    ) -> Result<
+        (
+            Arc<BetfairRpcClient<Authenticated>>,
+            JoinHandle<Result<(), ApiError>>,
+        ),
+        ApiError,
+    > {
+        let mut backoff = ExponentialBuilder::new().build();
+        let mut first_call = true;
+        let (session_token, authenticated_client) = loop {
+            if !first_call {
+                // add exponential recovery
+                let next = backoff.next();
+                let Some(delay) = next else {
+                    return Err(ApiError::EyreError(eyre::eyre!("could not authenticate")));
+                };
+                sleep(delay).await;
+            }
+            first_call = true;
+            let Ok(res) = self.bot_log_in().await else {
+                continue;
+            };
+
+            break res;
+        };
+
         let state = Authenticated {
             session_token,
             authenticated_client,
         };
-
-        Ok(BetfairRpcClient {
+        let client = Arc::new(BetfairRpcClient {
             state,
             bot_login_client: self.bot_login_client,
             rest_base: self.rest_base,
@@ -34,7 +65,31 @@ impl BetfairRpcClient<Unauthenticated> {
             login: self.login,
             stream: self.stream,
             secret_provider: self.secret_provider,
-        })
+        });
+
+        let keep_alive = tokio::spawn({
+            let client = Arc::downgrade(&client);
+            async move {
+                const MINUTES_15: u64 = 60 * 15;
+                let mut interval = interval(Duration::from_secs(MINUTES_15));
+
+                loop {
+                    interval.tick().await;
+                    let Some(client) = client.upgrade() else {
+                        // all references to the client have been dropped, we can exit the `keep-alive` loop
+                        return Ok(());
+                    };
+
+                    let t1 = Instant::now();
+                    let _res = client.keep_alive()?.execute().await?;
+                    let t2 = Instant::now();
+                    let diff = t2.saturating_duration_since(t1);
+                    tracing::info!(?diff, "latency");
+                }
+            }
+        });
+
+        Ok((client, keep_alive))
     }
 
     /// Creates a new instance of `UnauthenticatedBetfairRpcProvider` with a specific configuration.

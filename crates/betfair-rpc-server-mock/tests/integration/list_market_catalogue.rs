@@ -81,7 +81,7 @@ async fn list_market_catalogue() {
 
     // Action
     let client = server.client().await;
-    let client = client.authenticate().await.unwrap();
+    let (client, _) = client.authenticate().await.unwrap();
     let market_id = MarketId(Arc::new("1.210878100".to_owned()));
     let result = client
         .send_request(

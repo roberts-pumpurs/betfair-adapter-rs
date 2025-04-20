@@ -15,7 +15,7 @@ async fn keep_alive() {
 
     // Action
     let client = server.client().await;
-    let client = client.authenticate().await.unwrap();
+    let (client, _) = client.authenticate().await.unwrap();
     let ka = client.keep_alive().unwrap();
     ka.execute()
         .await

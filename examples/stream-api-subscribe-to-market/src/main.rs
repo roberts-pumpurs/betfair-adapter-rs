@@ -36,9 +36,8 @@ async fn main() -> eyre::Result<()> {
     };
 
     // login to betfair
-    let bf_client = BetfairRpcClient::new(secret_provider.clone())?
-        .authenticate()
-        .await?;
+    let bf_unauth = BetfairRpcClient::new(secret_provider.clone())?;
+    let (bf_client, _) = bf_unauth.clone().authenticate().await?;
     // get market id
     let market_book = bf_client
         .send_request(list_market_catalogue::Parameters {
@@ -59,7 +58,7 @@ async fn main() -> eyre::Result<()> {
     let market_id = market_book[0].market_id.clone();
 
     // connect to stream
-    let stream = BetfairStreamBuilder::<Cache>::new(bf_client);
+    let stream = BetfairStreamBuilder::<Cache>::new(bf_unauth.clone());
     let (mut stream, _task) = stream.start().await;
 
     // start processing stream

@@ -12,7 +12,7 @@ edition = "2024"
 description = """
 Utilities for interacting with Betfair from Rust
 """
-keywords = ["auth", "betfair", "stream", "async", "rpc", "trading"]
+keywords = ["auth", "betfair", "stream", "rpc", "betting"]
 categories = ["api", "authentication", "stream", "realtime", "asynchronous"]
 documentation = "https://github.com/roberts-pumpurs/betfair-adapter-rs"
 exclude = [
@@ -95,9 +95,8 @@ typed-builder = "0.21"
 redact = { version = "0.1", features = ["serde"] }
 trait-variant = "0.1"
 itertools = "0.14"
-backoff = { version = "0.4", features = ["tokio"] }
 log = "0.4"
-backon = "1.5"
+backon = "1"
 
 # Async
 tokio = { version = "1.0", features = ["full", "tracing"] }

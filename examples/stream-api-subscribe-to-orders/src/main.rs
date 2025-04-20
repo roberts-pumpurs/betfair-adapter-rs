@@ -32,13 +32,11 @@ async fn main() -> eyre::Result<()> {
         password: config.betfair_password,
         identity: config.betfair_identity,
     };
-    let bf_client = BetfairRpcClient::new(secret_provider.clone())?
-        .authenticate()
-        .await?;
+    let bf_unauth = BetfairRpcClient::new(secret_provider.clone())?;
 
     // connect to stream
     let stream =
-        BetfairStreamBuilder::<Cache>::new(bf_client).with_heartbeat(Duration::from_secs(5));
+        BetfairStreamBuilder::<Cache>::new(bf_unauth).with_heartbeat(Duration::from_secs(5));
     let (mut stream, _task) = stream.start().await;
 
     // start processing stream

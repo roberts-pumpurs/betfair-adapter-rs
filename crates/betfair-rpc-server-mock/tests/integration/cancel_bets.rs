@@ -41,7 +41,7 @@ async fn cancel_bets_unsuccessful() {
 
     // Action
     let client = server.client().await;
-    let client = client.authenticate().await.unwrap();
+    let (client, _) = client.authenticate().await.unwrap();
     let market_id = MarketId::new("1.210878100");
     let result = client
         .send_request(cancel_orders::Parameters {

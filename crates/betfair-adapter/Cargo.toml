@@ -21,6 +21,8 @@ redact.workspace = true
 tracing.workspace = true
 betfair-types.workspace = true
 eyre.workspace = true
+tokio.workspace = true
+backon.workspace = true
 url.workspace = true
 
 [dev-dependencies]

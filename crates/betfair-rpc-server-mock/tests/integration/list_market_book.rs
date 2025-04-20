@@ -102,7 +102,7 @@ async fn single_market_book() {
 
     // Action
     let client = server.client().await;
-    let client = client.authenticate().await.unwrap();
+    let (client, _) = client.authenticate().await.unwrap();
 
     let result = client
         .send_request(
