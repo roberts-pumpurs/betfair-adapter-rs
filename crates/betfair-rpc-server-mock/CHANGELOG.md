@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-rpc-server-mock-v0.3.0...betfair-rpc-server-mock-v0.4.0) - 2025-04-20
+
+### Added
+
+- rpc agent will take care of keep-alive loop
+
 ## [0.3.0](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-rpc-server-mock-v0.2.1...betfair-rpc-server-mock-v0.3.0) - 2025-04-20
 
 ### Added

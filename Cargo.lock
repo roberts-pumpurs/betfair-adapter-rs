@@ -199,7 +199,7 @@ checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 
 [[package]]
 name = "betfair-adapter"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "backon",
  "betfair-types",
@@ -224,7 +224,7 @@ dependencies = [
 
 [[package]]
 name = "betfair-cert-gen"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "eyre",
  "rcgen",
@@ -233,7 +233,7 @@ dependencies = [
 
 [[package]]
 name = "betfair-rpc-server-mock"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "betfair-adapter",
  "betfair-types",
@@ -254,7 +254,7 @@ dependencies = [
 
 [[package]]
 name = "betfair-stream-api"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "backon",
  "betfair-adapter",
@@ -279,7 +279,7 @@ dependencies = [
 
 [[package]]
 name = "betfair-stream-types"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "betfair-types",
  "chrono",
@@ -292,7 +292,7 @@ dependencies = [
 
 [[package]]
 name = "betfair-typegen"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "betfair-xml-parser",
  "eyre",
@@ -311,7 +311,7 @@ dependencies = [
 
 [[package]]
 name = "betfair-types"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "betfair-typegen",
  "chrono",
@@ -331,7 +331,7 @@ dependencies = [
 
 [[package]]
 name = "betfair-xml-parser"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "log",
  "rstest",
@@ -2276,7 +2276,7 @@ dependencies = [
 
 [[package]]
 name = "stream-api-subscribe-to-market"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "betfair-adapter",
  "betfair-stream-api",
@@ -2291,7 +2291,7 @@ dependencies = [
 
 [[package]]
 name = "stream-api-subscribe-to-orders"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "betfair-adapter",
  "betfair-stream-api",
@@ -3145,7 +3145,7 @@ checksum = "32ac00cd3f8ec9c1d33fb3e7958a82df6989c42d747bd326c822b1d625283547"
 
 [[package]]
 name = "xtask"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "betfair-cert-gen",
  "clap",
