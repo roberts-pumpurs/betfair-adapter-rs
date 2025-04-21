@@ -13,7 +13,7 @@ use self::order_stream_tracker::OrderStreamTracker;
 use super::primitives::{MarketBookCache, OrderBookCache};
 
 /// Separate stream struct to hold market/order caches
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StreamState {
     pub stream_id: Option<u64>,
     pub update_clk: Option<Clock>,

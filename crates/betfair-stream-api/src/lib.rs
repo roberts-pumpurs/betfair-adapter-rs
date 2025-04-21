@@ -48,6 +48,7 @@ use tokio_util::{
 /// # Type Parameters
 ///
 /// - `T`: A type that implements `MessageProcessor`, used to handle incoming `ResponseMessage` objects.
+#[derive(Debug, Clone)]
 pub struct BetfairStreamBuilder<T: MessageProcessor> {
     /// betfair client
     pub client: BetfairRpcClient<Unauthenticated>,
@@ -60,6 +61,7 @@ pub struct BetfairStreamBuilder<T: MessageProcessor> {
 /// Handle to a running Betfair Streaming API client.
 ///
 /// Provides channels to send requests (`send_to_stream`) and receive processed messages (`sink`).
+#[derive(Debug)]
 pub struct BetfairStreamClient<T: MessageProcessor> {
     /// send a message to the Betfair stream
     pub send_to_stream: Sender<RequestMessage>,
@@ -70,6 +72,7 @@ pub struct BetfairStreamClient<T: MessageProcessor> {
 /// Default `MessageProcessor` implementation that maintains market and order caches.
 ///
 /// It updates an internal `StreamState` to apply incremental updates to market and order books.
+#[derive(Debug, Clone)]
 pub struct Cache {
     state: StreamState,
 }
@@ -129,6 +132,7 @@ impl MessageProcessor for Cache {
 }
 
 /// `MessageProcessor` that forwards raw `ResponseMessage` objects without transformation.
+#[derive(Debug)]
 pub struct Forwarder;
 impl MessageProcessor for Forwarder {
     type Output = ResponseMessage;
