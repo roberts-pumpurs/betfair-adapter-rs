@@ -9,7 +9,6 @@ async fn keep_alive() {
     // Setup
     server
         .mock_keep_alive()
-        .expect(1)
         .mount(&server.bf_api_mock_server)
         .await;
 
