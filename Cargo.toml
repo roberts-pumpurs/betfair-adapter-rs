@@ -13,7 +13,7 @@ description = """
 Utilities for interacting with Betfair from Rust
 """
 keywords = ["auth", "betfair", "stream", "rpc", "betting"]
-categories = ["api", "authentication", "stream", "realtime", "asynchronous"]
+categories = ["api-bindings", "authentication", "finance", "asynchronous"]
 documentation = "https://github.com/roberts-pumpurs/betfair-adapter-rs"
 exclude = [
   "/.github/",
