@@ -49,7 +49,7 @@ use tokio_util::{
 ///
 /// - `T`: A type that implements `MessageProcessor`, used to handle incoming `ResponseMessage` objects.
 pub struct BetfairStreamBuilder<T: MessageProcessor> {
-    /// betfair cient
+    /// betfair client
     pub client: BetfairRpcClient<Unauthenticated>,
     /// Heartbeat interval (used only if heartbeat_enabled is true)
     pub heartbeat_interval: Option<Duration>,
@@ -384,7 +384,7 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
             let mut tls_stream = Framed::new(tls_stream, StreamAPIClientCodec);
 
             match self
-                .handshake(from_stream_tx, &client, &mut tls_stream)
+                .handshake(from_stream_tx, client, &mut tls_stream)
                 .await
             {
                 Ok(()) => return Ok(tls_stream),

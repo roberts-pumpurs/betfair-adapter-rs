@@ -46,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - fix broken test
 - Update README.md ([#5](https://github.com/roberts-pumpurs/betfair-adapter-rs/pull/5))
 - new ci
-- add utilities to model errror responses
+- add utilities to model error responses
 - remove circular dependencies
 - rpc mock will validate login credentials
 - applying clippy lints

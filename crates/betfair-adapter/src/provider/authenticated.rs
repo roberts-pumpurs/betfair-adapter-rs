@@ -1,5 +1,4 @@
 use core::marker::PhantomData;
-use std::sync::Arc;
 
 use betfair_types::keep_alive;
 use betfair_types::types::BetfairRpcRequest;
