@@ -6,7 +6,7 @@ use betfair_stream_types::response::order_change_message::OrderChangeMessage;
 use super::HasFullImage;
 use crate::cache::primitives::OrderBookCache;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct OrderStreamTracker {
     market_state: HashMap<MarketId, OrderBookCache>,
     updates_processed: u64,

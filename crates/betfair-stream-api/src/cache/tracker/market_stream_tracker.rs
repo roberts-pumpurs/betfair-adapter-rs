@@ -6,7 +6,7 @@ use betfair_stream_types::response::market_change_message::MarketChangeMessage;
 use super::HasFullImage;
 use crate::cache::primitives::MarketBookCache;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct MarketStreamTracker {
     market_state: HashMap<MarketId, MarketBookCache>,
     updates_processed: u64,
