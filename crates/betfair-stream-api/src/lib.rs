@@ -49,7 +49,7 @@ use tokio_util::{
 ///
 /// - `T`: A type that implements `MessageProcessor`, used to handle incoming `ResponseMessage` objects.
 pub struct BetfairStreamBuilder<T: MessageProcessor> {
-    /// betfair cient
+    /// betfair client
     pub client: BetfairRpcClient<Unauthenticated>,
     /// Heartbeat interval (used only if heartbeat_enabled is true)
     pub heartbeat_interval: Option<Duration>,

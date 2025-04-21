@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - betfair requests can be made concurrently via request objects
 - :art: Added xtask subscribe to market command (#7)
-- example on how to connnect to betfair
+- example on how to connect to betfair
 - refactored stream api
 - can instantiate stream api by just importing a trait
 - rpc server mock separated out
