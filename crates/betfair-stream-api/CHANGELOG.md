@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-stream-api-v0.4.1...betfair-stream-api-v0.5.0) - 2025-04-25
+
+### Added
+
+- the spawn function will be generic
+
 ## [0.4.1](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-stream-api-v0.4.0...betfair-stream-api-v0.4.1) - 2025-04-21
 
 ### Added
