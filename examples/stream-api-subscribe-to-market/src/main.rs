@@ -59,7 +59,7 @@ async fn main() -> eyre::Result<()> {
 
     // connect to stream
     let stream = BetfairStreamBuilder::<Cache>::new(bf_unauth.clone());
-    let (mut stream, _task) = stream.start().await;
+    let (mut stream, _task) = stream.start::<10>();
 
     // start processing stream
     let mut ms = MarketSubscriber::new(

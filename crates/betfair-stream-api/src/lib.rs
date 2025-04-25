@@ -25,8 +25,8 @@ use core::fmt;
 use core::{pin::pin, time::Duration};
 use eyre::Context as _;
 use futures::{
-    SinkExt as _, StreamExt as _,
-    future::{self, select},
+    FutureExt, SinkExt as _, StreamExt as _,
+    future::{self, BoxFuture, select},
 };
 use std::sync::Arc;
 use tokio::{
@@ -218,25 +218,56 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
     /// This will spawn an asynchronous task that manages the connection, handshake,
     /// incoming/outgoing messages, heartbeats (if enabled), and automatic reconnections.
     ///
+    /// # Type Parameters
+    ///
+    /// * `C` - The capacity of the internal message channels.
+    /// * `Sp` - The type of the spawner function.
+    /// * `H` - The type of the handle returned by the spawner.
+    ///
+    /// # Parameters
+    ///
+    /// * `spawner` - A function that takes a boxed future and returns a handle to the spawned task.
+    ///
     /// # Returns
     ///
     /// * `BetfairStreamClient<T>` - A client handle providing:
     ///     - `send_to_stream`: a channel sender for outgoing `RequestMessage`s.
     ///     - `sink`: a channel receiver for processed messages of type `T::Output`.
-    /// * `JoinHandle<eyre::Result<()>>` - A handle to the background task driving the streaming logic.
-    pub async fn start(self) -> (BetfairStreamClient<T>, JoinHandle<eyre::Result<()>>) {
-        let (to_stream_tx, to_stream_rx) = mpsc::channel(100);
-        let (from_stream_tx, from_stream_rx) = mpsc::channel(100);
+    /// * `H` - A handle to the background task driving the streaming logic, type depends on the spawner.
+    pub fn start_with<const C: usize, Sp, H>(self, spawner: Sp) -> (BetfairStreamClient<T>, H)
+    where
+        Sp: FnOnce(BoxFuture<'static, eyre::Result<()>>) -> H,
+    {
+        let (to_stream_tx, to_stream_rx) = mpsc::channel(C);
+        let (from_stream_tx, from_stream_rx) = mpsc::channel(C);
 
-        let task = tokio::task::spawn(self.run(from_stream_tx, to_stream_rx));
+        // let task = tokio::task::spawn(self.run(from_stream_tx, to_stream_rx));
+        let fut = self.run(from_stream_tx, to_stream_rx).boxed();
+        let handle = spawner(fut);
 
         (
             BetfairStreamClient {
                 send_to_stream: to_stream_tx,
                 sink: from_stream_rx,
             },
-            task,
+            handle,
         )
+    }
+
+    /// Starts the Betfair streaming client with the default Tokio task spawner.
+    ///
+    /// This is a convenience method that uses `tokio::spawn` to run the streaming task.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `C` - The capacity of the internal message channels.
+    ///
+    /// # Returns
+    ///
+    /// * `BetfairStreamClient<T>` - A client handle for interacting with the stream.
+    /// * `JoinHandle<eyre::Result<()>>` - A Tokio join handle for the background streaming task.
+    pub fn start<const C: usize>(self) -> (BetfairStreamClient<T>, JoinHandle<eyre::Result<()>>) {
+        self.start_with::<C, _, _>(|fut| tokio::spawn(fut))
     }
 
     async fn run(

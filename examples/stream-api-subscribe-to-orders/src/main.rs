@@ -37,7 +37,7 @@ async fn main() -> eyre::Result<()> {
     // connect to stream
     let stream =
         BetfairStreamBuilder::<Cache>::new(bf_unauth).with_heartbeat(Duration::from_secs(5));
-    let (mut stream, _task) = stream.start().await;
+    let (mut stream, _task) = stream.start::<10>();
 
     // start processing stream
     let os = OrderSubscriber::new(&stream, OrderFilter::default());
