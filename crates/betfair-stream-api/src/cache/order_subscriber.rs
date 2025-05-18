@@ -88,7 +88,7 @@ impl OrderSubscriber {
             id: None,
             segmentation_enabled: Some(true),
             clk: None,
-            heartbeat_ms: Some(500),
+            heartbeat_ms: Some(5000),
             initial_clk: None,
             order_filter: Some(Box::new(OrderFilter {
                 include_overall_position: Some(false),
@@ -117,7 +117,7 @@ impl OrderSubscriber {
             clk: None,         // empty to reset the clock
             initial_clk: None, // empty to reset the clock
             segmentation_enabled: Some(true),
-            heartbeat_ms: Some(500),
+            heartbeat_ms: Some(5000),
             order_filter: Some(Box::new(self.filter.clone())),
             conflate_ms: None,
         });
