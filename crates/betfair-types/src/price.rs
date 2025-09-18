@@ -153,7 +153,7 @@ impl Price {
             x if (dec!(50.0)..dec!(100.0)).contains(&x) => {
                 Ok(round_to_nearest(x, dec!(50.0), dec!(5.0)))
             }
-            x if (dec!(100.0)..dec!(1000.0)).contains(&x) => {
+            x if (dec!(100.0)..=dec!(1000.0)).contains(&x) => {
                 Ok(round_to_nearest(x, dec!(100.0), dec!(10.0)))
             }
             x => Err(PriceParseError::InvalidPriceSpecified(x)),
@@ -171,6 +171,7 @@ mod tests {
     #[rstest]
     #[case(dec!(0.99))]
     #[case(dec!(1.00))]
+    #[case(dec!(1000.01))]
     #[case(dec!(11000.00))]
     fn correctly_detects_price_adjustment_errors(#[case] price: Decimal) {
         let actual = Price::adjust_price_to_betfair_boundaries(price).unwrap_err();
@@ -180,6 +181,7 @@ mod tests {
     }
 
     #[rstest]
+    #[case(dec!(1.01), dec!(1.01))]
     #[case(dec!(1.03), dec!(1.03))]
     #[case(dec!(1.034), dec!(1.03))]
     #[case(dec!(1.05432111), dec!(1.05))]
@@ -200,6 +202,8 @@ mod tests {
     #[case(dec!(5.00032111), dec!(5.0))]
     #[case(dec!(5.13), dec!(5.1))]
     #[case(dec!(5.487), dec!(5.4))]
+    #[case(dec!(999.0), dec!(990.0))]
+    #[case(dec!(1000.0), dec!(1000.0))]
     fn correctly_adjusts_prices(#[case] input_price: Decimal, #[case] expected: Decimal) {
         let actual = Price::adjust_price_to_betfair_boundaries(input_price).unwrap();
         assert_eq!(
