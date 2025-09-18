@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.2](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-types-v0.5.1...betfair-types-v0.5.2) - 2025-09-18
+
+### Fixed
+
+- allow price of 1000 ([#60](https://github.com/roberts-pumpurs/betfair-adapter-rs/pull/60))
+
 ## [0.3.0](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-types-v0.2.1...betfair-types-v0.3.0) - 2025-04-20
 
 ### Added
