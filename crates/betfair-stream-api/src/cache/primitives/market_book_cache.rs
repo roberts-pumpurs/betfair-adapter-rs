@@ -202,6 +202,12 @@ impl MarketBookCache {
     pub const fn market_id(&self) -> &MarketId {
         &self.market_id
     }
+
+    /// Returns the total amount matched across the market.
+    #[must_use]
+    pub const fn total_matched(&self) -> Size {
+        self.total_matched
+    }
 }
 
 #[cfg(test)]
@@ -244,6 +250,7 @@ mod tests {
             init.update_cache(change.clone(), Utc::now(), true);
             assert!(init.active);
             assert_eq!(init.total_matched, change.total_value.unwrap_or_default());
+            assert_eq!(init.total_matched(), change.total_value.unwrap_or_default());
         }
     }
 
