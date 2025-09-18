@@ -223,8 +223,18 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
         if types_to_skip.contains(&type_alias.name.0.as_str()) {
             return None;
         }
+
+        let extra = if type_alias.data_type.as_str().eq("i64") {
+            quote! {
+                #[derive(Copy)]
+            }
+        } else {
+            quote! {}
+        };
+
         Some(quote! {
             #type_alias_derives
+            #extra
             pub struct #name (pub #data_type);
         })
     }
