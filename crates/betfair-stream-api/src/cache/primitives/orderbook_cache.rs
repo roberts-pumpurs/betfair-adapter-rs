@@ -48,9 +48,9 @@ impl OrderBookCache {
             for runner_change in order_runner_change {
                 let runner = self
                     .runners
-                    .entry((runner_change.id.clone(), runner_change.handicap))
+                    .entry((runner_change.id, runner_change.handicap))
                     .or_insert_with(|| {
-                        OrderBookRunner::new(self.market_id.clone(), runner_change.id.clone())
+                        OrderBookRunner::new(self.market_id.clone(), runner_change.id)
                     });
 
                 if let Some(ml) = runner_change.matched_lays {

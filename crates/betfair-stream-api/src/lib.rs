@@ -109,22 +109,22 @@ impl MessageProcessor for Cache {
                 Some(CachedMessage::Connection(connection_message))
             }
             ResponseMessage::MarketChange(market_change_message) => {
-                let data = self
+                
+
+                self
                     .state
                     .market_change_update(market_change_message)
                     .map(|markets| markets.into_iter().cloned().collect::<Vec<_>>())
-                    .map(CachedMessage::MarketChange);
-
-                data
+                    .map(CachedMessage::MarketChange)
             }
             ResponseMessage::OrderChange(order_change_message) => {
-                let data = self
+                
+
+                self
                     .state
                     .order_change_update(order_change_message)
                     .map(|markets| markets.into_iter().cloned().collect::<Vec<_>>())
-                    .map(CachedMessage::OrderChange);
-
-                data
+                    .map(CachedMessage::OrderChange)
             }
             ResponseMessage::Status(status_message) => Some(CachedMessage::Status(status_message)),
         }

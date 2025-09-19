@@ -45,7 +45,9 @@ impl From<Interface> for Aping {
             rpc_calls: HashMap::new(),
             data_types: HashMap::new(),
         };
-        let aping = val.items.iter().fold(aping_default, |mut aping, x| {
+        
+
+        val.items.iter().fold(aping_default, |mut aping, x| {
             match *x {
                 betfair_xml_parser::InterfaceItems::Description(ref x) => {
                     aping.insert_top_level_docs(x);
@@ -60,9 +62,7 @@ impl From<Interface> for Aping {
                 betfair_xml_parser::InterfaceItems::Operation(ref x) => aping.insert_operation(x),
             }
             aping
-        });
-
-        aping
+        })
     }
 }
 
@@ -409,7 +409,8 @@ mod prism_impls {
 
     impl Prism<Vec<Comment>> for betfair_xml_parser::operation::Operation {
         fn lense(&self) -> Vec<Comment> {
-            let doc_comment = self
+            
+            self
                 .values
                 .iter()
                 .filter_map(|x| match *x {
@@ -419,8 +420,7 @@ mod prism_impls {
                     betfair_xml_parser::operation::OperationItem::Parameters(_) => None,
                 })
                 .map(Comment::new)
-                .collect();
-            doc_comment
+                .collect()
         }
     }
 
@@ -451,7 +451,8 @@ mod prism_impls {
 
     impl Prism<Vec<Comment>> for &betfair_xml_parser::common::Parameter {
         fn lense(&self) -> Vec<Comment> {
-            let doc_comments = self
+            
+            self
                 .items
                 .iter()
                 .filter_map(|x| match *x {
@@ -461,8 +462,7 @@ mod prism_impls {
                     betfair_xml_parser::common::ParameterItem::ValidValues(_) => None,
                 })
                 .map(Comment::new)
-                .collect::<Vec<_>>();
-            doc_comments
+                .collect::<Vec<_>>()
         }
     }
 

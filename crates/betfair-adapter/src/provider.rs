@@ -1,7 +1,6 @@
 pub(crate) mod authenticated;
 mod unauthenticated;
 
-
 use crate::{SessionToken, secret, urls};
 
 #[derive(Debug, Clone)]

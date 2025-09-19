@@ -68,7 +68,7 @@ impl MarketBookCache {
         let mut calculate_total_matched = false;
         if let Some(rc) = market_change.runner_change {
             for runner_change in rc {
-                let Some(selection_id) = runner_change.id.clone() else {
+                let Some(selection_id) = runner_change.id else {
                     continue;
                 };
                 let runner = self
@@ -139,7 +139,7 @@ impl MarketBookCache {
         self.market_definition = Some(Box::new(market_definition.clone()));
 
         for runner_definition in market_definition.runners {
-            let selection_id = runner_definition.id.clone();
+            let selection_id = runner_definition.id;
             let Some(selection_id) = selection_id else {
                 continue;
             };
@@ -156,7 +156,7 @@ impl MarketBookCache {
 
     /// Adds a runner from a change.
     fn add_runner_from_change(&mut self, runner_change: RunnerChange) {
-        let Some(selection_id) = runner_change.id.clone() else {
+        let Some(selection_id) = runner_change.id else {
             return;
         };
         let key = (selection_id, runner_change.handicap);
@@ -168,7 +168,7 @@ impl MarketBookCache {
 
     /// Adds a runner from a definition.
     fn add_runner_from_definition(&mut self, runner_definition: RunnerDefinition) {
-        let Some(selection_id) = runner_definition.id.clone() else {
+        let Some(selection_id) = runner_definition.id else {
             return;
         };
         let key = (selection_id, runner_definition.handicap);

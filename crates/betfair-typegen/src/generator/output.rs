@@ -89,8 +89,7 @@ impl GeneratedOutput {
 
         if !status.success() {
             tracing::error!(?file_path, "cannot format file");
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
+            return Err(io::Error::other(
                 format!("rustfmt failed for {}", file_path.display()),
             ));
         }
