@@ -108,24 +108,16 @@ impl MessageProcessor for Cache {
             ResponseMessage::Connection(connection_message) => {
                 Some(CachedMessage::Connection(connection_message))
             }
-            ResponseMessage::MarketChange(market_change_message) => {
-                
-
-                self
-                    .state
-                    .market_change_update(market_change_message)
-                    .map(|markets| markets.into_iter().cloned().collect::<Vec<_>>())
-                    .map(CachedMessage::MarketChange)
-            }
-            ResponseMessage::OrderChange(order_change_message) => {
-                
-
-                self
-                    .state
-                    .order_change_update(order_change_message)
-                    .map(|markets| markets.into_iter().cloned().collect::<Vec<_>>())
-                    .map(CachedMessage::OrderChange)
-            }
+            ResponseMessage::MarketChange(market_change_message) => self
+                .state
+                .market_change_update(market_change_message)
+                .map(|markets| markets.into_iter().cloned().collect::<Vec<_>>())
+                .map(CachedMessage::MarketChange),
+            ResponseMessage::OrderChange(order_change_message) => self
+                .state
+                .order_change_update(order_change_message)
+                .map(|markets| markets.into_iter().cloned().collect::<Vec<_>>())
+                .map(CachedMessage::OrderChange),
             ResponseMessage::Status(status_message) => Some(CachedMessage::Status(status_message)),
         }
     }

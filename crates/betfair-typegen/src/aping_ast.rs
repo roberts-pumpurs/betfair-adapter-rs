@@ -45,7 +45,6 @@ impl From<Interface> for Aping {
             rpc_calls: HashMap::new(),
             data_types: HashMap::new(),
         };
-        
 
         val.items.iter().fold(aping_default, |mut aping, x| {
             match *x {
@@ -409,9 +408,7 @@ mod prism_impls {
 
     impl Prism<Vec<Comment>> for betfair_xml_parser::operation::Operation {
         fn lense(&self) -> Vec<Comment> {
-            
-            self
-                .values
+            self.values
                 .iter()
                 .filter_map(|x| match *x {
                     betfair_xml_parser::operation::OperationItem::Description(ref x) => {
@@ -451,9 +448,7 @@ mod prism_impls {
 
     impl Prism<Vec<Comment>> for &betfair_xml_parser::common::Parameter {
         fn lense(&self) -> Vec<Comment> {
-            
-            self
-                .items
+            self.items
                 .iter()
                 .filter_map(|x| match *x {
                     betfair_xml_parser::common::ParameterItem::Description(ref x) => {
