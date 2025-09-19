@@ -10,7 +10,7 @@ pub enum PriceParseError {
     InvalidPriceSpecified(Decimal),
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Clone, Serialize, Deserialize, Eq, Hash, Ord)]
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, Serialize, Deserialize, Eq, Hash, Ord)]
 pub struct Price(rust_decimal::Decimal);
 
 impl Deref for Price {
