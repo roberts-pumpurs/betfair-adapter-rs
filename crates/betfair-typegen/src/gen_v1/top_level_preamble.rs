@@ -7,9 +7,6 @@ use super::injector::CodeInjector;
 impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
     pub(crate) fn generate_transport_layer(&self) -> TokenStream {
         quote! {
-            use std::future::Future;
-            use serde::{Serialize, de::DeserializeOwned};
-
             pub trait BetfairRpcRequest {
                 type Res;
                 type Error;
@@ -22,7 +19,7 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
 
             use rust_decimal::{Decimal, prelude::FromPrimitive};
             use serde::de::{self, Visitor};
-            use serde::{Deserialize, Deserializer};
+            use serde::{Deserializer};
 
             // Define a custom visitor struct to handle different types
             struct DecimalOptionVisitor;
