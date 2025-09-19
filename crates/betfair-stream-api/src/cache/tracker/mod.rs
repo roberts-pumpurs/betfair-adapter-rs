@@ -115,6 +115,7 @@ impl StreamState {
         self.update_clk(msg);
     }
 
+    #[allow(unused)]
     pub(crate) fn clear_stale_cache(&mut self, publish_time: chrono::DateTime<chrono::Utc>) {
         self.market_stream_tracker.clear_stale_cache(publish_time);
         self.order_stream_tracker.clear_stale_cache(publish_time);

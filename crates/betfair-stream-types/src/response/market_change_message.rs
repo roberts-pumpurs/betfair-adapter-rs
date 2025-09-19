@@ -358,7 +358,7 @@ pub struct RunnerDefinition {
 /// Implements comparison for `RunnerDefinition`.
 impl PartialOrd for RunnerDefinition {
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
-        self.sort_priority.partial_cmp(&other.sort_priority)
+        Some(self.cmp(other))
     }
 }
 
