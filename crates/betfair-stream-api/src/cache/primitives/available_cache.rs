@@ -80,7 +80,7 @@ impl UpdateSet for UpdateSet3 {
     }
 
     fn key(&self) -> Self::Key {
-        self.0.clone()
+        self.0
     }
 
     fn should_be_deleted(&self) -> bool {
