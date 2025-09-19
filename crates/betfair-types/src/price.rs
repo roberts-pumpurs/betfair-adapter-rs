@@ -74,6 +74,8 @@ impl Price {
 
     /// This function is unsafe because it does not check if the price is within the Betfair
     /// boundaries. Use `Price::new` instead.
+    /// # Safety
+    /// The caller must ensure that the price is within the Betfair boundaries.
     #[must_use]
     pub const unsafe fn new_unchecked(price: rust_decimal::Decimal) -> Self {
         Self(price)
