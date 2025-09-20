@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-stream-types-v0.5.2...betfair-stream-types-v0.6.0) - 2025-09-20
+
+### Added
+
+- make `Price`, `Handicap` and `Position` all Copy ([#64](https://github.com/roberts-pumpurs/betfair-adapter-rs/pull/64))
+
+### Other
+
+- `cargo xtask fmt` updates and reduce warnings ([#63](https://github.com/roberts-pumpurs/betfair-adapter-rs/pull/63))
+
 ## [0.3.0](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-stream-types-v0.2.1...betfair-stream-types-v0.3.0) - 2025-04-20
 
 ### Added

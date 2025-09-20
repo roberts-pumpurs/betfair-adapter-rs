@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-adapter-v0.5.2...betfair-adapter-v0.6.0) - 2025-09-20
+
+### Other
+
+- `cargo xtask fmt` updates and reduce warnings ([#63](https://github.com/roberts-pumpurs/betfair-adapter-rs/pull/63))
+
 ## [0.4.1](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-adapter-v0.4.0...betfair-adapter-v0.4.1) - 2025-04-21
 
 ### Other
