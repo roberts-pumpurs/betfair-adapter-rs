@@ -63,7 +63,7 @@ impl UpdateSet for UpdateSet2 {
     }
 
     fn key(&self) -> Self::Key {
-        self.0.clone()
+        self.0
     }
 
     fn should_be_deleted(&self) -> bool {
@@ -76,11 +76,11 @@ impl UpdateSet for UpdateSet3 {
     type Value = (Price, Size);
 
     fn value(&self) -> Self::Value {
-        (self.1.clone(), self.2)
+        (self.1, self.2)
     }
 
     fn key(&self) -> Self::Key {
-        self.0.clone()
+        self.0
     }
 
     fn should_be_deleted(&self) -> bool {

@@ -178,7 +178,7 @@ pub struct UpdateSet2(pub Price, pub Size);
 pub struct UpdateSet3(pub Position, pub Price, pub Size);
 
 /// Represents the level of the order book.
-#[derive(Debug, PartialEq, PartialOrd, Clone, Serialize, Deserialize, Eq, Hash, Ord)]
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, Serialize, Deserialize, Eq, Hash, Ord)]
 pub struct Position(pub Decimal);
 
 pub trait DataChange<T> {
