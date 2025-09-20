@@ -22,8 +22,8 @@ pub struct StreamState {
     pub initial_clock: Option<InitialClock>,
     pub time_created: chrono::DateTime<chrono::Utc>,
     pub time_updated: chrono::DateTime<chrono::Utc>,
-    pub market_stream_tracker: MarketStreamTracker,
-    pub order_stream_tracker: OrderStreamTracker,
+    pub(crate) market_stream_tracker: MarketStreamTracker,
+    pub(crate) order_stream_tracker: OrderStreamTracker,
 }
 
 pub enum Updates<'a> {
@@ -115,6 +115,7 @@ impl StreamState {
         self.update_clk(msg);
     }
 
+    #[allow(unused)]
     pub(crate) fn clear_stale_cache(&mut self, publish_time: chrono::DateTime<chrono::Utc>) {
         self.market_stream_tracker.clear_stale_cache(publish_time);
         self.order_stream_tracker.clear_stale_cache(publish_time);

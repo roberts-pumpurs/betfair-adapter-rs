@@ -80,7 +80,7 @@ impl RunnerBookCache {
     }
 
     pub fn new_from_runner_definition(runner_definition: RunnerDefinition) -> eyre::Result<Self> {
-        let Some(selection_id) = runner_definition.id.clone() else {
+        let Some(selection_id) = runner_definition.id else {
             bail!("Invalid selection id");
         };
         let definition = Some(runner_definition);

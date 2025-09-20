@@ -52,6 +52,7 @@ impl CodeInjectorV1 {
             module_level_preamble: quote! {
                 use std::fmt::Debug;
                 use serde::{Serialize, Deserialize};
+                #[allow(unused_imports)]
                 use chrono::{DateTime, Utc};
                 use typed_builder::TypedBuilder;
             },

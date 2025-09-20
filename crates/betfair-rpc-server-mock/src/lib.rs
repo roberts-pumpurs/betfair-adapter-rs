@@ -56,8 +56,10 @@ impl Server {
     }
 
     pub async fn new_with_stream_url(stream_url: CustomUrl<Stream>) -> Self {
-        let mut settings = MockSettings::default();
-        settings.stream_url = stream_url;
+        let settings = MockSettings {
+            stream_url,
+            ..Default::default()
+        };
         Self::new_with_settings(settings).await
     }
 
@@ -107,7 +109,8 @@ impl Server {
     }
 
     #[must_use]
-    pub fn betfair_config<'a>(
+    #[allow(clippy::type_complexity)]
+    pub fn betfair_config(
         &self,
         secrets_provider: SecretProvider,
     ) -> BetfairConfigBuilder<
