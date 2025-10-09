@@ -62,6 +62,9 @@ impl OrderBookCache {
                 if let Some(uo) = runner_change.unmatched_orders {
                     runner.update_unmatched(uo);
                 }
+                if let Some(sm) = runner_change.strategy_matches {
+                    runner.update_strategy_matches(sm);
+                }
             }
         }
     }
