@@ -97,4 +97,10 @@ impl OrderBookCache {
     pub const fn market_id(&self) -> &MarketId {
         &self.market_id
     }
+
+    /// Returns a reference to the last change applied to the order book cache, if any.
+    #[must_use]
+    pub const fn last_change(&self) -> Option<&OrderMarketChange> {
+        self.last_change.as_ref()
+    }
 }
