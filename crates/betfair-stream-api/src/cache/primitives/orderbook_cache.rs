@@ -18,6 +18,8 @@ pub struct OrderBookCache {
     closed: bool,
     /// cache of orders placed on a runner
     runners: HashMap<(SelectionId, Option<Handicap>), OrderBookRunner>,
+
+    last_change: Option<OrderMarketChange>,
 }
 
 /// Implements methods for managing the order book cache.
@@ -30,6 +32,7 @@ impl OrderBookCache {
             publish_time,
             closed: false,
             runners: HashMap::new(),
+            last_change: None,
         }
     }
 
@@ -44,7 +47,7 @@ impl OrderBookCache {
         self.publish_time = publish_time;
         self.closed = change.closed.unwrap_or(self.closed);
 
-        if let Some(order_runner_change) = change.order_runner_change {
+        if let Some(ref order_runner_change) = change.order_runner_change {
             for runner_change in order_runner_change {
                 let runner = self
                     .runners
@@ -53,20 +56,22 @@ impl OrderBookCache {
                         OrderBookRunner::new(self.market_id.clone(), runner_change.id)
                     });
 
-                if let Some(ml) = runner_change.matched_lays {
+                if let Some(ref ml) = runner_change.matched_lays {
                     runner.update_matched_lays(ml);
                 }
-                if let Some(mb) = runner_change.matched_backs {
+                if let Some(ref mb) = runner_change.matched_backs {
                     runner.update_matched_backs(mb);
                 }
-                if let Some(uo) = runner_change.unmatched_orders {
+                if let Some(ref uo) = runner_change.unmatched_orders {
                     runner.update_unmatched(uo);
                 }
-                if let Some(sm) = runner_change.strategy_matches {
+                if let Some(ref sm) = runner_change.strategy_matches {
                     runner.update_strategy_matches(sm);
                 }
             }
         }
+
+        self.last_change = Some(change);
     }
 
     /// Returns the publish time of the order book.
