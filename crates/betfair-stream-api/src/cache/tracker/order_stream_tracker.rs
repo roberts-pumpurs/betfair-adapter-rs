@@ -7,7 +7,7 @@ use super::HasFullImage;
 use crate::cache::primitives::OrderBookCache;
 
 #[derive(Debug, Clone)]
-pub(crate) struct OrderStreamTracker {
+pub struct OrderStreamTracker {
     market_state: HashMap<MarketId, OrderBookCache>,
     updates_processed: u64,
 }
@@ -72,5 +72,9 @@ impl OrderStreamTracker {
             !(cached_item.is_closed()
                 && (publish_time.signed_duration_since(cached_item.publish_time())) > max_cache_age)
         });
+    }
+
+    pub fn states(&self) -> Vec<&OrderBookCache> {
+        self.market_state.values().collect()
     }
 }
