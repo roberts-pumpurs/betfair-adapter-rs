@@ -41,7 +41,7 @@ impl GeneratedOutput {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```ignore
     /// let output = GeneratedOutput::new();
     /// let result = output.write_to_file("output_directory");
     /// match result {

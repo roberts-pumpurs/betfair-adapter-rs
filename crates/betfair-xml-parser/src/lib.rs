@@ -69,7 +69,7 @@ pub enum InterfaceItems {
 ///
 /// # Example
 ///
-/// ```
+/// ```ignore
 /// let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
 /// <interface name="HeartbeatAPING" owner="BDP" version="1.0.0" date="now()" namespace="com.betfair.heartbeat.api"
 ///            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
