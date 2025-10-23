@@ -132,15 +132,15 @@ where
             .get("id")
             .and_then(serde_json::Value::as_i64)
             .map(|id| id as i32);
-        let data = v
-            .get(T::key())
-            .and_then(|data| serde_json::from_value(data.clone()).ok());
+        let data = v.get(T::key()).and_then(|data| {
+            serde_json::from_value(data.clone()).expect("data item should be deserialized")
+        });
 
         let res = Self {
             id,
-            change_type: v
-                .get("ct")
-                .and_then(|ct| serde_json::from_value(ct.clone()).ok()),
+            change_type: v.get("ct").and_then(|ct| {
+                serde_json::from_value(ct.clone()).expect("ct should be deserialized")
+            }),
             clock: v
                 .get("clk")
                 .and_then(|clk| clk.as_str())
@@ -156,9 +156,9 @@ where
                 .map(|ic| InitialClock(ic.to_owned())),
             data,
             conflate_ms: v.get("conflateMs").and_then(serde_json::Value::as_i64),
-            segment_type: v
-                .get("segmentType")
-                .and_then(|st| serde_json::from_value(st.clone()).ok()),
+            segment_type: v.get("segmentType").and_then(|st| {
+                serde_json::from_value(st.clone()).expect("segmentType should be deserialized")
+            }),
             status: v
                 .get("status")
                 .and_then(serde_json::Value::as_i64)
