@@ -162,7 +162,7 @@ pub struct Order {
     pub bsp: Option<rust_decimal::Decimal>,
     /// Strategy Reference - the customer's strategy reference for this order (empty string if one
     /// was not set)
-    #[serde(rename = "rfs")]
+    #[serde(rename = "rfs", default)]
     pub strategy_reference: CustomerStrategyRef,
     /// Status - the status of the order (E = EXECUTABLE, EC = `EXECUTION_COMPLETE`)
     pub status: StreamOrderStatus,
