@@ -20,7 +20,13 @@ pub struct OrderBookRunner {
     pub matched_backs: Available<UpdateSet2>,
     pub unmatched_orders: HashMap<BetId, Order>,
     pub handicap: Option<Decimal>,
-    pub strategy_matches: HashMap<CustomerStrategyRef, StrategyMatchChange>,
+    pub strategy_matches: HashMap<CustomerStrategyRef, StrategyMatch>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
+pub struct StrategyMatch {
+    pub matched_lays: Available<UpdateSet2>,
+    pub matched_backs: Available<UpdateSet2>,
 }
 
 impl OrderBookRunner {
@@ -36,17 +42,44 @@ impl OrderBookRunner {
         }
     }
 
-    pub(crate) fn update_unmatched(&mut self, unmatched_orders: impl IntoIterator<Item = Order>) {
+    pub(crate) fn update_unmatched<'o>(
+        &mut self,
+        unmatched_orders: impl IntoIterator<Item = &'o Order>,
+    ) {
         for order in unmatched_orders {
-            self.unmatched_orders.insert(order.id.clone(), order);
+            self.unmatched_orders
+                .insert(order.id.clone(), order.clone());
         }
     }
 
-    pub(crate) fn update_matched_lays(&mut self, ml: Vec<UpdateSet2>) {
+    pub(crate) fn update_matched_lays(&mut self, ml: &Vec<UpdateSet2>) {
         self.matched_lays.update(ml);
     }
 
-    pub(crate) fn update_matched_backs(&mut self, mb: Vec<UpdateSet2>) {
+    pub(crate) fn update_matched_backs(&mut self, mb: &Vec<UpdateSet2>) {
         self.matched_backs.update(mb);
+    }
+
+    pub(crate) fn update_strategy_matches(
+        &mut self,
+        sm: &HashMap<CustomerStrategyRef, StrategyMatchChange>,
+    ) {
+        for (key, value) in sm {
+            let entry = self
+                .strategy_matches
+                .entry(key.clone())
+                .or_insert_with(|| StrategyMatch {
+                    matched_lays: Available::new(&[]),
+                    matched_backs: Available::new(&[]),
+                });
+
+            if let Some(ref ml) = value.ml {
+                entry.matched_lays.update(ml);
+            }
+
+            if let Some(ref mb) = value.mb {
+                entry.matched_backs.update(mb);
+            }
+        }
     }
 }
