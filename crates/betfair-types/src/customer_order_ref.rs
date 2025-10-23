@@ -6,7 +6,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 /// An optional reference the customer can set to identify instructions and it will be returned on
 /// order change messages via the stream API. No validation will be done on uniqueness and the
 /// string is limited to 32 characters. If an empty string is provided it will be treated as null.
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 pub struct CustomerOrderRef(String);
 
 impl CustomerOrderRef {

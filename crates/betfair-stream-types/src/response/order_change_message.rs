@@ -153,7 +153,7 @@ pub struct Order {
     pub size_matched: Size,
     /// Order Reference - the customer's order reference for this order (empty string if one was
     /// not set)
-    #[serde(rename = "rfo")]
+    #[serde(rename = "rfo", default)]
     pub order_reference: CustomerOrderRef,
     /// Bet Id - the id of the order
     pub id: BetId,
