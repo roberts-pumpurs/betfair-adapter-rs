@@ -42,6 +42,7 @@ pub struct OrderMarketChange {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub closed: Option<bool>,
     /// Market ID - the identifier for the market associated with the order changes.
+    #[serde(rename = "id")]
     pub market_id: MarketId,
     /// Full Image - indicates if a full image of the order is available.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -121,22 +122,22 @@ pub struct Order {
     #[serde(rename = "s")]
     pub size: Size,
     /// The date the order was placed.
-    #[serde(rename = "pd")]
+    #[serde(with = "ts_millis", rename = "pd")]
     pub place_date: chrono::DateTime<chrono::Utc>,
     /// Regulator Auth Code - the auth code returned by the regulator
     #[serde(rename = "rac")]
     pub regulator_auth_code: String,
     /// Matched Date - the date the order was matched (null if the order is not matched)
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "md")]
+    #[serde(with = "ts_millis::option", default, rename = "md")]
     pub matched_date: Option<DateTime<Utc>>,
     /// Cancelled Date - the date the order was cancelled (null if the order is not cancelled)
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "cd")]
+    #[serde(with = "ts_millis::option", default, rename = "cd")]
     pub cancelled_date: Option<DateTime<Utc>>,
     /// Lapsed Date - the date the order was lapsed (null if the order is not lapsed)
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "ld")]
+    #[serde(with = "ts_millis::option", default, rename = "ld")]
     pub lapsed_date: Option<DateTime<Utc>>,
     /// Size Lapsed - the amount of the order that has been lapsed
     #[serde(rename = "sl")]
@@ -152,7 +153,7 @@ pub struct Order {
     pub size_matched: Size,
     /// Order Reference - the customer's order reference for this order (empty string if one was
     /// not set)
-    #[serde(rename = "rfo")]
+    #[serde(rename = "rfo", default)]
     pub order_reference: CustomerOrderRef,
     /// Bet Id - the id of the order
     pub id: BetId,
@@ -161,7 +162,7 @@ pub struct Order {
     pub bsp: Option<rust_decimal::Decimal>,
     /// Strategy Reference - the customer's strategy reference for this order (empty string if one
     /// was not set)
-    #[serde(rename = "rfs")]
+    #[serde(rename = "rfs", default)]
     pub strategy_reference: CustomerStrategyRef,
     /// Status - the status of the order (E = EXECUTABLE, EC = `EXECUTION_COMPLETE`)
     pub status: StreamOrderStatus,
@@ -237,4 +238,64 @@ pub struct StrategyMatchChange {
     /// Matched Lays - matched amounts by distinct matched price on the Lay side for this strategy
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ml: Option<Vec<UpdateSet2>>,
+}
+
+mod ts_millis {
+    use chrono::{DateTime, TimeZone, Utc};
+    use serde::{self, Deserialize, Deserializer, Serializer};
+
+    // ----- DateTime<Utc> as millis -----
+    pub(crate) fn serialize<S>(date: &DateTime<Utc>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_i64(date.timestamp_millis())
+    }
+
+    pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let millis = i64::deserialize(deserializer)?;
+        Utc.timestamp_millis_opt(millis)
+            .single()
+            .ok_or_else(|| serde::de::Error::custom(format!("invalid timestamp: {}", millis)))
+    }
+
+    // ----- Option<DateTime<Utc>> as millis or null -----
+    pub(crate) mod option {
+        use super::*;
+        use serde::{Deserialize, Deserializer, Serializer};
+
+        pub(crate) fn serialize<S>(
+            date: &Option<DateTime<Utc>>,
+            serializer: S,
+        ) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            match date {
+                Some(dt) => serializer.serialize_some(&dt.timestamp_millis()),
+                None => serializer.serialize_none(),
+            }
+        }
+
+        pub(crate) fn deserialize<'de, D>(
+            deserializer: D,
+        ) -> Result<Option<DateTime<Utc>>, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            // Accept either null or an i64
+            let maybe_ms = Option::<i64>::deserialize(deserializer)?;
+            match maybe_ms {
+                Some(ms) => Utc
+                    .timestamp_millis_opt(ms)
+                    .single()
+                    .map(Some)
+                    .ok_or_else(|| serde::de::Error::custom(format!("invalid timestamp: {}", ms))),
+                None => Ok(None),
+            }
+        }
+    }
 }

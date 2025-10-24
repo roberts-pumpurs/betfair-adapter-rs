@@ -28,6 +28,7 @@ impl core::ops::Deref for MarketChangeMessage {
 
 /// Represents a market change.
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MarketChange {
     /// Runner Changes - a list of changes to runners (or null if un-changed)
     #[serde(skip_serializing_if = "Option::is_none")]
