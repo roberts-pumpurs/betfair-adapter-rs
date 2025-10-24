@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-stream-api-v0.6.0...betfair-stream-api-v0.6.1) - 2025-10-24
+
+### Added
+
+- expose stream trackers and states ([#79](https://github.com/roberts-pumpurs/betfair-adapter-rs/pull/79))
+
+### Fixed
+
+- expose last change in OrderBookCache and update strategy_matches correctly ([#81](https://github.com/roberts-pumpurs/betfair-adapter-rs/pull/81))
+
 ## [0.6.0](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-stream-api-v0.5.2...betfair-stream-api-v0.6.0) - 2025-09-20
 
 ### Added

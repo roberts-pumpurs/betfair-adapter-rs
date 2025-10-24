@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-typegen-v0.6.0...betfair-typegen-v0.6.1) - 2025-10-24
+
+### Fixed
+
+- ignore bad doctests which should not run ([#78](https://github.com/roberts-pumpurs/betfair-adapter-rs/pull/78))
+
 ## [0.6.0](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-typegen-v0.5.2...betfair-typegen-v0.6.0) - 2025-09-20
 
 ### Other
