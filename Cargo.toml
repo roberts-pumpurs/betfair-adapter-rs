@@ -134,7 +134,7 @@ proc-macro2 = "1"
 syn = "2"
 
 # Testnig
-rstest = "0.25"
+rstest = "0.26"
 proptest = "1"
 wiremock = "0.6"
 test-log = { version = "0.2", features = ["trace"], default-features = false }
