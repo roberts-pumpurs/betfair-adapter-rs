@@ -34,6 +34,10 @@ impl F64Ord {
     pub const fn new(value: f64) -> Self {
         Self(value)
     }
+
+    pub const fn zero() -> Self {
+        Self(0.0)
+    }
 }
 
 #[cfg(feature = "fast-floats")]
