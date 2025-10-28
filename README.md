@@ -33,21 +33,24 @@ See the [`examples/`](./examples) directory for complete guides.
 
 ### `fast-floats`
 
-By default, this library uses `rust_decimal::Decimal` for all numeric values including `Price`, `Size`, and general decimal fields (handicaps, market rates, etc.). While `Decimal` provides precise decimal arithmetic, it can be slower than native floating-point operations.
+By default, this library uses `rust_decimal::Decimal` for many numeric values including `Price`, `Size`, and general decimal fields (handicaps, market rates, etc.).
+Using `Decimal` provides precise decimal arithmetic, however it can be slower than native floating-point operations.
 
 The `fast-floats` feature replaces `Decimal` with `f64` throughout the library, providing better performance at the cost of potential floating-point precision issues.
+The resulting performance gain and precision issues may or may not be important for your particular use case.
 
 In some places `Decimal` is replaced with `F64Ord`, a wrapper around `f64` that implements:
 - `Eq` using total equality (including NaN)
 - `Ord` using `f64::total_cmp`
 - `Hash` using the bit representation
 
+For `Position` in the `betfair-stream-types` crate, the `fast-floats` feature replaces `Decimal` with `u8`.
 
-#### `Price`, `Size`, `Position` and F64Ord
+#### `Price`, `Size`, `Position` and `F64Ord`
 
-`Price`, `Size` and `Position` implement `Eq`, `Ord`, and `Hash` when using `Decimal`, matching the underlying `Decimal` type.
+`Price`, `Size` and `Position` implement `Eq`, `Ord`, and `Hash` when using `Decimal`, reflecting the underlying `Decimal` type.
 
-To match this behavior, `Price`, `Size`, `Position` and `F64Ord` implement `Eq`, `Ord`, and `Hash` when using `f64` internally:
+To match this behavior, `Price`, `Size` and `F64Ord` also implement `Eq`, `Ord`, and `Hash` when using `f64` internally:
 - Ordering uses `f64::total_cmp` (consistent with IEEE 754)
 - Hashing uses bit representation
 - Equality is defined using total equality
@@ -57,6 +60,7 @@ This means:
 - `-0.0` and `+0.0` are treated as distinct values
 - All values can be used as HashMap keys
 
+When using `fast-floats`, `Position` also implements `Eq`, `Ord`, and `Hash` due to the underlying u8 type.
 
 #### Creating values from literals:
 
@@ -70,7 +74,8 @@ let price = Price::new(num!(1.5))?;
 let size = Size::from(num!(100.0));
 ```
 
-There is also a `num_ord!` macro for creating either `Decimal` or `F64Ord` depending on whether the `fast-floats` feature is enabled or disabled.
+There is also a `num_ord!` macro for creating either `Decimal` or `F64Ord`, and `num_u8!` for creating either `Decimal` or `u8`,
+depending on whether the `fast-floats` feature is enabled or disabled.
 
 ## Development
 

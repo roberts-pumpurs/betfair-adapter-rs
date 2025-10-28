@@ -20,6 +20,12 @@ pub use rust_decimal::Decimal as NumericOrdPrimitive;
 #[cfg(feature = "fast-floats")]
 pub type NumericOrdPrimitive = F64Ord;
 
+#[cfg(not(feature = "fast-floats"))]
+pub use rust_decimal::Decimal as NumericU8Primitive;
+
+#[cfg(feature = "fast-floats")]
+pub type NumericU8Primitive = u8;
+
 /// Wrapper around f64 that implements Eq, Ord, and Hash using total_cmp
 /// This allows f64 to be used in contexts that require these traits
 #[cfg(feature = "fast-floats")]
@@ -322,4 +328,18 @@ macro_rules! num_ord {
 #[macro_export]
 macro_rules! num_ord {
     ($lit:literal) => {{ $crate::numeric::F64Ord::from($lit as f64) }};
+}
+
+/// Create a numeric constant which implements Ord from a string literal at compile time
+#[cfg(not(feature = "fast-floats"))]
+#[macro_export]
+macro_rules! num_u8 {
+    ($lit:literal) => {{ ::rust_decimal_macros::dec!($lit) }};
+}
+
+/// Create a numeric constant which implements Ord from a string literal at compile time
+#[cfg(feature = "fast-floats")]
+#[macro_export]
+macro_rules! num_u8 {
+    ($lit:literal) => {{ $lit as u8 }};
 }

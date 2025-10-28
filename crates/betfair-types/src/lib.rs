@@ -11,7 +11,7 @@ pub mod price;
 pub mod size;
 
 // Re-export numeric types for convenience
-pub use numeric::{NumericOrdPrimitive, NumericPrimitive};
+pub use numeric::{NumericOrdPrimitive, NumericPrimitive, NumericU8Primitive};
 
 pub mod keep_alive {
     pub use crate::shared::*;

@@ -89,7 +89,7 @@ impl UpdateSet for UpdateSet3 {
 
 #[cfg(test)]
 mod tests {
-    use betfair_adapter::betfair_types::num;
+    use betfair_adapter::betfair_types::{num, num_u8};
     use pretty_assertions::assert_eq;
 
     use super::*;
@@ -97,12 +97,12 @@ mod tests {
     fn setup_set3() -> Available<UpdateSet3> {
         let prices = &[
             UpdateSet3(
-                Position(num!(1)),
+                Position(num_u8!(1)),
                 Price::new(num!(1.02)).unwrap(),
                 Size::new(num!(34.45)),
             ),
             UpdateSet3(
-                Position(num!(0)),
+                Position(num_u8!(0)),
                 Price::new(num!(1.01)).unwrap(),
                 Size::new(num!(12)),
             ),
@@ -116,11 +116,11 @@ mod tests {
 
         let mut expected = BTreeMap::new();
         expected.insert(
-            Position(num!(0)),
+            Position(num_u8!(0)),
             (Price::new(num!(1.01)).unwrap(), Size::new(num!(12))),
         );
         expected.insert(
-            Position(num!(1)),
+            Position(num_u8!(1)),
             (Price::new(num!(1.02)).unwrap(), Size::new(num!(34.45))),
         );
 
@@ -178,28 +178,28 @@ mod tests {
     fn test_update_set_3() {
         let init = Available::new([
             UpdateSet3(
-                Position(num!(1)),
+                Position(num_u8!(1)),
                 Price::new(num!(1.02)).unwrap(),
                 Size::new(num!(34.45)),
             ),
             UpdateSet3(
-                Position(num!(0)),
+                Position(num_u8!(0)),
                 Price::new(num!(1.01)).unwrap(),
                 Size::new(num!(12)),
             ),
         ]);
         let update = &[UpdateSet3(
-            Position(num!(1)),
+            Position(num_u8!(1)),
             Price::new(num!(1.02)).unwrap(),
             Size::new(num!(22)),
         )];
         let mut expected = BTreeMap::new();
         expected.insert(
-            Position(num!(1)),
+            Position(num_u8!(1)),
             (Price::new(num!(1.02)).unwrap(), Size::new(num!(22))),
         );
         expected.insert(
-            Position(num!(0)),
+            Position(num_u8!(0)),
             (Price::new(num!(1.01)).unwrap(), Size::new(num!(12))),
         );
 
@@ -232,24 +232,24 @@ mod tests {
     fn test_update_set_3_delete() {
         let init = Available::new([
             UpdateSet3(
-                Position(num!(1)),
+                Position(num_u8!(1)),
                 Price::new(num!(1.02)).unwrap(),
                 Size::new(num!(34.45)),
             ),
             UpdateSet3(
-                Position(num!(0)),
+                Position(num_u8!(0)),
                 Price::new(num!(1.01)).unwrap(),
                 Size::new(num!(12)),
             ),
         ]);
         let update = &[UpdateSet3(
-            Position(num!(1)),
+            Position(num_u8!(1)),
             Price::new(num!(1.02)).unwrap(),
             Size::new(num!(0)),
         )];
         let mut expected = BTreeMap::new();
         expected.insert(
-            Position(num!(0)),
+            Position(num_u8!(0)),
             (Price::new(num!(1.01)).unwrap(), Size::new(num!(12))),
         );
 
