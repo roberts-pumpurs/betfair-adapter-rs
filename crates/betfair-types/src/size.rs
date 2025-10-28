@@ -3,20 +3,20 @@ use serde::{Deserialize, Serialize};
 use crate::numeric::{NumericOps, NumericPrimitive};
 
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Default, Deserialize, Serialize)]
-#[cfg_attr(not(feature = "fast-floats"), derive(Eq, Hash, Ord))]
+#[cfg_attr(not(feature = "fast-primitives"), derive(Eq, Hash, Ord))]
 pub struct Size(NumericPrimitive);
 
-#[cfg(feature = "fast-floats")]
+#[cfg(feature = "fast-primitives")]
 impl Eq for Size {}
 
-#[cfg(feature = "fast-floats")]
+#[cfg(feature = "fast-primitives")]
 impl Ord for Size {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         self.0.total_cmp(&other.0)
     }
 }
 
-#[cfg(feature = "fast-floats")]
+#[cfg(feature = "fast-primitives")]
 impl core::hash::Hash for Size {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         self.0.to_bits().hash(state);
@@ -90,12 +90,12 @@ mod tests {
     fn size_gets_rounded_to_two_decimal_places(#[case] size_raw: NumericPrimitive) {
         let size = Size::from(size_raw);
 
-        #[cfg(not(feature = "fast-floats"))]
+        #[cfg(not(feature = "fast-primitives"))]
         {
             assert_eq!(size.0, num!(1.02));
         }
 
-        #[cfg(feature = "fast-floats")]
+        #[cfg(feature = "fast-primitives")]
         {
             let expected = num!(1.02);
             let diff = (size.0 - expected).abs();

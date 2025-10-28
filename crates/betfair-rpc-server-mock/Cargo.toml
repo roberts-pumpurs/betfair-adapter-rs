@@ -10,7 +10,7 @@ license.workspace = true
 edition.workspace = true
 
 [features]
-fast-floats = ["betfair-types/fast-floats", "betfair-adapter/fast-floats"]
+fast-primitives = ["betfair-types/fast-primitives", "betfair-adapter/fast-primitives"]
 
 [dependencies]
 betfair-adapter.workspace = true

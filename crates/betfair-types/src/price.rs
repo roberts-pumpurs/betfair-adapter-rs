@@ -11,20 +11,20 @@ pub enum PriceParseError {
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Clone, Copy, Serialize, Deserialize)]
-#[cfg_attr(not(feature = "fast-floats"), derive(Eq, Hash, Ord))]
+#[cfg_attr(not(feature = "fast-primitives"), derive(Eq, Hash, Ord))]
 pub struct Price(NumericPrimitive);
 
-#[cfg(feature = "fast-floats")]
+#[cfg(feature = "fast-primitives")]
 impl Eq for Price {}
 
-#[cfg(feature = "fast-floats")]
+#[cfg(feature = "fast-primitives")]
 impl Ord for Price {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         self.0.total_cmp(&other.0)
     }
 }
 
-#[cfg(feature = "fast-floats")]
+#[cfg(feature = "fast-primitives")]
 impl core::hash::Hash for Price {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         self.0.to_bits().hash(state);
@@ -127,7 +127,7 @@ impl Price {
             lower_range: NumericPrimitive,
             increment: NumericPrimitive,
         ) -> NumericPrimitive {
-            #[cfg(not(feature = "fast-floats"))]
+            #[cfg(not(feature = "fast-primitives"))]
             {
                 // check if we need to round down
                 let Some(remainder) = x.checked_rem(increment) else {
@@ -147,7 +147,7 @@ impl Price {
                 }
             }
 
-            #[cfg(feature = "fast-floats")]
+            #[cfg(feature = "fast-primitives")]
             {
                 // For f64, round to nearest increment to avoid floating-point precision issues
                 let steps_raw = (x - lower_range) / increment;
@@ -261,7 +261,7 @@ mod tests {
     ) {
         let actual = Price::adjust_price_to_betfair_boundaries(input_price).unwrap();
 
-        #[cfg(not(feature = "fast-floats"))]
+        #[cfg(not(feature = "fast-primitives"))]
         {
             assert_eq!(
                 expected, actual,
@@ -269,7 +269,7 @@ mod tests {
             );
         }
 
-        #[cfg(feature = "fast-floats")]
+        #[cfg(feature = "fast-primitives")]
         {
             let diff = (expected - actual).abs();
             assert!(
