@@ -1,5 +1,6 @@
 use betfair_rpc_server_mock::Server;
 use betfair_types::customer_ref::CustomerRef;
+use betfair_types::num;
 use betfair_types::size::Size;
 use betfair_types::types::sports_aping::{
     BetId, CancelInstruction, CancelInstructionReport, ExecutionReportErrorCode,
@@ -8,7 +9,6 @@ use betfair_types::types::sports_aping::{
 };
 use pretty_assertions::assert_eq;
 use rstest::rstest;
-use rust_decimal_macros::dec;
 use serde_json::json;
 
 #[rstest]
@@ -26,7 +26,7 @@ async fn cancel_bets_unsuccessful() {
             {
                 "status": "FAILURE",
                 "errorCode": "BET_TAKEN_OR_LAPSED",
-                "sizeCancelled": "0.0",
+                "sizeCancelled": 0.0, // Changed from string to double as per https://betfair-developer-docs.atlassian.net/wiki/spaces/1smk3cen4v3lu3yomq5qye0ni/pages/2687465/Betting+Type+Definitions#CancelInstructionReport
                 "instruction": {
                     "betId": "298537625817",
                 }
@@ -67,7 +67,7 @@ async fn cancel_bets_unsuccessful() {
             }),
             cancelled_date: None,
             error_code: Some(InstructionReportErrorCode::BetTakenOrLapsed),
-            size_cancelled: Size::from(dec!(0.0)),
+            size_cancelled: Size::from(num!(0.0)),
         }]),
         market_id: Some(MarketId::new("1.210878100")),
         status: ExecutionReportStatus::Failure,

@@ -5,9 +5,9 @@ use betfair_types::types::sports_aping::{
     ExchangePrices, MarketBook, MarketId, PriceData, PriceProjection, PriceSize, Runner,
     RunnerStatus, SelectionId, list_market_book,
 };
+use betfair_types::{num, num_ord};
 use pretty_assertions::assert_eq;
 use rstest::rstest;
-use rust_decimal_macros::dec;
 use serde_json::json;
 
 #[rstest]
@@ -138,39 +138,39 @@ async fn single_market_book() {
         number_of_runners: Some(2),
         number_of_active_runners: Some(2),
         last_match_time: None,
-        total_matched: Some(dec!(0)),
-        total_available: Some(dec!(153.6)),
+        total_matched: Some(num_ord!(0)),
+        total_available: Some(num_ord!(153.6)),
         cross_matching: Some(true),
         runners_voidable: Some(false),
         version: Some(4910),
         runners: Some(vec![
             betfair_types::types::sports_aping::Runner {
                 selection_id: betfair_types::types::sports_aping::SelectionId(12_062_411),
-                handicap: dec!(0),
+                handicap: num_ord!(0),
                 status: betfair_types::types::sports_aping::RunnerStatus::Active,
                 adjustment_factor: None,
                 last_price_traded: None,
-                total_matched: Some(dec!(0)),
+                total_matched: Some(num_ord!(0)),
                 removal_date: None,
                 sp: None,
                 ex: Some(betfair_types::types::sports_aping::ExchangePrices {
                     available_to_back: Some(vec![
                         betfair_types::types::sports_aping::PriceSize {
-                            price: Price::new(dec!(1.19)).unwrap(),
-                            size: Size::new(dec!(57.52)),
+                            price: Price::new(num!(1.19)).unwrap(),
+                            size: Size::new(num!(57.52)),
                         },
                         betfair_types::types::sports_aping::PriceSize {
-                            price: Price::new(dec!(1.02)).unwrap(),
-                            size: Size::new(dec!(6.48)),
+                            price: Price::new(num!(1.02)).unwrap(),
+                            size: Size::new(num!(6.48)),
                         },
                         betfair_types::types::sports_aping::PriceSize {
-                            price: Price::new(dec!(1.01)).unwrap(),
-                            size: Size::new(dec!(21.14)),
+                            price: Price::new(num!(1.01)).unwrap(),
+                            size: Size::new(num!(21.14)),
                         },
                     ]),
                     available_to_lay: Some(vec![PriceSize {
-                        price: Price::new(dec!(1.43)).unwrap(),
-                        size: Size::new(dec!(31.11)),
+                        price: Price::new(num!(1.43)).unwrap(),
+                        size: Size::new(num!(31.11)),
                     }]),
                     traded_volume: Some(vec![]),
                 }),
@@ -180,31 +180,31 @@ async fn single_market_book() {
             },
             Runner {
                 selection_id: SelectionId(50_310_375),
-                handicap: dec!(0),
+                handicap: num_ord!(0),
                 status: RunnerStatus::Active,
                 adjustment_factor: None,
                 last_price_traded: None,
-                total_matched: Some(dec!(0)),
+                total_matched: Some(num_ord!(0)),
                 removal_date: None,
                 sp: None,
                 ex: Some(ExchangePrices {
                     available_to_back: Some(vec![
                         PriceSize {
-                            price: Price::new(dec!(3.75)).unwrap(),
-                            size: Size::new(dec!(5.21)),
+                            price: Price::new(num!(3.75)).unwrap(),
+                            size: Size::new(num!(5.21)),
                         },
                         PriceSize {
-                            price: Price::new(dec!(1.02)).unwrap(),
-                            size: Size::new(dec!(6.65)),
+                            price: Price::new(num!(1.02)).unwrap(),
+                            size: Size::new(num!(6.65)),
                         },
                         PriceSize {
-                            price: Price::new(dec!(1.01)).unwrap(),
-                            size: Size::new(dec!(21.14)),
+                            price: Price::new(num!(1.01)).unwrap(),
+                            size: Size::new(num!(21.14)),
                         },
                     ]),
                     available_to_lay: Some(vec![PriceSize {
-                        price: Price::new(dec!(4.8)).unwrap(),
-                        size: Size::new(dec!(4.37)),
+                        price: Price::new(num!(4.8)).unwrap(),
+                        size: Size::new(num!(4.37)),
                     }]),
                     traded_volume: Some(vec![]),
                 }),

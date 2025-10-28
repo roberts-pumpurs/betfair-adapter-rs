@@ -29,6 +29,49 @@ Utilities for interacting with the Betfair API (API‑NG and Streaming) from Rus
 
 See the [`examples/`](./examples) directory for complete guides.
 
+## Feature Flags
+
+### `fast-floats`
+
+By default, this library uses `rust_decimal::Decimal` for all numeric values including `Price`, `Size`, and general decimal fields (handicaps, market rates, etc.). While `Decimal` provides precise decimal arithmetic, it can be slower than native floating-point operations.
+
+The `fast-floats` feature replaces `Decimal` with `f64` throughout the library, providing better performance at the cost of potential floating-point precision issues.
+
+In some places `Decimal` is replaced with `F64Ord`, a wrapper around `f64` that implements:
+- `Eq` using total equality (including NaN)
+- `Ord` using `f64::total_cmp`
+- `Hash` using the bit representation
+
+
+#### `Price`, `Size`, `Position` and F64Ord
+
+`Price`, `Size` and `Position` implement `Eq`, `Ord`, and `Hash` when using `Decimal`, matching the underlying `Decimal` type.
+
+To match this behavior, `Price`, `Size`, `Position` and `F64Ord` implement `Eq`, `Ord`, and `Hash` when using `f64` internally:
+- Ordering uses `f64::total_cmp` (consistent with IEEE 754)
+- Hashing uses bit representation
+- Equality is defined using total equality
+
+This means:
+- `NaN == NaN` is true (unlike standard `f64`)
+- `-0.0` and `+0.0` are treated as distinct values
+- All values can be used as HashMap keys
+
+
+#### Creating values from literals:
+
+Use the `num!` macro for cross-compatibility when creating numeric literals. The following will compile whether the `fast-floats` feature is
+enabled or disabled.
+
+```rust
+use betfair_types::num;
+
+let price = Price::new(num!(1.5))?;
+let size = Size::from(num!(100.0));
+```
+
+There is also a `num_ord!` macro for creating either `Decimal` or `F64Ord` depending on whether the `fast-floats` feature is enabled or disabled.
+
 ## Development
 
 Clone the repository and explore available tasks:

@@ -9,6 +9,9 @@ homepage.workspace = true
 license.workspace = true
 edition.workspace = true
 
+[features]
+fast-floats = ["betfair-types/fast-floats", "betfair-adapter/fast-floats"]
+
 [dependencies]
 betfair-adapter.workspace = true
 betfair-types.workspace = true

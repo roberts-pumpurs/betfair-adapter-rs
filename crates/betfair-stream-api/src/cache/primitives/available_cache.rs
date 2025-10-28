@@ -4,7 +4,6 @@ use alloc::collections::BTreeMap;
 
 use betfair_adapter::betfair_types::price::Price;
 use betfair_adapter::betfair_types::size::Size;
-use betfair_adapter::rust_decimal::Decimal;
 use betfair_stream_types::response::{Position, UpdateSet2, UpdateSet3};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -67,7 +66,7 @@ impl UpdateSet for UpdateSet2 {
     }
 
     fn should_be_deleted(&self) -> bool {
-        self.1 == Size::new(Decimal::ZERO)
+        self.1 == Size::zero()
     }
 }
 
@@ -84,28 +83,28 @@ impl UpdateSet for UpdateSet3 {
     }
 
     fn should_be_deleted(&self) -> bool {
-        self.2 == Size::new(Decimal::ZERO)
+        self.2 == Size::zero()
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use betfair_adapter::betfair_types::num;
     use pretty_assertions::assert_eq;
-    use rust_decimal_macros::dec;
 
     use super::*;
 
     fn setup_set3() -> Available<UpdateSet3> {
         let prices = &[
             UpdateSet3(
-                Position(dec!(1)),
-                Price::new(dec!(1.02)).unwrap(),
-                Size::new(dec!(34.45)),
+                Position(num!(1)),
+                Price::new(num!(1.02)).unwrap(),
+                Size::new(num!(34.45)),
             ),
             UpdateSet3(
-                Position(dec!(0)),
-                Price::new(dec!(1.01)).unwrap(),
-                Size::new(dec!(12)),
+                Position(num!(0)),
+                Price::new(num!(1.01)).unwrap(),
+                Size::new(num!(12)),
             ),
         ];
         Available::new(prices)
@@ -117,12 +116,12 @@ mod tests {
 
         let mut expected = BTreeMap::new();
         expected.insert(
-            Position(dec!(0)),
-            (Price::new(dec!(1.01)).unwrap(), Size::new(dec!(12))),
+            Position(num!(0)),
+            (Price::new(num!(1.01)).unwrap(), Size::new(num!(12))),
         );
         expected.insert(
-            Position(dec!(1)),
-            (Price::new(dec!(1.02)).unwrap(), Size::new(dec!(34.45))),
+            Position(num!(1)),
+            (Price::new(num!(1.02)).unwrap(), Size::new(num!(34.45))),
         );
 
         assert_eq!(init.book, expected);
@@ -131,16 +130,16 @@ mod tests {
     #[test]
     fn test_init_2() {
         let prices = &[
-            UpdateSet2(Price::new(dec!(27)).unwrap(), Size::new(dec!(0.95))),
-            UpdateSet2(Price::new(dec!(13)).unwrap(), Size::new(dec!(28.01))),
-            UpdateSet2(Price::new(dec!(1.02)).unwrap(), Size::new(dec!(1157.21))),
+            UpdateSet2(Price::new(num!(27)).unwrap(), Size::new(num!(0.95))),
+            UpdateSet2(Price::new(num!(13)).unwrap(), Size::new(num!(28.01))),
+            UpdateSet2(Price::new(num!(1.02)).unwrap(), Size::new(num!(1157.21))),
         ];
         let init = Available::new(prices);
 
         let mut expected = BTreeMap::new();
-        expected.insert(Price::new(dec!(1.02)).unwrap(), Size::new(dec!(1157.21)));
-        expected.insert(Price::new(dec!(13)).unwrap(), Size::new(dec!(28.01)));
-        expected.insert(Price::new(dec!(27)).unwrap(), Size::new(dec!(0.95)));
+        expected.insert(Price::new(num!(1.02)).unwrap(), Size::new(num!(1157.21)));
+        expected.insert(Price::new(num!(13)).unwrap(), Size::new(num!(28.01)));
+        expected.insert(Price::new(num!(27)).unwrap(), Size::new(num!(0.95)));
 
         assert_eq!(init.book, expected);
     }
@@ -156,18 +155,18 @@ mod tests {
     #[test]
     fn test_update_set_2() {
         let init = Available::new([
-            UpdateSet2(Price::new(dec!(27)).unwrap(), Size::new(dec!(0.95))),
-            UpdateSet2(Price::new(dec!(13)).unwrap(), Size::new(dec!(28.01))),
-            UpdateSet2(Price::new(dec!(1.02)).unwrap(), Size::new(dec!(1157.21))),
+            UpdateSet2(Price::new(num!(27)).unwrap(), Size::new(num!(0.95))),
+            UpdateSet2(Price::new(num!(13)).unwrap(), Size::new(num!(28.01))),
+            UpdateSet2(Price::new(num!(1.02)).unwrap(), Size::new(num!(1157.21))),
         ]);
         let update = &[UpdateSet2(
-            Price::new(dec!(27)).unwrap(),
-            Size::new(dec!(2)),
+            Price::new(num!(27)).unwrap(),
+            Size::new(num!(2)),
         )];
         let mut expected = BTreeMap::new();
-        expected.insert(Price::new(dec!(1.02)).unwrap(), Size::new(dec!(1157.21)));
-        expected.insert(Price::new(dec!(13)).unwrap(), Size::new(dec!(28.01)));
-        expected.insert(Price::new(dec!(27)).unwrap(), Size::new(dec!(2)));
+        expected.insert(Price::new(num!(1.02)).unwrap(), Size::new(num!(1157.21)));
+        expected.insert(Price::new(num!(13)).unwrap(), Size::new(num!(28.01)));
+        expected.insert(Price::new(num!(27)).unwrap(), Size::new(num!(2)));
 
         let mut actual = init;
         actual.update(update);
@@ -179,29 +178,29 @@ mod tests {
     fn test_update_set_3() {
         let init = Available::new([
             UpdateSet3(
-                Position(dec!(1)),
-                Price::new(dec!(1.02)).unwrap(),
-                Size::new(dec!(34.45)),
+                Position(num!(1)),
+                Price::new(num!(1.02)).unwrap(),
+                Size::new(num!(34.45)),
             ),
             UpdateSet3(
-                Position(dec!(0)),
-                Price::new(dec!(1.01)).unwrap(),
-                Size::new(dec!(12)),
+                Position(num!(0)),
+                Price::new(num!(1.01)).unwrap(),
+                Size::new(num!(12)),
             ),
         ]);
         let update = &[UpdateSet3(
-            Position(dec!(1)),
-            Price::new(dec!(1.02)).unwrap(),
-            Size::new(dec!(22)),
+            Position(num!(1)),
+            Price::new(num!(1.02)).unwrap(),
+            Size::new(num!(22)),
         )];
         let mut expected = BTreeMap::new();
         expected.insert(
-            Position(dec!(1)),
-            (Price::new(dec!(1.02)).unwrap(), Size::new(dec!(22))),
+            Position(num!(1)),
+            (Price::new(num!(1.02)).unwrap(), Size::new(num!(22))),
         );
         expected.insert(
-            Position(dec!(0)),
-            (Price::new(dec!(1.01)).unwrap(), Size::new(dec!(12))),
+            Position(num!(0)),
+            (Price::new(num!(1.01)).unwrap(), Size::new(num!(12))),
         );
 
         let mut actual = init;
@@ -213,15 +212,15 @@ mod tests {
     #[test]
     fn test_update_set_2_delete() {
         let init = Available::new([
-            UpdateSet2(Price::new(dec!(27)).unwrap(), Size::new(dec!(0.95))),
-            UpdateSet2(Price::new(dec!(13)).unwrap(), Size::new(dec!(28.01))),
+            UpdateSet2(Price::new(num!(27)).unwrap(), Size::new(num!(0.95))),
+            UpdateSet2(Price::new(num!(13)).unwrap(), Size::new(num!(28.01))),
         ]);
         let update = &[UpdateSet2(
-            Price::new(dec!(27)).unwrap(),
-            Size::new(dec!(0)),
+            Price::new(num!(27)).unwrap(),
+            Size::new(num!(0)),
         )];
         let mut expected = BTreeMap::new();
-        expected.insert(Price::new(dec!(13)).unwrap(), Size::new(dec!(28.01)));
+        expected.insert(Price::new(num!(13)).unwrap(), Size::new(num!(28.01)));
 
         let mut actual = init;
         actual.update(update);
@@ -233,25 +232,25 @@ mod tests {
     fn test_update_set_3_delete() {
         let init = Available::new([
             UpdateSet3(
-                Position(dec!(1)),
-                Price::new(dec!(1.02)).unwrap(),
-                Size::new(dec!(34.45)),
+                Position(num!(1)),
+                Price::new(num!(1.02)).unwrap(),
+                Size::new(num!(34.45)),
             ),
             UpdateSet3(
-                Position(dec!(0)),
-                Price::new(dec!(1.01)).unwrap(),
-                Size::new(dec!(12)),
+                Position(num!(0)),
+                Price::new(num!(1.01)).unwrap(),
+                Size::new(num!(12)),
             ),
         ]);
         let update = &[UpdateSet3(
-            Position(dec!(1)),
-            Price::new(dec!(1.02)).unwrap(),
-            Size::new(dec!(0)),
+            Position(num!(1)),
+            Price::new(num!(1.02)).unwrap(),
+            Size::new(num!(0)),
         )];
         let mut expected = BTreeMap::new();
         expected.insert(
-            Position(dec!(0)),
-            (Price::new(dec!(1.01)).unwrap(), Size::new(dec!(12))),
+            Position(num!(0)),
+            (Price::new(num!(1.01)).unwrap(), Size::new(num!(12))),
         );
 
         let mut actual = init;

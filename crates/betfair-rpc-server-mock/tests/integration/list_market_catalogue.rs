@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use betfair_rpc_server_mock::Server;
+use betfair_types::num_ord;
 use betfair_types::types::sports_aping::{
     Competition, CompetitionId, CountryCode, Event, EventId, EventType, EventTypeId,
     MarketCatalogue, MarketDescription, MarketFilter, MarketId, MarketProjection, MarketType,
@@ -9,7 +10,6 @@ use betfair_types::types::sports_aping::{
 };
 use pretty_assertions::assert_eq;
 use rstest::rstest;
-use rust_decimal_macros::dec;
 use serde_json::json;
 
 #[rstest]
@@ -114,7 +114,7 @@ async fn list_market_catalogue() {
     // Assert
     let market = MarketCatalogue {
         market_id: MarketId(Arc::new("1.206502771".to_owned())),
-        total_matched: dec!(0).into(),
+        total_matched: num_ord!(0).into(),
         market_start_time: "2022-11-15T17:00:00.000Z".parse().ok(),
         event: Some(Event {
             country_code: Some(CountryCode(Arc::new("GB".to_owned()))),
@@ -136,14 +136,14 @@ async fn list_market_catalogue() {
             RunnerCatalog {
                 selection_id: SelectionId(12_062_411),
                 runner_name: Arc::new("Atomeromu Szekszard Women".to_owned()),
-                handicap: dec!(0),
+                handicap: num_ord!(0),
                 sort_priority: 1,
                 metadata: None,
             },
             RunnerCatalog {
                 selection_id: SelectionId(50_310_375),
                 runner_name: Arc::new("Olympiakos Piraeus BC".to_owned()),
-                handicap: dec!(0),
+                handicap: num_ord!(0),
                 sort_priority: 2,
                 metadata: None,
             },
@@ -158,7 +158,7 @@ async fn list_market_catalogue() {
             turn_in_play_enabled: true,
             market_type: MarketType(Arc::new("MATCH_ODDS".to_owned())),
             regulator: Some(Arc::new("MALTA LOTTERIES AND GAMBLING AUTHORITY".to_owned())),
-            market_base_rate: Some(dec!(2.0)),
+            market_base_rate: Some(num_ord!(2.0)),
             discount_allowed: Some(false),
             wallet: Some(Arc::new("UK wallet".to_owned()),),
             rules: Some(

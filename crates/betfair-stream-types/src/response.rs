@@ -1,7 +1,7 @@
+use betfair_types::NumericPrimitive;
 use betfair_types::price::Price;
 use betfair_types::size::Size;
 use chrono::{DateTime, TimeZone as _, Utc};
-use rust_decimal::Decimal;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -178,8 +178,26 @@ pub struct UpdateSet2(pub Price, pub Size);
 pub struct UpdateSet3(pub Position, pub Price, pub Size);
 
 /// Represents the level of the order book.
-#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, Serialize, Deserialize, Eq, Hash, Ord)]
-pub struct Position(pub Decimal);
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(not(feature = "fast-floats"), derive(Eq, Hash, Ord))]
+pub struct Position(pub NumericPrimitive);
+
+#[cfg(feature = "fast-floats")]
+impl Eq for Position {}
+
+#[cfg(feature = "fast-floats")]
+impl Ord for Position {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        self.0.total_cmp(&other.0)
+    }
+}
+
+#[cfg(feature = "fast-floats")]
+impl core::hash::Hash for Position {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        self.0.to_bits().hash(state);
+    }
+}
 
 pub trait DataChange<T> {
     fn key() -> &'static str;

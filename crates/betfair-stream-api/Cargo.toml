@@ -12,6 +12,11 @@ categories.workspace = true
 documentation.workspace = true
 exclude.workspace = true
 
+[features]
+default = []
+# Use f64 instead of rust_decimal for Price, Size and other numeric values (faster but less precise)
+fast-floats = ["betfair-stream-types/fast-floats", "betfair-adapter/fast-floats"]
+
 [dependencies]
 backon.workspace = true
 tokio.workspace = true

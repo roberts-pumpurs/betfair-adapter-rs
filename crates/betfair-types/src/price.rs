@@ -1,20 +1,38 @@
 use core::ops::{Add, Deref, Div, Mul, Sub};
 
-use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
+
+use crate::numeric::{NumericOps, NumericOrdPrimitive, NumericPrimitive};
 
 #[derive(thiserror::Error, Clone, Debug, PartialEq, Eq)]
 pub enum PriceParseError {
     #[error("InvalidPriceSpecified: {0}")]
-    InvalidPriceSpecified(Decimal),
+    InvalidPriceSpecified(NumericOrdPrimitive),
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, Serialize, Deserialize, Eq, Hash, Ord)]
-pub struct Price(rust_decimal::Decimal);
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(not(feature = "fast-floats"), derive(Eq, Hash, Ord))]
+pub struct Price(NumericPrimitive);
+
+#[cfg(feature = "fast-floats")]
+impl Eq for Price {}
+
+#[cfg(feature = "fast-floats")]
+impl Ord for Price {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        self.0.total_cmp(&other.0)
+    }
+}
+
+#[cfg(feature = "fast-floats")]
+impl core::hash::Hash for Price {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        self.0.to_bits().hash(state);
+    }
+}
 
 impl Deref for Price {
-    type Target = Decimal;
+    type Target = NumericPrimitive;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -51,23 +69,23 @@ impl Mul for Price {
     }
 }
 
-impl Div<rust_decimal::Decimal> for Price {
+impl Div<NumericPrimitive> for Price {
     type Output = Self;
 
-    fn div(self, rhs: rust_decimal::Decimal) -> Self::Output {
+    fn div(self, rhs: NumericPrimitive) -> Self::Output {
         let lhs = self.0;
         Self(lhs / rhs)
     }
 }
 
-impl From<Price> for rust_decimal::Decimal {
+impl From<Price> for NumericPrimitive {
     fn from(value: Price) -> Self {
         value.0
     }
 }
 
 impl Price {
-    pub fn new(price: rust_decimal::Decimal) -> Result<Self, PriceParseError> {
+    pub fn new(price: NumericPrimitive) -> Result<Self, PriceParseError> {
         let price = Self(Self::adjust_price_to_betfair_boundaries(price)?);
         Ok(price)
     }
@@ -77,7 +95,7 @@ impl Price {
     /// # Safety
     /// The caller must ensure that the price is within the Betfair boundaries.
     #[must_use]
-    pub const unsafe fn new_unchecked(price: rust_decimal::Decimal) -> Self {
+    pub const unsafe fn new_unchecked(price: NumericPrimitive) -> Self {
         Self(price)
     }
 
@@ -101,64 +119,95 @@ impl Price {
     /// | 100 → 1000 | 10        |
     /// ```
     fn adjust_price_to_betfair_boundaries(
-        current_price: rust_decimal::Decimal,
-    ) -> Result<rust_decimal::Decimal, PriceParseError> {
+        current_price: NumericPrimitive,
+    ) -> Result<NumericPrimitive, PriceParseError> {
         #[inline]
         fn round_to_nearest(
-            x: rust_decimal::Decimal,
-            lower_range: rust_decimal::Decimal,
-            increment: rust_decimal::Decimal,
-        ) -> rust_decimal::Decimal {
-            // check if we need to round down
-            let Some(remainder) = x.checked_rem(increment) else {
-                panic!("Invalid price");
-            };
+            x: NumericPrimitive,
+            lower_range: NumericPrimitive,
+            increment: NumericPrimitive,
+        ) -> NumericPrimitive {
+            #[cfg(not(feature = "fast-floats"))]
+            {
+                // check if we need to round down
+                let Some(remainder) = x.checked_rem(increment) else {
+                    panic!("Invalid price");
+                };
 
-            if remainder != dec!(0.0) {
-                // check if we need to settle for the lowest range (to not underflow to the next
-                // bottom range)
-                if x - increment <= lower_range {
+                if remainder != NumericPrimitive::zero() {
+                    // check if we need to settle for the lowest range (to not underflow to the next
+                    // bottom range)
+                    if x - increment <= lower_range {
+                        lower_range
+                    } else {
+                        (x - remainder).round_2dp()
+                    }
+                } else {
+                    x.round_2dp()
+                }
+            }
+
+            #[cfg(feature = "fast-floats")]
+            {
+                // For f64, round to nearest increment to avoid floating-point precision issues
+                let steps_raw = (x - lower_range) / increment;
+                let steps = steps_raw.round();
+                let rounded = (lower_range + (steps * increment)).round_2dp();
+
+                // Check if the original value is already very close to the rounded value
+                // (within floating-point tolerance), if so, use the rounded value
+                let diff = (x - rounded).abs();
+                if diff < 1e-9 {
+                    return rounded;
+                }
+
+                // Otherwise, check if we need to round down
+                let steps_down = steps_raw.floor();
+                let rounded_down = (lower_range + (steps_down * increment)).round_2dp();
+
+                // Ensure we don't go below the lower range
+                if rounded_down < lower_range {
                     lower_range
                 } else {
-                    (x - remainder).round_dp(2)
+                    rounded_down
                 }
-            } else {
-                // TODO: remove the magic constant
-                x.round_dp(2)
             }
         }
+
+        use crate::num;
+
         match current_price {
-            x if (dec!(1.01)..dec!(2.0)).contains(&x) => {
-                Ok(round_to_nearest(x, dec!(1.01), dec!(0.01)))
+            x if (num!(1.01)..num!(2.0)).contains(&x) => {
+                Ok(round_to_nearest(x, num!(1.01), num!(0.01)))
             }
-            x if (dec!(2.0)..dec!(3.0)).contains(&x) => {
-                Ok(round_to_nearest(x, dec!(2.0), dec!(0.02)))
+            x if (num!(2.0)..num!(3.0)).contains(&x) => {
+                Ok(round_to_nearest(x, num!(2.0), num!(0.02)))
             }
-            x if (dec!(3.0)..dec!(4.0)).contains(&x) => {
-                Ok(round_to_nearest(x, dec!(3.0), dec!(0.05)))
+            x if (num!(3.0)..num!(4.0)).contains(&x) => {
+                Ok(round_to_nearest(x, num!(3.0), num!(0.05)))
             }
-            x if (dec!(4.0)..dec!(6.0)).contains(&x) => {
-                Ok(round_to_nearest(x, dec!(4.0), dec!(0.1)))
+            x if (num!(4.0)..num!(6.0)).contains(&x) => {
+                Ok(round_to_nearest(x, num!(4.0), num!(0.1)))
             }
-            x if (dec!(6.0)..dec!(10.0)).contains(&x) => {
-                Ok(round_to_nearest(x, dec!(6.0), dec!(0.2)))
+            x if (num!(6.0)..num!(10.0)).contains(&x) => {
+                Ok(round_to_nearest(x, num!(6.0), num!(0.2)))
             }
-            x if (dec!(10.0)..dec!(20.0)).contains(&x) => {
-                Ok(round_to_nearest(x, dec!(10.0), dec!(0.5)))
+            x if (num!(10.0)..num!(20.0)).contains(&x) => {
+                Ok(round_to_nearest(x, num!(10.0), num!(0.5)))
             }
-            x if (dec!(20.0)..dec!(30.0)).contains(&x) => {
-                Ok(round_to_nearest(x, dec!(20.0), dec!(1.0)))
+            x if (num!(20.0)..num!(30.0)).contains(&x) => {
+                Ok(round_to_nearest(x, num!(20.0), num!(1.0)))
             }
-            x if (dec!(30.0)..dec!(50.0)).contains(&x) => {
-                Ok(round_to_nearest(x, dec!(30.0), dec!(2.0)))
+            x if (num!(30.0)..num!(50.0)).contains(&x) => {
+                Ok(round_to_nearest(x, num!(30.0), num!(2.0)))
             }
-            x if (dec!(50.0)..dec!(100.0)).contains(&x) => {
-                Ok(round_to_nearest(x, dec!(50.0), dec!(5.0)))
+            x if (num!(50.0)..num!(100.0)).contains(&x) => {
+                Ok(round_to_nearest(x, num!(50.0), num!(5.0)))
             }
-            x if (dec!(100.0)..=dec!(1000.0)).contains(&x) => {
-                Ok(round_to_nearest(x, dec!(100.0), dec!(10.0)))
+            x if (num!(100.0)..=num!(1000.0)).contains(&x) => {
+                Ok(round_to_nearest(x, num!(100.0), num!(10.0)))
             }
-            x => Err(PriceParseError::InvalidPriceSpecified(x)),
+            x => Err(PriceParseError::InvalidPriceSpecified(x.into())),
         }
     }
 }
@@ -166,51 +215,67 @@ impl Price {
 #[cfg(test)]
 mod tests {
     use rstest::*;
-    use rust_decimal_macros::*;
 
     use super::*;
+    use crate::num;
 
     #[rstest]
-    #[case(dec!(0.99))]
-    #[case(dec!(1.00))]
-    #[case(dec!(1000.01))]
-    #[case(dec!(11000.00))]
-    fn correctly_detects_price_adjustment_errors(#[case] price: Decimal) {
+    #[case(num!(0.99))]
+    #[case(num!(1.00))]
+    #[case(num!(1000.01))]
+    #[case(num!(11000.00))]
+    fn correctly_detects_price_adjustment_errors(#[case] price: NumericPrimitive) {
         let actual = Price::adjust_price_to_betfair_boundaries(price).unwrap_err();
 
-        let expected = PriceParseError::InvalidPriceSpecified(price);
+        let expected = PriceParseError::InvalidPriceSpecified(price.into());
         assert_eq!(expected, actual);
     }
 
     #[rstest]
-    #[case(dec!(1.01), dec!(1.01))]
-    #[case(dec!(1.03), dec!(1.03))]
-    #[case(dec!(1.034), dec!(1.03))]
-    #[case(dec!(1.05432111), dec!(1.05))]
+    #[case(num!(1.01), num!(1.01))]
+    #[case(num!(1.03), num!(1.03))]
+    #[case(num!(1.034), num!(1.03))]
+    #[case(num!(1.05432111), num!(1.05))]
     // Second scale
-    #[case(dec!(2.00032111), dec!(2.0))]
-    #[case(dec!(2.13), dec!(2.12))]
-    #[case(dec!(2.487), dec!(2.48))]
-    #[case(dec!(2.4), dec!(2.4))]
+    #[case(num!(2.00032111), num!(2.0))]
+    #[case(num!(2.13), num!(2.12))]
+    #[case(num!(2.487), num!(2.48))]
+    #[case(num!(2.4), num!(2.4))]
     // Third scale
-    #[case(dec!(3.00032111), dec!(3.0))]
-    #[case(dec!(3.13), dec!(3.1))]
-    #[case(dec!(3.487), dec!(3.45))]
-    #[case(dec!(3.55), dec!(3.55))]
+    #[case(num!(3.00032111), num!(3.0))]
+    #[case(num!(3.13), num!(3.1))]
+    #[case(num!(3.487), num!(3.45))]
+    #[case(num!(3.55), num!(3.55))]
     // Fourth scale
-    #[case(dec!(4.00032111), dec!(4.0))]
-    #[case(dec!(4.13), dec!(4.1))]
-    #[case(dec!(4.487), dec!(4.4))]
-    #[case(dec!(5.00032111), dec!(5.0))]
-    #[case(dec!(5.13), dec!(5.1))]
-    #[case(dec!(5.487), dec!(5.4))]
-    #[case(dec!(999.0), dec!(990.0))]
-    #[case(dec!(1000.0), dec!(1000.0))]
-    fn correctly_adjusts_prices(#[case] input_price: Decimal, #[case] expected: Decimal) {
+    #[case(num!(4.00032111), num!(4.0))]
+    #[case(num!(4.13), num!(4.1))]
+    #[case(num!(4.487), num!(4.4))]
+    #[case(num!(5.00032111), num!(5.0))]
+    #[case(num!(5.13), num!(5.1))]
+    #[case(num!(5.487), num!(5.4))]
+    #[case(num!(999.0), num!(990.0))]
+    #[case(num!(1000.0), num!(1000.0))]
+    fn correctly_adjusts_prices(
+        #[case] input_price: NumericPrimitive,
+        #[case] expected: NumericPrimitive,
+    ) {
         let actual = Price::adjust_price_to_betfair_boundaries(input_price).unwrap();
-        assert_eq!(
-            expected, actual,
-            "Expected {input_price} to be adjusted to {expected}, but got {actual}"
-        );
+
+        #[cfg(not(feature = "fast-floats"))]
+        {
+            assert_eq!(
+                expected, actual,
+                "Expected {input_price} to be adjusted to {expected}, but got {actual}"
+            );
+        }
+
+        #[cfg(feature = "fast-floats")]
+        {
+            let diff = (expected - actual).abs();
+            assert!(
+                diff < 1e-9,
+                "Expected {input_price} to be adjusted to {expected}, but got {actual} (diff: {diff})"
+            );
+        }
     }
 }

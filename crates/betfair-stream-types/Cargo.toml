@@ -12,6 +12,11 @@ edition.workspace = true
 [lints]
 workspace = true
 
+[features]
+default = []
+# Use f64 instead of rust_decimal for Price and Size (faster but less precise)
+fast-floats = ["betfair-types/fast-floats"]
+
 [dependencies]
 serde.workspace = true
 chrono.workspace = true
