@@ -285,6 +285,7 @@ dependencies = [
  "chrono",
  "json-rpc-types",
  "rust_decimal",
+ "rust_decimal_macros",
  "serde",
  "serde_json",
  "typed-builder",
