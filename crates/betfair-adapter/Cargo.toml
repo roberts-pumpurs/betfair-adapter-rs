@@ -11,8 +11,8 @@ edition.workspace = true
 
 [features]
 default = []
-# Use f64 instead of rust_decimal for Price, Size and other numeric values (faster but less precise)
-fast-primitives = ["betfair-types/fast-primitives"]
+# Use rust_decimal instead of f64 for Price, Size and other numeric values (slower but more precise)
+decimal-primitives = ["betfair-types/decimal-primitives"]
 
 [lints]
 workspace = true

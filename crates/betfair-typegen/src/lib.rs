@@ -18,6 +18,7 @@ use betfair_xml_parser::Interface;
 use generator::settings::GeneratorSettings;
 pub use generator::{BetfairTypeGenerator, output, settings};
 pub use proc_macro2::TokenStream;
+#[cfg(feature = "decimal-primitives")]
 pub use rust_decimal;
 
 /// The trait that is used to generate the types for the Betfair API

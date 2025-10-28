@@ -10,7 +10,8 @@ license.workspace = true
 edition.workspace = true
 
 [features]
-fast-primitives = ["betfair-types/fast-primitives", "betfair-adapter/fast-primitives"]
+# Use rust_decimal instead of f64 for Price, Size and other numeric values (slower but more precise)
+decimal-primitives = ["betfair-types/decimal-primitives", "betfair-adapter/decimal-primitives"]
 
 [dependencies]
 betfair-adapter.workspace = true

@@ -14,8 +14,8 @@ exclude.workspace = true
 
 [features]
 default = []
-# Use f64 instead of rust_decimal for Price, Size and other numeric values (faster but less precise)
-fast-primitives = ["betfair-stream-types/fast-primitives", "betfair-adapter/fast-primitives"]
+# Use rust_decimal instead of f64 for Price, Size and other numeric values (slower but more precise)
+decimal-primitives = ["betfair-stream-types/decimal-primitives", "betfair-adapter/decimal-primitives"]
 
 [dependencies]
 backon.workspace = true

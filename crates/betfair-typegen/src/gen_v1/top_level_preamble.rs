@@ -19,12 +19,12 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
             use serde::de::{self, Visitor};
             use serde::{Deserializer};
 
-            #[cfg(not(feature = "fast-primitives"))]
+            #[cfg(feature = "decimal-primitives")]
             use rust_decimal::{Decimal, prelude::FromPrimitive};
-            #[cfg(not(feature = "fast-primitives"))]
+            #[cfg(feature = "decimal-primitives")]
             use std::str::FromStr;
 
-            #[cfg(feature = "fast-primitives")]
+            #[cfg(not(feature = "decimal-primitives"))]
             use crate::numeric::{F64Ord};
 
             use crate::numeric::{NumericOrdPrimitive};
@@ -43,11 +43,11 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                 where
                     E: de::Error,
                 {
-                    #[cfg(feature = "fast-primitives")]
+                    #[cfg(not(feature = "decimal-primitives"))]
                     {
                         Ok(Some(F64Ord::new(value)))
                     }
-                    #[cfg(not(feature = "fast-primitives"))]
+                    #[cfg(feature = "decimal-primitives")]
                     {
                         Ok(Some(
                             Decimal::from_f64(value).ok_or_else(|| E::custom("Invalid float value"))?,
@@ -61,12 +61,12 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                 {
                     match value {
                         "NaN" => Ok(None),
-                        #[cfg(feature = "fast-primitives")]
+                        #[cfg(not(feature = "decimal-primitives"))]
                         _ => {
                             let parsed: f64 = value.parse().map_err(E::custom)?;
                             Ok(Some(F64Ord::new(parsed)))
                         }
-                        #[cfg(not(feature = "fast-primitives"))]
+                        #[cfg(feature = "decimal-primitives")]
                         _ => Decimal::from_str(value).map(Some).map_err(E::custom),
                     }
                 }

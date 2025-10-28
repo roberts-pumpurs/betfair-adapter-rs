@@ -14,13 +14,13 @@ workspace = true
 
 [features]
 default = []
-# Use f64 instead of rust_decimal for Price and Size (faster but less precise)
-fast-primitives = ["betfair-types/fast-primitives"]
+# Use rust_decimal instead of f64 for Price and Size (slower but more precise)
+decimal-primitives = ["betfair-types/decimal-primitives", "dep:rust_decimal"]
 
 [dependencies]
 serde.workspace = true
 chrono.workspace = true
-rust_decimal.workspace = true
+rust_decimal = { workspace = true, optional = true }
 typed-builder.workspace = true
 betfair-types.workspace = true
 serde_json.workspace = true

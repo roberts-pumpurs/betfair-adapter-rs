@@ -5,6 +5,7 @@ mod secret;
 mod urls;
 
 pub use betfair_types;
+#[cfg(feature = "decimal-primitives")]
 pub use betfair_types::rust_decimal;
 pub use config::BetfairConfigBuilder;
 pub use error::ApiError;

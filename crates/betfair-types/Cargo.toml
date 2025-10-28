@@ -11,14 +11,14 @@ edition = { workspace = true }
 
 [features]
 default = []
-# Use f64 instead of rust_decimal for Price, Size and other numeric values (faster but less precise)
-fast-primitives = []
+# Use rust_decimal instead of f64 for Price, Size and other numeric values (slower but more precise)
+decimal-primitives = ["dep:rust_decimal", "dep:rust_decimal_macros"]
 
 [dependencies]
 serde.workspace = true
 chrono.workspace = true
-rust_decimal.workspace = true
-rust_decimal_macros.workspace = true
+rust_decimal = { workspace = true, optional = true }
+rust_decimal_macros = { workspace = true, optional = true }
 typed-builder.workspace = true
 redact.workspace = true
 serde_json.workspace = true
