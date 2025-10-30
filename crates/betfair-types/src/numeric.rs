@@ -292,7 +292,7 @@ impl NumericOps for f64 {
 
     #[inline(always)]
     fn round_2dp(self) -> Self {
-        (self * 100.0).round() * 0.01
+        (self * 100.0).round() / 100.0
     }
 
     fn zero() -> Self {

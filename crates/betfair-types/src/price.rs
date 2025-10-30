@@ -286,3 +286,101 @@ mod tests {
         }
     }
 }
+
+#[cfg(not(feature = "decimal-primitives"))]
+#[cfg(test)]
+mod price_serialization_tests {
+    use super::*;
+    use serde::{Deserialize, Serialize};
+
+    fn get_all_prices() -> Vec<f64> {
+        let mut prices = Vec::new();
+
+        let price_ranges = [
+            (1.01_f64, 2.0_f64, 0.01_f64),     // 1.01 → 2 | 0.01
+            (2.0_f64, 3.0_f64, 0.02_f64),      // 2 → 3 | 0.02
+            (3.0_f64, 4.0_f64, 0.05_f64),      // 3 → 4 | 0.05
+            (4.0_f64, 6.0_f64, 0.1_f64),       // 4 → 6 | 0.1
+            (6.0_f64, 10.0_f64, 0.2_f64),      // 6 → 10 | 0.2
+            (10.0_f64, 20.0_f64, 0.5_f64),     // 10 → 20 | 0.5
+            (20.0_f64, 30.0_f64, 1.0_f64),     // 20 → 30 | 1
+            (30.0_f64, 50.0_f64, 2.0_f64),     // 30 → 50 | 2
+            (50.0_f64, 100.0_f64, 5.0_f64),    // 50 → 100 | 5
+            (100.0_f64, 1001.0_f64, 10.0_f64), // 100 → 1000 | 10 (inclusive)
+        ];
+
+        for (start, end, step) in price_ranges {
+            let mut price = start;
+            while price < end {
+                prices.push(price.round_2dp());
+                price += step;
+            }
+        }
+
+        prices
+    }
+
+    #[test]
+    fn get_all_prices_generates_valid_prices() {
+        for price in get_all_prices() {
+            let valid_price = Price::new(price).unwrap();
+            assert_eq!(valid_price.0, price);
+        }
+    }
+
+    fn check_decimal_places(value_str: &str, max_decimal_places: usize) -> Result<(), String> {
+        let parts: Vec<&str> = value_str.split('.').collect();
+
+        if parts.len() > 2 {
+            return Err(format!(
+                "Unexpected serialization (multiple decimal points): {}",
+                value_str
+            ));
+        }
+
+        if parts.len() == 2 && parts[1].len() > max_decimal_places {
+            return Err(format!(
+                "Unexpected serialization (too many decimal places): {} (expected max {} decimal places, got {})",
+                value_str,
+                max_decimal_places,
+                parts[1].len()
+            ));
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn all_prices_should_serialize_to_two_decimal_places() {
+        for price in get_all_prices() {
+            let price_as_string = price.to_string();
+            check_decimal_places(&price_as_string, 2)
+                .unwrap_or_else(|err| panic!("Price {} failed: {}", price, err));
+        }
+    }
+
+    #[derive(Serialize, Deserialize, Debug)]
+    struct PriceContainer {
+        price: f64,
+    }
+
+    #[test]
+    fn struct_with_price_should_serialize_to_two_decimal_places() {
+        for price in get_all_prices() {
+            let container = PriceContainer { price };
+            let json = serde_json::to_string(&container)
+                .unwrap_or_else(|e| panic!("Failed to serialize price {}: {}", price, e));
+
+            // Extract the price string directly from JSON (format is {"price":123.45})
+            // We need to verify what's actually in the serialized JSON.
+            let price_str = json
+                .strip_prefix("{\"price\":")
+                .and_then(|s| s.strip_suffix("}"))
+                .unwrap_or_else(|| panic!("Unexpected JSON format for price {}: {}", price, json));
+
+            check_decimal_places(price_str, 2).unwrap_or_else(|err| {
+                panic!("Price {} in struct failed (JSON: {}): {}", price, json, err)
+            });
+        }
+    }
+}
