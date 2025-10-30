@@ -252,6 +252,16 @@ mod tests {
 
     use super::*;
 
+    // This test exists only to convince cargo-machete that we are in fact using
+    // rust_decimal as a dependency (through the `num_u8!` macro in the tests below).
+    #[cfg(feature = "decimal-primitives")]
+    #[test]
+    fn allow_cargo_machete_to_see_rust_decimal_is_used() {
+        use rust_decimal::{Decimal, prelude::FromPrimitive};
+        use rust_decimal_macros::*;
+        assert_eq!(Decimal::from_f64(2.0).unwrap(), dec!(1.0) * dec!(2.0));
+    }
+
     #[test]
     fn can_deserialize_connection() {
         let msg = "{\"op\":\"connection\",\"connectionId\":\"206-221122192222-702491\"}";
