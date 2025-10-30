@@ -328,46 +328,36 @@ mod price_serialization_tests {
         }
     }
 
-    fn check_decimal_places(value_str: &str, max_decimal_places: usize) -> Result<(), String> {
+    fn check_decimal_places(value_str: &str, max_decimal_places: usize) {
         let parts: Vec<&str> = value_str.split('.').collect();
-
-        if parts.len() > 2 {
-            return Err(format!(
-                "Unexpected serialization (multiple decimal points): {}",
-                value_str
-            ));
-        }
-
+        assert!(parts.len() <= 2);
         if parts.len() == 2 && parts[1].len() > max_decimal_places {
-            return Err(format!(
-                "Unexpected serialization (too many decimal places): {} (expected max {} decimal places, got {})",
-                value_str,
-                max_decimal_places,
-                parts[1].len()
-            ));
+            panic!(
+                "Unexpected serialization: expected {} decimal places, value was {})",
+                max_decimal_places, value_str,
+            );
         }
-
-        Ok(())
     }
 
     #[test]
     fn all_prices_should_serialize_to_two_decimal_places() {
         for price in get_all_prices() {
             let price_as_string = price.to_string();
-            check_decimal_places(&price_as_string, 2)
-                .unwrap_or_else(|err| panic!("Price {} failed: {}", price, err));
+            check_decimal_places(&price_as_string, 2);
         }
     }
 
     #[derive(Serialize, Deserialize, Debug)]
     struct PriceContainer {
-        price: f64,
+        price: Price,
     }
 
     #[test]
     fn struct_with_price_should_serialize_to_two_decimal_places() {
         for price in get_all_prices() {
-            let container = PriceContainer { price };
+            let container = PriceContainer {
+                price: Price::new(price).unwrap(),
+            };
             let json = serde_json::to_string(&container)
                 .unwrap_or_else(|e| panic!("Failed to serialize price {}: {}", price, e));
 
@@ -378,9 +368,7 @@ mod price_serialization_tests {
                 .and_then(|s| s.strip_suffix("}"))
                 .unwrap_or_else(|| panic!("Unexpected JSON format for price {}: {}", price, json));
 
-            check_decimal_places(price_str, 2).unwrap_or_else(|err| {
-                panic!("Price {} in struct failed (JSON: {}): {}", price, json, err)
-            });
+            check_decimal_places(price_str, 2);
         }
     }
 }

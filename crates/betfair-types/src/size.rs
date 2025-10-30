@@ -32,7 +32,16 @@ impl core::hash::Hash for Size {
 
 impl Size {
     #[must_use]
-    pub const fn new(size: NumericPrimitive) -> Self {
+    pub fn new(size: NumericPrimitive) -> Self {
+        let size = size.round_2dp();
+        Self(size)
+    }
+
+    /// This function is unsafe because it does not round the size to 2dp.
+    /// # Safety
+    /// The caller must ensure that the size is valid on Betfair.
+    #[must_use]
+    pub const unsafe fn new_unchecked(size: NumericPrimitive) -> Self {
         Self(size)
     }
 
@@ -75,7 +84,7 @@ impl Size {
 
 impl From<NumericPrimitive> for Size {
     fn from(val: NumericPrimitive) -> Self {
-        Self(val.round_2dp())
+        Self::new(val)
     }
 }
 
@@ -111,6 +120,71 @@ mod tests {
                 "Expected size to be rounded to 1.02, but got {}",
                 size.0
             );
+        }
+    }
+}
+
+#[cfg(not(feature = "decimal-primitives"))]
+#[cfg(test)]
+mod size_serialization_tests {
+    use super::*;
+    use serde::{Deserialize, Serialize};
+
+    fn get_many_sizes() -> Vec<f64> {
+        // These sizes are not exactly representable in an f64.
+        vec![1.1, 1.2, 1.3, 1.5, 1.7, 2.1, 2.3, 3.14, 10.01, 9999.99]
+    }
+
+    #[test]
+    fn get_many_sizes_generates_valid_sizes() {
+        for size in get_many_sizes() {
+            let valid_size = Size::new(size);
+            assert_eq!(valid_size.0, size);
+        }
+    }
+
+    fn check_decimal_places(value_str: &str, max_decimal_places: usize) {
+        let parts: Vec<&str> = value_str.split('.').collect();
+        assert!(parts.len() <= 2);
+        if parts.len() == 2 && parts[1].len() > max_decimal_places {
+            panic!(
+                "Unexpected serialization: expected {} decimal places, value was {})",
+                max_decimal_places, value_str,
+            );
+        }
+    }
+
+    #[test]
+    fn all_sizes_should_serialize_to_two_decimal_places() {
+        for size in get_many_sizes() {
+            let size_as_string = size.to_string();
+            check_decimal_places(&size_as_string, 2);
+        }
+    }
+
+    #[derive(Serialize, Deserialize, Debug)]
+    struct SizeContainer {
+        size: Size,
+    }
+
+    #[test]
+    fn struct_with_size_should_serialize_to_two_decimal_places() {
+        for size in get_many_sizes() {
+            let container = SizeContainer {
+                size: Size::new(size),
+            };
+
+            let json = serde_json::to_string(&container)
+                .unwrap_or_else(|e| panic!("Failed to serialize size {}: {}", size, e));
+
+            // Extract the size string directly from JSON (format is {"size":123.45})
+            // We need to verify what's actually in the serialized JSON.
+            let size_str = json
+                .strip_prefix("{\"size\":")
+                .and_then(|s| s.strip_suffix("}"))
+                .unwrap_or_else(|| panic!("Unexpected JSON format for size {}: {}", size, json));
+
+            check_decimal_places(size_str, 2);
         }
     }
 }
