@@ -125,7 +125,7 @@ impl MarketBookCache {
             self.total_matched = self
                 .runners
                 .values()
-                .map(|x| x.total_matched().unwrap_or_else(|| Size::zero()))
+                .map(|x| x.total_matched().unwrap_or_else(Size::zero))
                 .fold(Size::zero(), |acc, x| acc.saturating_add(&x));
         }
     }

@@ -2,12 +2,19 @@ use serde::{Deserialize, Serialize};
 
 use crate::numeric::{NumericOps, NumericPrimitive};
 
-#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Default, Deserialize, Serialize)]
-#[cfg_attr(feature = "decimal-primitives", derive(Eq, Hash, Ord))]
+#[derive(Clone, Copy, Debug, PartialEq, Default, Deserialize, Serialize)]
+#[cfg_attr(feature = "decimal-primitives", derive(Eq, Hash, Ord, PartialOrd))]
 pub struct Size(NumericPrimitive);
 
 #[cfg(not(feature = "decimal-primitives"))]
 impl Eq for Size {}
+
+#[cfg(not(feature = "decimal-primitives"))]
+impl PartialOrd for Size {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
 
 #[cfg(not(feature = "decimal-primitives"))]
 impl Ord for Size {

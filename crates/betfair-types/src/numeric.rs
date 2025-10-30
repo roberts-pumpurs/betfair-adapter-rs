@@ -29,9 +29,7 @@ pub type NumericU8Primitive = u8;
 /// Wrapper around f64 that implements Eq, Ord, and Hash using total_cmp
 /// This allows f64 to be used in contexts that require these traits
 #[cfg(not(feature = "decimal-primitives"))]
-#[derive(
-    Debug, Clone, Copy, PartialEq, PartialOrd, Default, serde::Serialize, serde::Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Default, serde::Serialize, serde::Deserialize)]
 #[serde(transparent)]
 pub struct F64Ord(pub f64);
 
@@ -62,6 +60,13 @@ impl From<F64Ord> for f64 {
 
 #[cfg(not(feature = "decimal-primitives"))]
 impl Eq for F64Ord {}
+
+#[cfg(not(feature = "decimal-primitives"))]
+impl PartialOrd for F64Ord {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
 
 #[cfg(not(feature = "decimal-primitives"))]
 impl Ord for F64Ord {

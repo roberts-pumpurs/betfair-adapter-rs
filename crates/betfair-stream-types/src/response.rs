@@ -217,7 +217,7 @@ impl<'de> Deserialize<'de> for Position {
             where
                 E: Error,
             {
-                if value >= 0 && value <= 255 {
+                if (0..=255).contains(&value) {
                     Ok(Position(value as u8))
                 } else {
                     Err(E::custom(format!("u8 out of range: {}", value)))
@@ -228,7 +228,7 @@ impl<'de> Deserialize<'de> for Position {
             where
                 E: Error,
             {
-                if value.fract() == 0.0 && value >= 0.0 && value <= 255.0 {
+                if value.fract() == 0.0 && (0.0..=255.0).contains(&value) {
                     Ok(Position(value as u8))
                 } else if value.fract() != 0.0 {
                     Err(E::custom(format!("expected integer value, got: {}", value)))

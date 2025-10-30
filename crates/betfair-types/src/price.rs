@@ -10,12 +10,19 @@ pub enum PriceParseError {
     InvalidPriceSpecified(NumericOrdPrimitive),
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, Serialize, Deserialize)]
-#[cfg_attr(feature = "decimal-primitives", derive(Eq, Hash, Ord))]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "decimal-primitives", derive(Eq, Hash, Ord, PartialOrd))]
 pub struct Price(NumericPrimitive);
 
 #[cfg(not(feature = "decimal-primitives"))]
 impl Eq for Price {}
+
+#[cfg(not(feature = "decimal-primitives"))]
+impl PartialOrd for Price {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
 
 #[cfg(not(feature = "decimal-primitives"))]
 impl Ord for Price {
