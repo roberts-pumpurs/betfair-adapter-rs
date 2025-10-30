@@ -33,13 +33,14 @@ See the [`examples/`](./examples) directory for complete guides.
 
 ### `decimal-primitives`
 
-Enabling this feature uses `rust_decimal::Decimal` for many numeric values including `Price`, `Size`, and general other decimal fields (handicaps, market rates, etc.).
-Using `Decimal` provides precise decimal arithmetic, however it can be slower than native floating-point operations.
+Enabling this feature uses `rust_decimal::Decimal` for many numeric values including `Price`, `Size`, and some other
+fields (handicaps, market rates, etc.).
+Using `Decimal` provides precise arithmetic, however it can be slower compared to f64 floating-point operations.
 
 #### Creating values from literals:
 
-Use the `num!` macro for cross-compatibility when creating numeric literals. The following will compile whether the `decimal-primitives` feature is
-enabled or disabled.
+Use the `num!` macro for cross-compatibility when creating numeric literals. The following will compile
+whether the `decimal-primitives` feature is enabled or disabled.
 
 ```rust
 use betfair_types::num;

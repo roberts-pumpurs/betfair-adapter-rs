@@ -182,6 +182,9 @@ pub struct UpdateSet3(pub Position, pub Price, pub Size);
 #[cfg_attr(feature = "decimal-primitives", derive(Deserialize))]
 pub struct Position(pub NumericU8Primitive);
 
+/// A custom deserializer because while Position is always integer values from 1 to 10
+/// the Betfair API often sends them as `1.0`, `2.0`, etc. This deserializer handles
+/// converting floats with no fractional part to u8 during deserialization.
 #[cfg(not(feature = "decimal-primitives"))]
 impl<'de> Deserialize<'de> for Position {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>

@@ -303,41 +303,42 @@ impl NumericOps for f64 {
     }
 }
 
-/// Create a numeric constant from a string literal at compile time
-/// This macro helps create constants that work with both Decimal and f64
+/// Create a numeric constant which is either an f64 or Decimal depending on feature flags
 #[cfg(feature = "decimal-primitives")]
 #[macro_export]
 macro_rules! num {
     ($lit:literal) => {{ ::rust_decimal_macros::dec!($lit) }};
 }
+
+/// Create a numeric constant which is either an f64 or Decimal depending on feature flags
 #[cfg(not(feature = "decimal-primitives"))]
 #[macro_export]
 macro_rules! num {
     ($lit:literal) => {{ $lit as f64 }};
 }
 
-/// Create a numeric constant which implements Ord from a string literal at compile time
+/// Create a numeric constant which is either an F64Ord or Decimal depending on feature flags
 #[cfg(feature = "decimal-primitives")]
 #[macro_export]
 macro_rules! num_ord {
     ($lit:literal) => {{ ::rust_decimal_macros::dec!($lit) }};
 }
 
-/// Create a numeric constant which implements Ord from a string literal at compile time
+/// Create a numeric constant which is either an F64Ord or Decimal depending on feature flags
 #[cfg(not(feature = "decimal-primitives"))]
 #[macro_export]
 macro_rules! num_ord {
     ($lit:literal) => {{ $crate::numeric::F64Ord::from($lit as f64) }};
 }
 
-/// Create a numeric constant which implements Ord from a string literal at compile time
+/// Create a numeric constant which is either a u8 or Decimal depending on feature flags
 #[cfg(feature = "decimal-primitives")]
 #[macro_export]
 macro_rules! num_u8 {
     ($lit:literal) => {{ ::rust_decimal_macros::dec!($lit) }};
 }
 
-/// Create a numeric constant which implements Ord from a string literal at compile time
+/// Create a numeric constant which is either a u8 or Decimal depending on feature flags
 #[cfg(not(feature = "decimal-primitives"))]
 #[macro_export]
 macro_rules! num_u8 {
