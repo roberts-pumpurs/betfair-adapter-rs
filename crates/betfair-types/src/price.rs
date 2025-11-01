@@ -11,27 +11,22 @@ pub enum PriceParseError {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-#[cfg_attr(feature = "decimal-primitives", derive(Eq, Hash, Ord, PartialOrd))]
 pub struct Price(NumericPrimitive);
 
-#[cfg(not(feature = "decimal-primitives"))]
 impl Eq for Price {}
 
-#[cfg(not(feature = "decimal-primitives"))]
 impl PartialOrd for Price {
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-#[cfg(not(feature = "decimal-primitives"))]
 impl Ord for Price {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         self.0.total_cmp(&other.0)
     }
 }
 
-#[cfg(not(feature = "decimal-primitives"))]
 impl core::hash::Hash for Price {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         self.0.to_bits().hash(state);
@@ -134,50 +129,27 @@ impl Price {
             lower_range: NumericPrimitive,
             increment: NumericPrimitive,
         ) -> NumericPrimitive {
-            #[cfg(feature = "decimal-primitives")]
-            {
-                // check if we need to round down
-                let Some(remainder) = x.checked_rem(increment) else {
-                    panic!("Invalid price");
-                };
+            // For f64, round to nearest increment to avoid floating-point precision issues
+            let steps_raw = (x - lower_range) / increment;
+            let steps = steps_raw.round();
+            let rounded = (lower_range + (steps * increment)).round_2dp();
 
-                if remainder != NumericPrimitive::zero() {
-                    // check if we need to settle for the lowest range (to not underflow to the next
-                    // bottom range)
-                    if x - increment <= lower_range {
-                        lower_range
-                    } else {
-                        (x - remainder).round_2dp()
-                    }
-                } else {
-                    x.round_2dp()
-                }
+            // Check if the original value is already very close to the rounded value
+            // (within floating-point tolerance), if so, use the rounded value
+            let diff = (x - rounded).abs();
+            if diff < 1e-9 {
+                return rounded;
             }
 
-            #[cfg(not(feature = "decimal-primitives"))]
-            {
-                // For f64, round to nearest increment to avoid floating-point precision issues
-                let steps_raw = (x - lower_range) / increment;
-                let steps = steps_raw.round();
-                let rounded = (lower_range + (steps * increment)).round_2dp();
+            // Otherwise, check if we need to round down
+            let steps_down = steps_raw.floor();
+            let rounded_down = (lower_range + (steps_down * increment)).round_2dp();
 
-                // Check if the original value is already very close to the rounded value
-                // (within floating-point tolerance), if so, use the rounded value
-                let diff = (x - rounded).abs();
-                if diff < 1e-9 {
-                    return rounded;
-                }
-
-                // Otherwise, check if we need to round down
-                let steps_down = steps_raw.floor();
-                let rounded_down = (lower_range + (steps_down * increment)).round_2dp();
-
-                // Ensure we don't go below the lower range
-                if rounded_down < lower_range {
-                    lower_range
-                } else {
-                    rounded_down
-                }
+            // Ensure we don't go below the lower range
+            if rounded_down < lower_range {
+                lower_range
+            } else {
+                rounded_down
             }
         }
 
@@ -214,19 +186,9 @@ impl Price {
             x if (num!(100.0)..=num!(1000.0)).contains(&x) => {
                 Ok(round_to_nearest(x, num!(100.0), num!(10.0)))
             }
-            x => {
-                #[cfg(feature = "decimal-primitives")]
-                {
-                    Err(PriceParseError::InvalidPriceSpecified(x))
-                }
-
-                #[cfg(not(feature = "decimal-primitives"))]
-                {
-                    Err(PriceParseError::InvalidPriceSpecified(
-                        crate::numeric::F64Ord(x),
-                    ))
-                }
-            }
+            x => Err(PriceParseError::InvalidPriceSpecified(
+                crate::numeric::F64Ord(x),
+            )),
         }
     }
 }
@@ -280,26 +242,14 @@ mod tests {
     ) {
         let actual = Price::adjust_price_to_betfair_boundaries(input_price).unwrap();
 
-        #[cfg(feature = "decimal-primitives")]
-        {
-            assert_eq!(
-                expected, actual,
-                "Expected {input_price} to be adjusted to {expected}, but got {actual}"
-            );
-        }
-
-        #[cfg(not(feature = "decimal-primitives"))]
-        {
-            let diff = (expected - actual).abs();
-            assert!(
-                diff < 1e-9,
-                "Expected {input_price} to be adjusted to {expected}, but got {actual} (diff: {diff})"
-            );
-        }
+        let diff = (expected - actual).abs();
+        assert!(
+            diff < 1e-9,
+            "Expected {input_price} to be adjusted to {expected}, but got {actual} (diff: {diff})"
+        );
     }
 }
 
-#[cfg(not(feature = "decimal-primitives"))]
 #[cfg(test)]
 mod price_serialization_tests {
     use super::*;

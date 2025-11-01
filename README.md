@@ -29,18 +29,13 @@ Utilities for interacting with the Betfair API (API‑NG and Streaming) from Rus
 
 See the [`examples/`](./examples) directory for complete guides.
 
-## Feature Flags
+## Working with Numeric Values
 
-### `decimal-primitives`
+This library uses `f64` for numeric values like `Price` and `Size`. Helper macros are provided for creating these values:
 
-Enabling this feature uses `rust_decimal::Decimal` for many numeric values including `Price`, `Size`, and some other
-fields (handicaps, market rates, etc.).
-Using `Decimal` provides precise arithmetic, however it can be slower compared to f64 floating-point operations.
-
-#### Creating values from literals:
-
-Use the `num!` macro for cross-compatibility when creating numeric literals. The following will compile
-whether the `decimal-primitives` feature is enabled or disabled.
+- `num!` - Creates f64 values for `Price`, `Size`, etc.
+- `num_ord!` - Creates `F64Ord` values (f64 with Eq/Ord/Hash traits)
+- `num_u8!` - Creates u8 values for position and other small integers
 
 ```rust
 use betfair_types::num;
@@ -48,9 +43,6 @@ use betfair_types::num;
 let price = Price::new(num!(1.5))?;
 let size = Size::from(num!(100.0));
 ```
-
-There is also a `num_ord!` macro for creating either `Decimal` or `F64Ord`, and `num_u8!` for creating either `Decimal` or `u8`,
-depending on whether the `decimal-primitives` feature is enabled or disabled.
 
 ## Development
 
