@@ -1,13 +1,12 @@
 //! Runner book cache (used for market book Stream API caching)
 
+use betfair_adapter::betfair_types::NumericOrdPrimitive;
 use betfair_adapter::betfair_types::price::Price;
 use betfair_adapter::betfair_types::size::Size;
 use betfair_adapter::betfair_types::types::sports_aping::SelectionId;
-use betfair_adapter::rust_decimal;
 use betfair_stream_types::response::market_change_message::{RunnerChange, RunnerDefinition};
 use betfair_stream_types::response::{UpdateSet2, UpdateSet3};
 use eyre::bail;
-use rust_decimal::Decimal;
 
 use super::available_cache::Available;
 
@@ -28,7 +27,7 @@ pub struct RunnerBookCache {
     starting_price_lay: Available<UpdateSet2>,
     starting_price_near: Option<Price>,
     starting_price_far: Option<Price>,
-    handicap: Option<Decimal>,
+    handicap: Option<NumericOrdPrimitive>,
     definition: Option<RunnerDefinition>,
 }
 
@@ -108,14 +107,14 @@ impl RunnerBookCache {
     pub fn update_traded(&mut self, traded: &[UpdateSet2]) {
         if traded.is_empty() {
             self.traded.clear();
-            self.total_matched = Some(Size::new(Decimal::ZERO));
+            self.total_matched = Some(Size::zero());
             return;
         }
         self.total_matched = Some(
             traded
                 .iter()
                 .map(|x| x.1)
-                .fold(Size::new(Decimal::ZERO), |acc, x| acc.saturating_add(&x)),
+                .fold(Size::zero(), |acc, x| acc.saturating_add(&x)),
         );
         self.traded.update(traded);
     }
@@ -246,7 +245,7 @@ impl RunnerBookCache {
     }
 
     #[must_use]
-    pub const fn handicap(&self) -> Option<Decimal> {
+    pub const fn handicap(&self) -> Option<NumericOrdPrimitive> {
         self.handicap
     }
 

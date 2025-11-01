@@ -1,7 +1,7 @@
+use betfair_types::NumericU8Primitive;
 use betfair_types::price::Price;
 use betfair_types::size::Size;
 use chrono::{DateTime, TimeZone as _, Utc};
-use rust_decimal::Decimal;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -178,8 +178,69 @@ pub struct UpdateSet2(pub Price, pub Size);
 pub struct UpdateSet3(pub Position, pub Price, pub Size);
 
 /// Represents the level of the order book.
-#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, Serialize, Deserialize, Eq, Hash, Ord)]
-pub struct Position(pub Decimal);
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, Serialize, Eq, Hash, Ord)]
+#[cfg_attr(feature = "decimal-primitives", derive(Deserialize))]
+pub struct Position(pub NumericU8Primitive);
+
+/// A custom deserializer because while Position is always integer values from 1 to 10
+/// the Betfair API often sends them as `1.0`, `2.0`, etc. This deserializer handles
+/// converting floats with no fractional part to u8 during deserialization.
+#[cfg(not(feature = "decimal-primitives"))]
+impl<'de> Deserialize<'de> for Position {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        use serde::de::Error;
+
+        struct PositionVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for PositionVisitor {
+            type Value = Position;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("a number or string representing an integer between 0 and 255")
+            }
+
+            fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                if value <= 255 {
+                    Ok(Position(value as u8))
+                } else {
+                    Err(E::custom(format!("u8 out of range: {}", value)))
+                }
+            }
+
+            fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                if (0..=255).contains(&value) {
+                    Ok(Position(value as u8))
+                } else {
+                    Err(E::custom(format!("u8 out of range: {}", value)))
+                }
+            }
+
+            fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                if value.fract() == 0.0 && (0.0..=255.0).contains(&value) {
+                    Ok(Position(value as u8))
+                } else if value.fract() != 0.0 {
+                    Err(E::custom(format!("expected integer value, got: {}", value)))
+                } else {
+                    Err(E::custom(format!("u8 out of range: {}", value)))
+                }
+            }
+        }
+
+        deserializer.deserialize_any(PositionVisitor)
+    }
+}
 
 pub trait DataChange<T> {
     fn key() -> &'static str;
@@ -187,7 +248,19 @@ pub trait DataChange<T> {
 
 #[cfg(test)]
 mod tests {
+    use betfair_types::num_u8;
+
     use super::*;
+
+    // This test exists only to convince cargo-machete that we are in fact using
+    // rust_decimal as a dependency (through the `num_u8!` macro in the tests below).
+    #[cfg(feature = "decimal-primitives")]
+    #[test]
+    fn allow_cargo_machete_to_see_rust_decimal_is_used() {
+        use rust_decimal::{Decimal, prelude::FromPrimitive};
+        use rust_decimal_macros::*;
+        assert_eq!(Decimal::from_f64(2.0).unwrap(), dec!(1.0) * dec!(2.0));
+    }
 
     #[test]
     fn can_deserialize_connection() {
@@ -201,5 +274,49 @@ mod tests {
                 id: None,
             })
         );
+    }
+
+    #[test]
+    fn position_deserializes_from_integer() {
+        let json = "2";
+        let position: Position = serde_json::from_str(json).unwrap();
+        assert_eq!(position.0, num_u8!(2));
+    }
+
+    #[test]
+    fn position_deserializes_from_decimal_number_with_zero_fraction() {
+        let json = "2.0";
+        let position: Position = serde_json::from_str(json).unwrap();
+        assert_eq!(position.0, num_u8!(2));
+    }
+
+    #[test]
+    #[cfg(not(feature = "decimal-primitives"))]
+    fn position_rejects_decimal_with_fraction() {
+        let json = "2.5";
+        let result = serde_json::from_str::<Position>(json);
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("expected integer value")
+        );
+    }
+
+    #[test]
+    #[cfg(not(feature = "decimal-primitives"))]
+    fn position_rejects_out_of_range() {
+        let json = "256";
+        let result = serde_json::from_str::<Position>(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    #[cfg(not(feature = "decimal-primitives"))]
+    fn position_rejects_negative() {
+        let json = "-1";
+        let result = serde_json::from_str::<Position>(json);
+        assert!(result.is_err());
     }
 }

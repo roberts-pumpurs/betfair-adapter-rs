@@ -21,7 +21,7 @@ impl TypeResolverV1 {
                 "string" => "std::sync::Arc<String>".to_owned(),
                 "int" | "i32" => "i32".to_owned(),
                 "i64" => "i64".to_owned(),
-                "double" | "float" => "rust_decimal::Decimal".to_owned(),
+                "double" | "float" => "crate::numeric::NumericOrdPrimitive".to_owned(),
                 "dateTime" => "DateTime<Utc>".to_owned(),
                 "boolean" | "bool" => "bool".to_owned(),
                 "CustomerRef" => "crate::customer_ref::CustomerRef".to_owned(),

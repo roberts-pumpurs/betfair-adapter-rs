@@ -1,3 +1,4 @@
+use betfair_types::NumericOrdPrimitive;
 use betfair_types::price::Price;
 use betfair_types::size::Size;
 use betfair_types::types::sports_aping::{MarketId, SelectionId};
@@ -74,7 +75,7 @@ pub struct MarketDefinition {
     pub timezone: String,
     /// The divisor for each way betting.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub each_way_divisor: Option<rust_decimal::Decimal>,
+    pub each_way_divisor: Option<NumericOrdPrimitive>,
 
     /// The market regulators.
     pub regulators: Vec<String>,
@@ -83,7 +84,7 @@ pub struct MarketDefinition {
     pub market_type: String,
 
     /// The base rate for the market.
-    pub market_base_rate: rust_decimal::Decimal,
+    pub market_base_rate: NumericOrdPrimitive,
 
     /// The number of winners in the market.
     pub number_of_winners: i32,
@@ -95,7 +96,7 @@ pub struct MarketDefinition {
     /// For Handicap and Line markets, the maximum value for the outcome, in market units for this
     /// market (eg 100 runs).
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub line_max_unit: Option<rust_decimal::Decimal>,
+    pub line_max_unit: Option<NumericOrdPrimitive>,
 
     /// Indicates if the market is in play.
     pub in_play: bool,
@@ -116,7 +117,7 @@ pub struct MarketDefinition {
     /// For Handicap and Line markets, the minimum value for the outcome, in market units for this
     /// market (eg 0 runs).
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub line_min_unit: Option<rust_decimal::Decimal>,
+    pub line_min_unit: Option<NumericOrdPrimitive>,
 
     /// The event ID associated with the market.
     pub event_id: String,
@@ -176,7 +177,7 @@ pub struct MarketDefinition {
     /// runs, lineMinUnit=10, lineMaxUnit=20 and lineInterval=0.5, then valid lines include 10,
     /// 10.5, 11, 11.5 up to 20 runs.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub line_interval: Option<rust_decimal::Decimal>,
+    pub line_interval: Option<NumericOrdPrimitive>,
 
     /// The status of the market.
     pub status: StreamMarketDefinitionStatus,
@@ -218,7 +219,7 @@ pub struct KeyLineSelection {
     /// The handicap value for the selection.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "hc")]
-    pub handicap: Option<rust_decimal::Decimal>,
+    pub handicap: Option<NumericOrdPrimitive>,
 }
 
 /// Represents the price ladder definition.
@@ -318,7 +319,7 @@ pub struct RunnerChange {
     /// Handicap - the handicap of the runner (selection) (null if not applicable)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "hc")]
-    pub handicap: Option<rust_decimal::Decimal>,
+    pub handicap: Option<NumericOrdPrimitive>,
 
     /// Best Display Available To Back (includes virtual prices)- `LevelPriceVol` triple delta of
     /// price changes, keyed by level (0 vol is remove)
@@ -343,14 +344,14 @@ pub struct RunnerDefinition {
     /// Handicap - the handicap of the runner (selection) (null if not applicable)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "hc")]
-    pub handicap: Option<rust_decimal::Decimal>,
+    pub handicap: Option<NumericOrdPrimitive>,
     /// The adjustment factor for the runner.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub adjustment_factor: Option<rust_decimal::Decimal>,
+    pub adjustment_factor: Option<NumericOrdPrimitive>,
     /// The BSP value for the runner.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "bsp")]
-    pub bsp: Option<rust_decimal::Decimal>,
+    pub bsp: Option<NumericOrdPrimitive>,
     /// The status of the runner.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<StreamRunnerDefinitionStatus>,

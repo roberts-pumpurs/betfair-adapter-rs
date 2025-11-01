@@ -2,14 +2,13 @@
 
 use std::collections::HashMap;
 
+use betfair_adapter::betfair_types::NumericOrdPrimitive;
 use betfair_adapter::betfair_types::size::Size;
 use betfair_adapter::betfair_types::types::sports_aping::{MarketId, SelectionId};
-use betfair_adapter::rust_decimal;
 use betfair_stream_types::response::market_change_message::{
     MarketChange, MarketDefinition, RunnerChange, RunnerDefinition, StreamMarketDefinitionStatus,
 };
 use chrono::{DateTime, Utc};
-use rust_decimal::Decimal;
 
 use super::runner_book_cache::RunnerBookCache;
 
@@ -21,7 +20,7 @@ pub struct MarketBookCache {
     active: bool,
     total_matched: Size,
     market_definition: Option<Box<MarketDefinition>>,
-    runners: HashMap<(SelectionId, Option<Decimal>), RunnerBookCache>,
+    runners: HashMap<(SelectionId, Option<NumericOrdPrimitive>), RunnerBookCache>,
 }
 
 /// Represents the market book cache.
@@ -34,7 +33,7 @@ impl MarketBookCache {
             active: true,
             publish_time,
             market_definition: None,
-            total_matched: Size::new(Decimal::ZERO),
+            total_matched: Size::zero(),
             runners: HashMap::new(),
         }
     }
@@ -126,11 +125,8 @@ impl MarketBookCache {
             self.total_matched = self
                 .runners
                 .values()
-                .map(|x| {
-                    x.total_matched()
-                        .unwrap_or_else(|| Size::new(Decimal::ZERO))
-                })
-                .fold(Size::new(Decimal::ZERO), |acc, x| acc.saturating_add(&x));
+                .map(|x| x.total_matched().unwrap_or_else(Size::zero))
+                .fold(Size::zero(), |acc, x| acc.saturating_add(&x));
         }
     }
 
@@ -186,7 +182,9 @@ impl MarketBookCache {
 
     /// Returns a reference to the runners in the market.
     #[must_use]
-    pub const fn runners(&self) -> &HashMap<(SelectionId, Option<Decimal>), RunnerBookCache> {
+    pub const fn runners(
+        &self,
+    ) -> &HashMap<(SelectionId, Option<NumericOrdPrimitive>), RunnerBookCache> {
         &self.runners
     }
 
@@ -212,10 +210,10 @@ impl MarketBookCache {
 
 #[cfg(test)]
 mod tests {
+    use betfair_adapter::betfair_types::num;
     use betfair_adapter::betfair_types::price::Price;
     use betfair_stream_types::response::UpdateSet2;
     use betfair_stream_types::response::market_change_message::MarketChangeMessage;
-    use rust_decimal_macros::dec;
 
     use super::*;
     use crate::cache::primitives::available_cache::Available;
@@ -234,7 +232,7 @@ mod tests {
         assert!(market_book_cache.active);
         assert_eq!(market_book_cache.market_id, market_id);
         assert_eq!(market_book_cache.publish_time, publish_time);
-        assert_eq!(market_book_cache.total_matched, Size::new(Decimal::ZERO));
+        assert_eq!(market_book_cache.total_matched, Size::zero());
         assert_eq!(market_book_cache.market_definition, None);
         assert!(market_book_cache.runners.is_empty());
     }
@@ -275,16 +273,16 @@ mod tests {
         let data = vec![
             RunnerChange {
                 available_to_back: Some(vec![UpdateSet2(
-                    Price::new(dec!(1.01)).unwrap(),
-                    Size::new(dec!(200)),
+                    Price::new(num!(1.01)).unwrap(),
+                    Size::new(num!(200)),
                 )]),
                 id: Some(SelectionId(13_536_143)),
                 ..Default::default()
             },
             RunnerChange {
                 available_to_lay: Some(vec![UpdateSet2(
-                    Price::new(dec!(1.02)).unwrap(),
-                    Size::new(dec!(200)),
+                    Price::new(num!(1.02)).unwrap(),
+                    Size::new(num!(200)),
                 )]),
                 id: Some(SelectionId(13_536_143)),
                 ..Default::default()
@@ -300,21 +298,21 @@ mod tests {
         assert!(init.active);
         assert_eq!(init.runners.len(), 1);
         // assert tv not changed
-        assert_eq!(init.total_matched, Size::new(Decimal::ZERO));
+        assert_eq!(init.total_matched, Size::zero());
         // assert atb updated
         assert_eq!(
             init.runners[&(SelectionId(13_536_143), None)].available_to_back(),
             &Available::new([UpdateSet2(
-                Price::new(dec!(1.01)).unwrap(),
-                Size::new(dec!(200))
+                Price::new(num!(1.01)).unwrap(),
+                Size::new(num!(200))
             )])
         );
         // assert atl updated
         assert_eq!(
             init.runners[&(SelectionId(13_536_143), None)].available_to_lay(),
             &Available::new([UpdateSet2(
-                Price::new(dec!(1.02)).unwrap(),
-                Size::new(dec!(200))
+                Price::new(num!(1.02)).unwrap(),
+                Size::new(num!(200))
             )])
         );
     }
@@ -352,7 +350,7 @@ mod tests {
             let market_change = MarketChange {
                 market_id: Some(market_id.clone()),
                 runner_change: Some(vec![RunnerChange {
-                    total_value: Some(Size::new(dec!(123.0))),
+                    total_value: Some(Size::new(num!(123.0))),
                     id: Some(SelectionId(13_536_143)),
                     ..Default::default()
                 }]),
@@ -361,7 +359,7 @@ mod tests {
             init.update_cache(market_change, Utc::now(), true);
             assert_eq!(
                 init.runners.iter().next().unwrap().1.total_matched(),
-                Some(Size::new(dec!(123.0)))
+                Some(Size::new(num!(123.0)))
             );
         };
         {
@@ -377,7 +375,7 @@ mod tests {
             init.update_cache(market_change, Utc::now(), true);
             assert_eq!(
                 init.runners.iter().next().unwrap().1.total_matched(),
-                Some(Size::new(Decimal::ZERO))
+                Some(Size::zero())
             );
         };
         {
@@ -385,8 +383,8 @@ mod tests {
                 market_id: Some(market_id),
                 runner_change: Some(vec![RunnerChange {
                     traded: Some(vec![UpdateSet2(
-                        Price::new(dec!(12.0)).unwrap(),
-                        Size::new(dec!(2.0)),
+                        Price::new(num!(12.0)).unwrap(),
+                        Size::new(num!(2.0)),
                     )]),
                     id: Some(SelectionId(13_536_143)),
                     ..Default::default()
@@ -396,7 +394,7 @@ mod tests {
             init.update_cache(market_change, Utc::now(), true);
             assert_eq!(
                 init.runners.iter().next().unwrap().1.total_matched(),
-                Some(Size::new(dec!(2.0)))
+                Some(Size::new(num!(2.0)))
             );
         }
     }
@@ -409,22 +407,22 @@ mod tests {
             let market_change = MarketChange {
                 market_id: Some(market_id.clone()),
                 runner_change: Some(vec![RunnerChange {
-                    total_value: Some(Size::new(dec!(123.0))),
+                    total_value: Some(Size::new(num!(123.0))),
                     id: Some(SelectionId(13_536_143)),
                     ..Default::default()
                 }]),
                 ..Default::default()
             };
             init.update_cache(market_change, Utc::now(), true);
-            assert_eq!(init.total_matched, Size::new(Decimal::ZERO));
+            assert_eq!(init.total_matched, Size::zero());
         };
         {
             let market_change = MarketChange {
                 market_id: Some(market_id),
                 runner_change: Some(vec![RunnerChange {
                     traded: Some(vec![UpdateSet2(
-                        Price::new(dec!(12.0)).unwrap(),
-                        Size::new(dec!(2.0)),
+                        Price::new(num!(12.0)).unwrap(),
+                        Size::new(num!(2.0)),
                     )]),
                     id: Some(SelectionId(13_536_143)),
                     ..Default::default()
@@ -432,7 +430,7 @@ mod tests {
                 ..Default::default()
             };
             init.update_cache(market_change, Utc::now(), true);
-            assert_eq!(init.total_matched, Size::new(dec!(2.0)));
+            assert_eq!(init.total_matched, Size::new(num!(2.0)));
         }
     }
 }

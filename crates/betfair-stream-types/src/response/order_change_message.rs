@@ -1,3 +1,4 @@
+use betfair_types::NumericOrdPrimitive;
 use betfair_types::customer_order_ref::CustomerOrderRef;
 use betfair_types::customer_strategy_ref::CustomerStrategyRef;
 use betfair_types::handicap::Handicap;
@@ -159,7 +160,7 @@ pub struct Order {
     pub id: BetId,
     /// BSP Liability - the BSP liability of the order (null if the order is not a BSP order)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub bsp: Option<rust_decimal::Decimal>,
+    pub bsp: Option<NumericOrdPrimitive>,
     /// Strategy Reference - the customer's strategy reference for this order (empty string if one
     /// was not set)
     #[serde(rename = "rfs", default)]

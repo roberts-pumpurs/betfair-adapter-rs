@@ -19,7 +19,7 @@ fn test_deserialize2() {
             {
                 "status": "FAILURE",
                 "errorCode": "BET_TAKEN_OR_LAPSED",
-                "sizeCancelled": "0.0",
+                "sizeCancelled": 0.0, // Changed from string to double as per https://betfair-developer-docs.atlassian.net/wiki/spaces/1smk3cen4v3lu3yomq5qye0ni/pages/2687465/Betting+Type+Definitions#CancelInstructionReport
                 "instruction": {
                     "betId": "298537625817",
                 }
