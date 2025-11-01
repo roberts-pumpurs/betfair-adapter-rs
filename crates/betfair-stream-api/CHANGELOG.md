@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.2](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-stream-api-v0.6.1...betfair-stream-api-v0.6.2) - 2025-11-01
+
+### Added
+
+- allow using either f64 or Decimal depending on feature flag ([#83](https://github.com/roberts-pumpurs/betfair-adapter-rs/pull/83))
+
 ## [0.6.1](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-stream-api-v0.6.0...betfair-stream-api-v0.6.1) - 2025-10-24
 
 ### Added
