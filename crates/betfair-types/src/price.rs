@@ -214,7 +214,7 @@ impl Price {
             x if (num!(100.0)..=num!(1000.0)).contains(&x) => {
                 Ok(round_to_nearest(x, num!(100.0), num!(10.0)))
             }
-            x => Err(PriceParseError::InvalidPriceSpecified(x.into())),
+            x => Err(PriceParseError::InvalidPriceSpecified(x)),
         }
     }
 }
