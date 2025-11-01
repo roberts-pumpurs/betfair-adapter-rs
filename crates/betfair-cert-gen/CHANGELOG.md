@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.2](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-cert-gen-v0.6.1...betfair-cert-gen-v0.6.2) - 2025-11-01
+
+### Added
+
+- allow using either f64 or Decimal depending on feature flag ([#83](https://github.com/roberts-pumpurs/betfair-adapter-rs/pull/83))
+
 ## [0.4.1](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-cert-gen-v0.4.0...betfair-cert-gen-v0.4.1) - 2025-04-21
 
 ### Other
