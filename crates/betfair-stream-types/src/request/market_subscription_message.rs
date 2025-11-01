@@ -81,7 +81,9 @@ impl LadderLevel {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize, Default,
+)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 /// Filter Exchange market data:
 /// - <https://support.developer.betfair.com/hc/en-us/articles/6540502258077-What-Betfair-Exchange-market-data-is-available-from-listMarketBook-Stream-API>-
@@ -93,6 +95,7 @@ pub enum Fields {
     /// Best prices including Virtual Bets - depth is controlled by ladderLevels (1 to 10) - Please
     /// note: The virtual price stream is updated ~150 m/s after non-virtual prices. Virtual prices
     /// are calculated for all ladder levels.
+    #[default]
     ExBestOffersDisp,
     /// - Fields: batb, batl
     /// - Type: level, price, size
@@ -137,12 +140,6 @@ pub enum Fields {
     /// Starting price projection prices. To receive any update to the Betfair SP Near and
     /// Far price.
     SpProjected,
-}
-
-impl Default for Fields {
-    fn default() -> Self {
-        Self::ExBestOffersDisp
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize, TypedBuilder)]

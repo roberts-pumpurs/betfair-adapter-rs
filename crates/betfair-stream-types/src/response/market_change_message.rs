@@ -184,19 +184,16 @@ pub struct MarketDefinition {
 }
 
 /// Represents the status of a market definition.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize, Default,
+)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum StreamMarketDefinitionStatus {
+    #[default]
     Inactive,
     Open,
     Suspended,
     Closed,
-}
-
-impl Default for StreamMarketDefinitionStatus {
-    fn default() -> Self {
-        Self::Inactive
-    }
 }
 
 /// Represents the key line definition.

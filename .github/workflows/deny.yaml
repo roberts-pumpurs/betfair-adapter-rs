@@ -27,5 +27,5 @@ jobs:
       - name: Setup repo
         uses: ./.github/actions/setup-repo
 
-      - name: cargo coverage
+      - name: cargo deny
         run: cargo xtask deny
