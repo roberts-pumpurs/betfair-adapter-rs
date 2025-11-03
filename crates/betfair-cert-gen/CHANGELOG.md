@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.3](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-cert-gen-v0.6.2...betfair-cert-gen-v0.6.3) - 2025-11-03
+
+### Other
+
+- remove rust_decimal feature, only use floats ([#86](https://github.com/roberts-pumpurs/betfair-adapter-rs/pull/86))
+
 ## [0.6.2](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-cert-gen-v0.6.1...betfair-cert-gen-v0.6.2) - 2025-11-01
 
 ### Added
