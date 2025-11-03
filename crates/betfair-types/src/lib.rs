@@ -1,7 +1,5 @@
 //! # Betfair Types library
 
-#[cfg(feature = "decimal-primitives")]
-pub use rust_decimal;
 pub mod bot_login;
 pub mod customer_order_ref;
 pub mod customer_ref;

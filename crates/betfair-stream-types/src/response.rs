@@ -179,13 +179,11 @@ pub struct UpdateSet3(pub Position, pub Price, pub Size);
 
 /// Represents the level of the order book.
 #[derive(Debug, PartialEq, PartialOrd, Clone, Copy, Serialize, Eq, Hash, Ord)]
-#[cfg_attr(feature = "decimal-primitives", derive(Deserialize))]
 pub struct Position(pub NumericU8Primitive);
 
 /// A custom deserializer because while Position is always integer values from 1 to 10
 /// the Betfair API often sends them as `1.0`, `2.0`, etc. This deserializer handles
 /// converting floats with no fractional part to u8 during deserialization.
-#[cfg(not(feature = "decimal-primitives"))]
 impl<'de> Deserialize<'de> for Position {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -252,16 +250,6 @@ mod tests {
 
     use super::*;
 
-    // This test exists only to convince cargo-machete that we are in fact using
-    // rust_decimal as a dependency (through the `num_u8!` macro in the tests below).
-    #[cfg(feature = "decimal-primitives")]
-    #[test]
-    fn allow_cargo_machete_to_see_rust_decimal_is_used() {
-        use rust_decimal::{Decimal, prelude::FromPrimitive};
-        use rust_decimal_macros::*;
-        assert_eq!(Decimal::from_f64(2.0).unwrap(), dec!(1.0) * dec!(2.0));
-    }
-
     #[test]
     fn can_deserialize_connection() {
         let msg = "{\"op\":\"connection\",\"connectionId\":\"206-221122192222-702491\"}";
@@ -291,7 +279,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(feature = "decimal-primitives"))]
     fn position_rejects_decimal_with_fraction() {
         let json = "2.5";
         let result = serde_json::from_str::<Position>(json);
@@ -305,7 +292,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(feature = "decimal-primitives"))]
     fn position_rejects_out_of_range() {
         let json = "256";
         let result = serde_json::from_str::<Position>(json);
@@ -313,7 +299,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(feature = "decimal-primitives"))]
     fn position_rejects_negative() {
         let json = "-1";
         let result = serde_json::from_str::<Position>(json);

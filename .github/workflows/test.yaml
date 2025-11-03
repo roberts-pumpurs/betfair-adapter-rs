@@ -11,13 +11,7 @@ name: test
 jobs:
   test:
     runs-on: ubuntu-22.04
-    name: test (${{ matrix.features }})
-    strategy:
-      fail-fast: false
-      matrix:
-        features:
-          - "default features"
-          - "decimal-primitives"
+    name: test
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,10 +21,5 @@ jobs:
       - name: Setup repo
         uses: ./.github/actions/setup-repo
 
-      - name: cargo test (default features)
-        if: matrix.features == 'default features'
+      - name: cargo test
         run: cargo xtask test
-
-      - name: cargo test (decimal-primitives)
-        if: matrix.features == 'decimal-primitives'
-        run: cargo xtask test -- --all-features

@@ -12,11 +12,6 @@ categories.workspace = true
 documentation.workspace = true
 exclude.workspace = true
 
-[features]
-default = []
-# Use rust_decimal instead of f64 for Price, Size and other numeric values (slower but more precise)
-decimal-primitives = ["betfair-stream-types/decimal-primitives", "betfair-adapter/decimal-primitives"]
-
 [dependencies]
 backon.workspace = true
 tokio.workspace = true
@@ -36,8 +31,6 @@ serde_json.workspace = true
 rustls-native-certs.workspace = true
 
 [dev-dependencies]
-rust_decimal_macros.workspace = true
-rust_decimal.workspace = true
 pretty_assertions.workspace = true
 
 [lints]

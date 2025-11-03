@@ -3,27 +3,22 @@ use serde::{Deserialize, Serialize};
 use crate::numeric::{NumericOps, NumericPrimitive};
 
 #[derive(Clone, Copy, Debug, PartialEq, Default, Deserialize, Serialize)]
-#[cfg_attr(feature = "decimal-primitives", derive(Eq, Hash, Ord, PartialOrd))]
 pub struct Size(NumericPrimitive);
 
-#[cfg(not(feature = "decimal-primitives"))]
 impl Eq for Size {}
 
-#[cfg(not(feature = "decimal-primitives"))]
 impl PartialOrd for Size {
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-#[cfg(not(feature = "decimal-primitives"))]
 impl Ord for Size {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         self.0.total_cmp(&other.0)
     }
 }
 
-#[cfg(not(feature = "decimal-primitives"))]
 impl core::hash::Hash for Size {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         self.0.to_bits().hash(state);
@@ -106,25 +101,16 @@ mod tests {
     fn size_gets_rounded_to_two_decimal_places(#[case] size_raw: NumericPrimitive) {
         let size = Size::from(size_raw);
 
-        #[cfg(feature = "decimal-primitives")]
-        {
-            assert_eq!(size.0, num!(1.02));
-        }
-
-        #[cfg(not(feature = "decimal-primitives"))]
-        {
-            let expected = num!(1.02);
-            let diff = (size.0 - expected).abs();
-            assert!(
-                diff < 1e-9,
-                "Expected size to be rounded to 1.02, but got {}",
-                size.0
-            );
-        }
+        let expected = num!(1.02);
+        let diff = (size.0 - expected).abs();
+        assert!(
+            diff < 1e-9,
+            "Expected size to be rounded to 1.02, but got {}",
+            size.0
+        );
     }
 }
 
-#[cfg(not(feature = "decimal-primitives"))]
 #[cfg(test)]
 mod size_serialization_tests {
     use super::*;
