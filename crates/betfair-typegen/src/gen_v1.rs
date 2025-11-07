@@ -9,6 +9,7 @@ mod type_resolver;
 
 use betfair_xml_parser::Interface;
 pub use injector::CodeInjector;
+use itertools::Itertools;
 use proc_macro2::TokenStream;
 use quote::quote;
 
@@ -49,10 +50,9 @@ impl<T: CodeInjector> GeneratorStrategy for GenV1GeneratorStrategy<T> {
         let aping_: Aping = interface.into();
 
         let top_level_docs = self.generate_top_level_docs(&aping_);
-        let data_types = aping_
-            .data_types()
-            .iter()
-            .fold(quote! {}, |acc, (_name, data)| {
+        let data_types = aping_.data_types().iter().sorted_by_key(|v| v.0).fold(
+            quote! {},
+            |acc, (_name, data)| {
                 let iter_data_type = self.generate_data_type(data);
 
                 quote! {
@@ -60,11 +60,11 @@ impl<T: CodeInjector> GeneratorStrategy for GenV1GeneratorStrategy<T> {
 
                     #iter_data_type
                 }
-            });
-        let rpc_calls = aping_
-            .rpc_calls()
-            .iter()
-            .fold(quote! {}, |acc, (_name, data)| {
+            },
+        );
+        let rpc_calls = aping_.rpc_calls().iter().sorted_by_key(|v| v.0).fold(
+            quote! {},
+            |acc, (_name, data)| {
                 let iter_rpc_call = self.generate_rpc_call(data);
 
                 quote! {
@@ -72,7 +72,8 @@ impl<T: CodeInjector> GeneratorStrategy for GenV1GeneratorStrategy<T> {
 
                     #iter_rpc_call
                 }
-            });
+            },
+        );
 
         let preamble = self.code_injector.module_level_preamble();
 

@@ -141,6 +141,12 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
             let struct_parameter_derives = generator.code_injector.struct_parameter_derives();
             if struct_field.mandatory {
                 let extra = match resolve_type_result.plural {
+                    TypePlural::Singular(ref value) => match value.as_str() {
+                        "double" | "float" => quote! {
+                            #[serde(deserialize_with = "super::deserialize_f64", default)]
+                        },
+                        _ => quote! {},
+                    },
                     TypePlural::Map { key: _, value: _ } => quote! {
                         #[serde(deserialize_with = "super::deserialize_map_skip_null_default_empty", default)]
                     },
@@ -158,7 +164,7 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                 let extra = match resolve_type_result.plural {
                     TypePlural::Singular(ref value) => match value.as_str() {
                         "double" | "float" => quote! {
-                            #[serde(deserialize_with = "super::deserialize_decimal_option", default)]
+                            #[serde(deserialize_with = "super::deserialize_f64_option", default)]
                         },
                         _ => quote! {},
                     },

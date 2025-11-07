@@ -9,6 +9,9 @@ pub mod numeric;
 pub mod price;
 pub mod size;
 
+#[cfg(test)]
+pub mod tests;
+
 // Re-export numeric types for convenience
 pub use numeric::{NumericOrdPrimitive, NumericPrimitive, NumericU8Primitive};
 
