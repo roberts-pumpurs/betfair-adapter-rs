@@ -17,7 +17,9 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
             use std::fmt;
 
             use serde::de::{self, Visitor};
-            use serde::{Deserializer};
+            use serde::{Deserialize, Deserializer};
+            use std::collections::HashMap;
+            use std::hash::Hash;
 
             use crate::numeric::{F64Ord, NumericOrdPrimitive};
 
@@ -59,6 +61,40 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                 deserializer.deserialize_any(DecimalOptionVisitor)
             }
 
+            /// For fields of type `Option<HashMap<K, V>>`
+            ///
+            /// If any of the map values are null, they are ignored and not added
+            /// to the resulting HashMap.
+            pub fn deserialize_map_skip_null<'de, D, K, V>(
+                deserializer: D,
+            ) -> Result<Option<HashMap<K, V>>, D::Error>
+            where
+                D: Deserializer<'de>,
+                K: Deserialize<'de> + Eq + Hash,
+                V: Deserialize<'de>,
+            {
+                let opt_map: Option<HashMap<K, Option<V>>> = Option::deserialize(deserializer)?;
+                Ok(opt_map.map(|map| {
+                    map.into_iter()
+                        .filter_map(|(k, v)| v.map(|vv| (k, vv))) // drop entries where value == null
+                        .collect()
+                }))
+            }
+
+            /// For fields of type `HashMap<K, V>`
+            ///
+            /// Behaves the same as [`deserialize_map_skip_null`] except
+            /// that if the overall value is null then an empty HashMap is returned.
+            pub fn deserialize_map_skip_null_default_empty<'de, D, K, V>(
+                deserializer: D,
+            ) -> Result<HashMap<K, V>, D::Error>
+            where
+                D: Deserializer<'de>,
+                K: Deserialize<'de> + Eq + Hash,
+                V: Deserialize<'de>,
+            {
+                deserialize_map_skip_null(deserializer).map(|opt| opt.unwrap_or_default())
+            }
         }
     }
 }
