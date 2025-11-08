@@ -57,7 +57,7 @@ impl MarketBookCache {
         self.publish_time = publish_time;
 
         if let Some(market_definition) = market_change.market_definition {
-            self.market_definition = Some(market_definition);
+            self.update_market_definition(market_definition);
         }
 
         if let Some(tv) = market_change.total_value {
@@ -131,10 +131,8 @@ impl MarketBookCache {
     }
 
     /// Updates the market definition with the given market definition.
-    pub fn update_market_definition(&mut self, market_definition: MarketDefinition) {
-        self.market_definition = Some(Box::new(market_definition.clone()));
-
-        for runner_definition in market_definition.runners {
+    pub fn update_market_definition(&mut self, market_definition: Box<MarketDefinition>) {
+        for runner_definition in &market_definition.runners {
             let selection_id = runner_definition.id;
             let Some(selection_id) = selection_id else {
                 continue;
@@ -145,9 +143,11 @@ impl MarketBookCache {
             if let Some(runner) = runner {
                 runner.set_definition(runner_definition.clone());
             } else {
-                self.add_runner_from_definition(runner_definition);
+                self.add_runner_from_definition(runner_definition.clone());
             }
         }
+
+        self.market_definition = Some(market_definition);
     }
 
     /// Adds a runner from a change.
@@ -210,13 +210,14 @@ impl MarketBookCache {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::cache::primitives::available_cache::Available;
     use betfair_adapter::betfair_types::num;
     use betfair_adapter::betfair_types::price::Price;
     use betfair_stream_types::response::UpdateSet2;
-    use betfair_stream_types::response::market_change_message::MarketChangeMessage;
-
-    use super::*;
-    use crate::cache::primitives::available_cache::Available;
+    use betfair_stream_types::response::market_change_message::{
+        MarketChangeMessage, StreamRunnerDefinitionStatus,
+    };
 
     fn init() -> (MarketId, DateTime<Utc>, MarketBookCache) {
         let market_id = MarketId::new("1.23456789");
@@ -334,11 +335,101 @@ mod tests {
         };
         let (_, _, mut init) = init();
 
-        init.update_market_definition(mock_market_definition.clone());
+        init.update_market_definition(Box::new(mock_market_definition.clone()));
 
         assert_eq!(
             init.market_definition,
             Some(Box::new(mock_market_definition))
+        );
+    }
+
+    #[test]
+    fn test_update_market_definition_in_change() {
+        let (market_id, _, mut init) = init();
+        let data = vec![
+            RunnerChange {
+                available_to_back: Some(vec![UpdateSet2(
+                    Price::new(num!(1.01)).unwrap(),
+                    Size::new(num!(200)),
+                )]),
+                id: Some(SelectionId(13_536_143)),
+                ..Default::default()
+            },
+            RunnerChange {
+                available_to_back: Some(vec![UpdateSet2(
+                    Price::new(num!(1.02)).unwrap(),
+                    Size::new(num!(400)),
+                )]),
+                id: Some(SelectionId(13_536_144)),
+                ..Default::default()
+            },
+        ];
+        let mock_market_definition = MarketDefinition {
+            bet_delay: 1,
+            version: 234,
+            complete: true,
+            runners_voidable: false,
+            status: StreamMarketDefinitionStatus::Open,
+            bsp_reconciled: true,
+            cross_matching: false,
+            in_play: true,
+            number_of_winners: 5,
+            number_of_active_runners: 6,
+            runners: vec![
+                RunnerDefinition {
+                    id: Some(SelectionId(13_536_143)),
+                    status: Some(StreamRunnerDefinitionStatus::Hidden),
+                    ..Default::default()
+                },
+                RunnerDefinition {
+                    id: Some(SelectionId(13_536_144)),
+                    status: Some(StreamRunnerDefinitionStatus::Removed),
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        };
+
+        let market_change = MarketChange {
+            market_id: Some(market_id),
+            runner_change: Some(data),
+            market_definition: Some(Box::new(mock_market_definition)),
+            ..Default::default()
+        };
+
+        init.update_cache(market_change, Utc::now(), true);
+        assert!(init.active);
+        assert_eq!(init.runners.len(), 2);
+
+        assert_eq!(
+            init.runners[&(SelectionId(13_536_143), None)]
+                .definition()
+                .unwrap()
+                .status,
+            Some(StreamRunnerDefinitionStatus::Hidden)
+        );
+
+        assert_eq!(
+            init.runners[&(SelectionId(13_536_144), None)]
+                .definition()
+                .unwrap()
+                .status,
+            Some(StreamRunnerDefinitionStatus::Removed)
+        );
+
+        assert_eq!(
+            init.runners[&(SelectionId(13_536_143), None)].available_to_back(),
+            &Available::new([UpdateSet2(
+                Price::new(num!(1.01)).unwrap(),
+                Size::new(num!(200))
+            )])
+        );
+        assert_eq!(
+            init.runners[&(SelectionId(13_536_144), None)].available_to_back(),
+            &Available::new([UpdateSet2(
+                Price::new(num!(1.02)).unwrap(),
+                Size::new(num!(400))
+            )])
         );
     }
 
