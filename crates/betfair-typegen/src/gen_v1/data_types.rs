@@ -8,6 +8,7 @@ use crate::aping_ast::data_type::{
 };
 use crate::aping_ast::types::Name;
 use crate::gen_v1::documentation::CommentParse as _;
+use crate::gen_v1::type_resolver::TypePlural;
 
 impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
     pub(crate) fn generate_data_type(&self, data_type: &DataType) -> TokenStream {
@@ -124,9 +125,9 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                 }
             };
             let original_name = struct_field.name.0.as_str();
-            let data_type = match generator
+            let resolve_type_result = match generator
                 .type_resolver
-                .resolve_type(&struct_field.data_type)
+                .resolve_type_with_metadata(&struct_field.data_type)
             {
                 Ok(type_) => type_,
                 Err(err) => {
@@ -134,24 +135,39 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                     return quote! { compile_error!(#err_msg); };
                 }
             };
+
+            let data_type = resolve_type_result.resolved_type;
+
             let struct_parameter_derives = generator.code_injector.struct_parameter_derives();
             if struct_field.mandatory {
+                let extra = match resolve_type_result.plural {
+                    TypePlural::Map { key: _, value: _ } => quote! {
+                        #[serde(deserialize_with = "super::deserialize_map_skip_null_default_empty", default)]
+                    },
+                    _ => quote! {},
+                };
+
                 quote! {
                     #description
                     #struct_parameter_derives
                     #[serde(rename = #original_name)]
+                    #extra
                     pub #name: #data_type,
                 }
             } else {
-                let extra = if struct_field.data_type.as_str().eq("double")
-                    || struct_field.data_type.as_str().eq("float")
-                {
-                    quote! {
-                        #[serde(deserialize_with = "super::deserialize_decimal_option", default)]
-                    }
-                } else {
-                    quote! {}
+                let extra = match resolve_type_result.plural {
+                    TypePlural::Singular(ref value) => match value.as_str() {
+                        "double" | "float" => quote! {
+                            #[serde(deserialize_with = "super::deserialize_decimal_option", default)]
+                        },
+                        _ => quote! {},
+                    },
+                    TypePlural::Map { key: _, value: _ } => quote! {
+                        #[serde(deserialize_with = "super::deserialize_map_skip_null", default)]
+                    },
+                    _ => quote! {},
                 };
+
                 quote! {
                     #description
                     #struct_parameter_derives

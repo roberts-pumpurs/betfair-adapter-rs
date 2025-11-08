@@ -56,7 +56,11 @@ fn test_deserialize() {
                     "selectionId": 50_310_375,
                     "runnerName": "Olympiakos Piraeus BC",
                     "handicap": 0.0,
-                    "sortPriority": 2
+                    "sortPriority": 2,
+                    "metadata": {
+                        "foo": "bar",
+                        "baz": null
+                    }
                 }
             ],
             "competition": {
@@ -78,4 +82,11 @@ fn test_deserialize() {
     ]);
     let result = serde_json::from_value::<Vec<MarketCatalogue>>(response).unwrap();
     assert_eq!(result.len(), 1);
+
+    // Check that we correctly deserialize metadata containing null values.
+    let runners = result[0].runners.as_ref().unwrap();
+    assert_eq!(runners.len(), 2);
+    assert!(runners[0].metadata.is_none());
+    assert!(runners[1].metadata.is_some());
+    assert_eq!(runners[1].metadata.as_ref().unwrap().len(), 1);
 }

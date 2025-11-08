@@ -9,12 +9,32 @@ use eyre::{Result, WrapErr as _};
 #[derive(Debug)]
 pub(crate) struct TypeResolverV1;
 
+pub(crate) struct ResolvedTypeWithMetadata {
+    pub resolved_type: syn::Type,
+    pub plural: TypePlural,
+}
+
+pub(crate) enum TypePlural {
+    Singular(String),
+    List(String),
+    Set(String),
+    Map { key: String, value: String },
+}
+
 impl TypeResolverV1 {
     pub(crate) const fn new() -> Self {
         Self
     }
 
     pub(crate) fn resolve_type(&self, data_type: &DataTypeParameter) -> Result<syn::Type> {
+        self.resolve_type_with_metadata(data_type)
+            .map(|result| result.resolved_type)
+    }
+
+    pub(crate) fn resolve_type_with_metadata(
+        &self,
+        data_type: &DataTypeParameter,
+    ) -> Result<ResolvedTypeWithMetadata> {
         fn transform_to_rust_types(input: &str) -> String {
             // TODO make this a configurable thing
             match input {
@@ -34,23 +54,31 @@ impl TypeResolverV1 {
                 _ => input.to_pascal_case(),
             }
         }
-        match self.manage_list(data_type.as_str()) {
-            TypePlural::Singular(value) => {
-                let value = transform_to_rust_types(&value);
-                syn::parse_str(&value).wrap_err_with(|| format!("Failed to parse type: {value}"))
+
+        let plural = self.manage_list(data_type.as_str());
+
+        let resolved_type = match plural {
+            TypePlural::Singular(ref value) => {
+                let value = transform_to_rust_types(value);
+                syn::parse_str(&value).wrap_err_with(|| format!("Failed to parse type: {value}"))?
             }
-            TypePlural::List(value) | TypePlural::Set(value) => {
-                let value = transform_to_rust_types(&value);
+            TypePlural::List(ref value) | TypePlural::Set(ref value) => {
+                let value = transform_to_rust_types(value);
                 let value = format!("Vec<{value}>");
-                syn::parse_str(&value).wrap_err_with(|| format!("Failed to parse type: {value}"))
+                syn::parse_str(&value).wrap_err_with(|| format!("Failed to parse type: {value}"))?
             }
-            TypePlural::Map { key, value } => {
-                let key = transform_to_rust_types(&key);
-                let value = transform_to_rust_types(&value);
+            TypePlural::Map { ref key, ref value } => {
+                let key = transform_to_rust_types(key);
+                let value = transform_to_rust_types(value);
                 let value = format!("std::collections::HashMap<{key}, {value}>");
-                syn::parse_str(&value).wrap_err_with(|| format!("Failed to parse type: {value}"))
+                syn::parse_str(&value).wrap_err_with(|| format!("Failed to parse type: {value}"))?
             }
-        }
+        };
+
+        Ok(ResolvedTypeWithMetadata {
+            resolved_type,
+            plural,
+        })
     }
 
     fn manage_list(&self, item: &str) -> TypePlural {
@@ -72,13 +100,6 @@ impl TypeResolverV1 {
             TypePlural::Singular(item.to_owned())
         }
     }
-}
-
-enum TypePlural {
-    Singular(String),
-    List(String),
-    Set(String),
-    Map { key: String, value: String },
 }
 
 #[cfg(test)]
