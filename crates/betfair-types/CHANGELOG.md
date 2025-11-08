@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.4](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-types-v0.6.3...betfair-types-v0.6.4) - 2025-11-08
+
+### Added
+
+- drop null values when deserializing to HashMaps ([#91](https://github.com/roberts-pumpurs/betfair-adapter-rs/pull/91))
+
+### Fixed
+
+- use bitwise equality for F64Ord ([#90](https://github.com/roberts-pumpurs/betfair-adapter-rs/pull/90))
+
 ## [0.6.3](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-types-v0.6.2...betfair-types-v0.6.3) - 2025-11-03
 
 ### Other
