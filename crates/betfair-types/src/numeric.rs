@@ -15,7 +15,7 @@ pub type NumericU8Primitive = u8;
 
 /// Wrapper around f64 that implements Eq, Ord, and Hash using total_cmp
 /// This allows f64 to be used in contexts that require these traits
-#[derive(Debug, Clone, Copy, PartialEq, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, Default, serde::Serialize, serde::Deserialize)]
 #[serde(transparent)]
 pub struct F64Ord(pub f64);
 
@@ -26,6 +26,10 @@ impl F64Ord {
 
     pub const fn zero() -> Self {
         Self(0.0)
+    }
+
+    pub const fn as_f64(&self) -> f64 {
+        self.0
     }
 }
 
@@ -38,6 +42,12 @@ impl From<f64> for F64Ord {
 impl From<F64Ord> for f64 {
     fn from(value: F64Ord) -> Self {
         value.0
+    }
+}
+
+impl PartialEq for F64Ord {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.to_bits() == other.0.to_bits()
     }
 }
 
@@ -61,17 +71,33 @@ impl core::hash::Hash for F64Ord {
     }
 }
 
-impl core::ops::Deref for F64Ord {
-    type Target = f64;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
 impl core::fmt::Display for F64Ord {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::cmp::Ordering;
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    #[test]
+    fn f64ord_should_use_bitwise_equality() {
+        let nan = F64Ord::new(f64::NAN);
+        assert_eq!(nan, F64Ord::new(f64::NAN)); // This would fail for a normal f64.
+
+        assert_eq!(F64Ord::new(-0.0).cmp(&F64Ord::new(0.0)), Ordering::Less);
+        assert_ne!(F64Ord::new(-0.0), F64Ord::new(0.0));
+
+        let mut h1 = DefaultHasher::new();
+        let mut h2 = DefaultHasher::new();
+        nan.hash(&mut h1);
+        nan.hash(&mut h2);
+        assert_eq!(h1.finish(), h2.finish());
     }
 }
 

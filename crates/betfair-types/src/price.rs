@@ -1,4 +1,4 @@
-use core::ops::{Add, Deref, Div, Mul, Sub};
+use core::ops::{Add, Div, Mul, Sub};
 
 use serde::{Deserialize, Serialize};
 
@@ -10,8 +10,14 @@ pub enum PriceParseError {
     InvalidPriceSpecified(NumericOrdPrimitive),
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Price(NumericPrimitive);
+
+impl PartialEq for Price {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.to_bits() == other.0.to_bits()
+    }
+}
 
 impl Eq for Price {}
 
@@ -30,14 +36,6 @@ impl Ord for Price {
 impl core::hash::Hash for Price {
     fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         self.0.to_bits().hash(state);
-    }
-}
-
-impl Deref for Price {
-    type Target = NumericPrimitive;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
     }
 }
 
@@ -99,6 +97,10 @@ impl Price {
     #[must_use]
     pub const unsafe fn new_unchecked(price: NumericPrimitive) -> Self {
         Self(price)
+    }
+
+    pub const fn as_f64(&self) -> f64 {
+        self.0
     }
 
     /// Betfair docs: <https://docs.developer.betfair.com/pages/viewpage.action?pageId=6095894>
@@ -199,6 +201,24 @@ mod tests {
 
     use super::*;
     use crate::num;
+    use std::cmp::Ordering;
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    #[test]
+    fn price_should_use_bitwise_equality() {
+        let nan = Price(f64::NAN);
+        assert_eq!(nan, Price(f64::NAN)); // This would fail for a normal f64.
+
+        assert_eq!(Price(-0.0).cmp(&Price(0.0)), Ordering::Less);
+        assert_ne!(Price(-0.0), Price(0.0));
+
+        let mut h1 = DefaultHasher::new();
+        let mut h2 = DefaultHasher::new();
+        nan.hash(&mut h1);
+        nan.hash(&mut h2);
+        assert_eq!(h1.finish(), h2.finish());
+    }
 
     #[rstest]
     #[case(num!(0.99))]

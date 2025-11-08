@@ -2,8 +2,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::numeric::{NumericOps, NumericPrimitive};
 
-#[derive(Clone, Copy, Debug, PartialEq, Default, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
 pub struct Size(NumericPrimitive);
+
+impl PartialEq for Size {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.to_bits() == other.0.to_bits()
+    }
+}
 
 impl Eq for Size {}
 
@@ -38,6 +44,10 @@ impl Size {
     #[must_use]
     pub const unsafe fn new_unchecked(size: NumericPrimitive) -> Self {
         Self(size)
+    }
+
+    pub const fn as_f64(&self) -> f64 {
+        self.0
     }
 
     #[must_use]
@@ -95,6 +105,24 @@ mod tests {
 
     use super::*;
     use crate::num;
+    use std::cmp::Ordering;
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    #[test]
+    fn size_should_use_bitwise_equality() {
+        let nan = Size(f64::NAN);
+        assert_eq!(nan, Size(f64::NAN)); // This would fail for a normal f64.
+
+        assert_eq!(Size(-0.0).cmp(&Size(0.0)), Ordering::Less);
+        assert_ne!(Size(-0.0), Size(0.0));
+
+        let mut h1 = DefaultHasher::new();
+        let mut h2 = DefaultHasher::new();
+        nan.hash(&mut h1);
+        nan.hash(&mut h2);
+        assert_eq!(h1.finish(), h2.finish());
+    }
 
     #[rstest]
     #[case(num!(1.022192999293999))]
