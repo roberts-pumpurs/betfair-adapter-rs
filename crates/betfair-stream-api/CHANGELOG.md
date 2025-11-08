@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.4](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-stream-api-v0.6.3...betfair-stream-api-v0.6.4) - 2025-11-08
+
+### Fixed
+
+- update runner definitions when market defintion is updated ([#89](https://github.com/roberts-pumpurs/betfair-adapter-rs/pull/89))
+
 ## [0.6.3](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-stream-api-v0.6.2...betfair-stream-api-v0.6.3) - 2025-11-03
 
 ### Other
