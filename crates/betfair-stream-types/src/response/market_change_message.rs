@@ -75,6 +75,10 @@ pub struct MarketDefinition {
     pub timezone: String,
     /// The divisor for each way betting.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        deserialize_with = "betfair_types::types::deserialize_f64_option",
+        default
+    )]
     pub each_way_divisor: Option<NumericOrdPrimitive>,
 
     /// The market regulators.
@@ -84,6 +88,7 @@ pub struct MarketDefinition {
     pub market_type: String,
 
     /// The base rate for the market.
+    #[serde(deserialize_with = "betfair_types::types::deserialize_f64")]
     pub market_base_rate: NumericOrdPrimitive,
 
     /// The number of winners in the market.
@@ -96,6 +101,10 @@ pub struct MarketDefinition {
     /// For Handicap and Line markets, the maximum value for the outcome, in market units for this
     /// market (eg 100 runs).
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        deserialize_with = "betfair_types::types::deserialize_f64_option",
+        default
+    )]
     pub line_max_unit: Option<NumericOrdPrimitive>,
 
     /// Indicates if the market is in play.
@@ -117,6 +126,10 @@ pub struct MarketDefinition {
     /// For Handicap and Line markets, the minimum value for the outcome, in market units for this
     /// market (eg 0 runs).
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        deserialize_with = "betfair_types::types::deserialize_f64_option",
+        default
+    )]
     pub line_min_unit: Option<NumericOrdPrimitive>,
 
     /// The event ID associated with the market.
@@ -177,6 +190,10 @@ pub struct MarketDefinition {
     /// runs, lineMinUnit=10, lineMaxUnit=20 and lineInterval=0.5, then valid lines include 10,
     /// 10.5, 11, 11.5 up to 20 runs.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        deserialize_with = "betfair_types::types::deserialize_f64_option",
+        default
+    )]
     pub line_interval: Option<NumericOrdPrimitive>,
 
     /// The status of the market.
@@ -215,6 +232,10 @@ pub struct KeyLineSelection {
     pub id: Option<i64>,
     /// The handicap value for the selection.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        deserialize_with = "betfair_types::types::deserialize_f64_option",
+        default
+    )]
     #[serde(rename = "hc")]
     pub handicap: Option<NumericOrdPrimitive>,
 }
@@ -315,6 +336,10 @@ pub struct RunnerChange {
 
     /// Handicap - the handicap of the runner (selection) (null if not applicable)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        deserialize_with = "betfair_types::types::deserialize_f64_option",
+        default
+    )]
     #[serde(rename = "hc")]
     pub handicap: Option<NumericOrdPrimitive>,
 
@@ -340,13 +365,25 @@ pub struct RunnerDefinition {
     pub id: Option<SelectionId>,
     /// Handicap - the handicap of the runner (selection) (null if not applicable)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        deserialize_with = "betfair_types::types::deserialize_f64_option",
+        default
+    )]
     #[serde(rename = "hc")]
     pub handicap: Option<NumericOrdPrimitive>,
     /// The adjustment factor for the runner.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        deserialize_with = "betfair_types::types::deserialize_f64_option",
+        default
+    )]
     pub adjustment_factor: Option<NumericOrdPrimitive>,
     /// The BSP value for the runner.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        deserialize_with = "betfair_types::types::deserialize_f64_option",
+        default
+    )]
     #[serde(rename = "bsp")]
     pub bsp: Option<NumericOrdPrimitive>,
     /// The status of the runner.
