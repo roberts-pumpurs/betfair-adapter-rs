@@ -21,6 +21,7 @@ syn.workspace = true
 typed-builder.workspace = true
 tracing.workspace = true
 eyre.workspace = true
+itertools.workspace = true
 [dev-dependencies]
 rstest.workspace = true
 serde-xml-rs.workspace = true

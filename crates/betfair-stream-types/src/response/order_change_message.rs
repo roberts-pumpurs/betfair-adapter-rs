@@ -160,6 +160,10 @@ pub struct Order {
     pub id: BetId,
     /// BSP Liability - the BSP liability of the order (null if the order is not a BSP order)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        deserialize_with = "betfair_types::types::deserialize_f64_option",
+        default
+    )]
     pub bsp: Option<NumericOrdPrimitive>,
     /// Strategy Reference - the customer's strategy reference for this order (empty string if one
     /// was not set)
