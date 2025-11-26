@@ -7,7 +7,7 @@ use betfair_types::types::BetfairRpcRequest;
 use serde_json::json;
 pub use wiremock;
 use wiremock::matchers::{PathExactMatcher, method, path};
-use wiremock::{Mock, MockServer, ResponseTemplate};
+use wiremock::{Mock, MockBuilder, MockServer, ResponseTemplate};
 
 mod urlencoded_matcher;
 use urlencoded_matcher::FormEncodedBodyMatcher;
@@ -179,20 +179,28 @@ impl Server {
         response: serde_json::Value,
         response_code: u16,
     ) -> Mock {
+        self.mock_builder(http_method, path_matcher, with_auth_headers)
+            .respond_with(ResponseTemplate::new(response_code).set_body_json(response))
+            .named(name)
+    }
+
+    pub fn mock_builder(
+        &self,
+        http_method: &str,
+        path_matcher: PathExactMatcher,
+        with_auth_headers: bool,
+    ) -> MockBuilder {
         use wiremock::matchers::{header, method};
 
         let m = Mock::given(method(http_method)).and(path_matcher);
 
-        let m = if with_auth_headers {
+        if with_auth_headers {
             m.and(header("Accept", "application/json"))
                 .and(header("X-Authentication", SESSION_TOKEN))
                 .and(header("X-Application", APP_KEY))
         } else {
             m
-        };
-
-        m.respond_with(ResponseTemplate::new(response_code).set_body_json(response))
-            .named(name)
+        }
     }
 
     pub fn mock_keep_alive(&self) -> Mock {
