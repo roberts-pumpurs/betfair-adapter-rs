@@ -328,8 +328,8 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
                 match select(to_stream_rx_next, stream_next).await {
                     future::Either::Left((request, _)) => {
                         let Some(request) = request else {
-                            tracing::warn!("request returned None");
-                            continue 'retry;
+                            tracing::info!("request channel closed, shutting down stream task");
+                            return Ok(());
                         };
 
                         tracing::debug!(?request, "sending to betfair");
@@ -353,11 +353,11 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
                                 };
 
                                 if let Err(err) = from_stream_tx.send(message).await {
-                                    tracing::warn!(
-                                        "could not send stream message to sink: {:?}",
+                                    tracing::info!(
+                                        "output channel receiver dropped, shutting down stream task: {:?}",
                                         err
                                     );
-                                    continue 'retry;
+                                    return Ok(());
                                 };
                             }
                             Err(err) => tracing::warn!(?err, "reading message error"),
