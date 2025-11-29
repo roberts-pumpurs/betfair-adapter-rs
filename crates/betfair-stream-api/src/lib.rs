@@ -328,8 +328,8 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
                 match select(to_stream_rx_next, stream_next).await {
                     future::Either::Left((request, _)) => {
                         let Some(request) = request else {
-                            tracing::warn!("request returned None");
-                            continue 'retry;
+                            tracing::info!("request channel closed, shutting down stream task");
+                            return Ok(());
                         };
 
                         tracing::debug!(?request, "sending to betfair");
@@ -352,9 +352,12 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
                                     continue;
                                 };
 
-                                let Ok(()) = from_stream_tx.send(message).await else {
-                                    tracing::warn!("could not send stream message to sink");
-                                    continue 'retry;
+                                if let Err(err) = from_stream_tx.send(message).await {
+                                    tracing::info!(
+                                        "output channel receiver dropped, shutting down stream task: {:?}",
+                                        err
+                                    );
+                                    return Ok(());
                                 };
                             }
                             Err(err) => tracing::warn!(?err, "reading message error"),
@@ -454,11 +457,18 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
             .processor
             .process_message(res.clone())
             .ok_or(HandshakeErr::Fatal)
-            .inspect_err(|err| tracing::error!(?err))?;
+            .inspect_err(|_err| {
+                tracing::error!(
+                    "processor.process_message returned None for connection message: {:?}",
+                    res
+                )
+            })?;
         from_stream_tx
             .send(message.clone())
             .await
-            .inspect_err(|err| tracing::warn!(?err))
+            .inspect_err(|err| {
+                tracing::warn!("failed to send connection message to channel: {:?}", err)
+            })
             .map_err(|_| HandshakeErr::Fatal)?;
         let ResponseMessage::Connection(_) = &res else {
             tracing::warn!("stream responded with invalid connection message");
@@ -497,12 +507,19 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
             .processor
             .process_message(message.clone())
             .ok_or(HandshakeErr::Fatal)
-            .inspect_err(|err| tracing::warn!(?err))
+            .inspect_err(|_err| {
+                tracing::warn!(
+                    "processor.process_message returned None for status message: {:?}",
+                    message
+                )
+            })
             .map_err(|_| HandshakeErr::Fatal)?;
         from_stream_tx
             .send(processed_message)
             .await
-            .inspect_err(|err| tracing::warn!(?err))
+            .inspect_err(|err| {
+                tracing::warn!("failed to send status message to channel: {:?}", err)
+            })
             .map_err(|_| HandshakeErr::Fatal)?;
         tracing::info!(?message, "message from stream");
         let ResponseMessage::Status(status_message) = &message else {
@@ -514,7 +531,7 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
             return Ok(());
         };
 
-        tracing::error!(?err, "stream respondend wit an error");
+        tracing::error!(?err, "stream respondend with an error");
         let action = match err.error_code {
             ErrorCode::NoAppKey => HandshakeErr::Fatal,
             ErrorCode::InvalidAppKey => HandshakeErr::Fatal,
