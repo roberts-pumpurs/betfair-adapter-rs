@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.7](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-stream-api-v0.6.6...betfair-stream-api-v0.6.7) - 2025-11-29
+
+### Fixed
+
+- graceful shutdown of stream when client channels dropped ([#101](https://github.com/roberts-pumpurs/betfair-adapter-rs/pull/101))
+
 ## [0.6.5](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-stream-api-v0.6.4...betfair-stream-api-v0.6.5) - 2025-11-13
 
 ### Added
