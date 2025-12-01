@@ -13,6 +13,39 @@ use self::data_type::{
 use self::rpc_calls::{Exception, Param, Returns, RpcCall};
 use self::types::{Comment, Name};
 
+/// Overrides for mandatory field values that are incorrect in the XML.
+const MANDATORY_OVERRIDES: &[MandatoryOverride] = &[
+    // https://forum.developer.betfair.com/forum/sports-exchange-api/exchange-api/2473-cancelinstructionreport-sizecancelled-required-but-absent
+    MandatoryOverride {
+        data_type_name: "CancelInstructionReport",
+        field_name: "sizeCancelled",
+        mandatory: false,
+    },
+    MandatoryOverride {
+        data_type_name: "CurrentOrderSummary",
+        field_name: "matchedDate",
+        mandatory: false,
+    },
+];
+
+/// Override entry for correcting mandatory field values that are incorrect in the XML.
+struct MandatoryOverride {
+    data_type_name: &'static str,
+    field_name: &'static str,
+    mandatory: bool,
+}
+
+/// Check if there's an override for a specific field's mandatory status.
+fn get_mandatory_override(data_type_name: &str, field_name: &str) -> Option<bool> {
+    MANDATORY_OVERRIDES
+        .iter()
+        .find(|override_entry| {
+            override_entry.data_type_name == data_type_name
+                && override_entry.field_name == field_name
+        })
+        .map(|override_entry| override_entry.mandatory)
+}
+
 #[derive(Debug, Clone, TypedBuilder)]
 pub(crate) struct Aping {
     #[builder(default)]
@@ -150,9 +183,12 @@ impl Aping {
                     })
                     .map(Comment::new)
                     .collect::<Vec<_>>();
+                let mandatory_from_xml = x.mandatory.unwrap_or(false);
+                let mandatory =
+                    get_mandatory_override(&data_type.name, &x.name).unwrap_or(mandatory_from_xml);
                 StructField {
                     name: Name(x.name.clone()),
-                    mandatory: x.mandatory.unwrap_or(false),
+                    mandatory,
                     data_type: x.r#type.into(),
                     description,
                 }
@@ -1004,5 +1040,64 @@ mod tests {
 
         // Assert
         assert_eq!(aping.rpc_calls, expected_rpc_calls);
+    }
+
+    #[rstest::rstest]
+    fn parse_type_with_overridden_mandatory_field(mut aping: Aping) {
+        // Setup
+        let input = r#"
+            <dataType name="CancelInstructionReport">
+                <description/>
+                <parameter mandatory="true" name="status" type="InstructionReportStatus">
+                    <description>whether the command succeeded or failed</description>
+                </parameter>
+                <parameter name="errorCode" type="InstructionReportErrorCode">
+                    <description>cause of failure, or null if command succeeds</description>
+                </parameter>
+                <parameter type="CancelInstruction" name="instruction">
+                    <description>The instruction that was requested</description>
+                </parameter>
+                <parameter mandatory="true" name="sizeCancelled" type="Size">
+                    <description/>
+                </parameter>
+                <parameter name="cancelledDate" type="dateTime">
+                    <description/>
+                </parameter>
+            </dataType>
+        "#;
+        let input = serde_xml_rs::from_str(input).unwrap();
+
+        // Action
+        aping.insert_data_type(&input);
+
+        // Assert
+        assert_eq!(aping.data_types.len(), 1);
+
+        let data_type = aping
+            .data_types
+            .get(&Name("CancelInstructionReport".to_owned()))
+            .unwrap();
+
+        let DataTypeVariant::StructValue(struct_data_type) = &data_type.variant else {
+            panic!("Unexpected variant");
+        };
+
+        // The `sizeCancelled` mandatory status should have been overridden.
+        let size_cancelled = struct_data_type
+            .fields
+            .iter()
+            .find(|f| f.name == Name("sizeCancelled".to_owned()))
+            .expect("sizeCancelled field should exist");
+
+        assert!(!size_cancelled.mandatory);
+
+        // The `status` field should still be mandatory.
+        let status = struct_data_type
+            .fields
+            .iter()
+            .find(|f| f.name == Name("status".to_owned()))
+            .expect("sizeCancelled field should exist");
+
+        assert!(status.mandatory);
     }
 }

@@ -30,6 +30,14 @@ async fn cancel_bets_unsuccessful() {
                 "instruction": {
                     "betId": "298537625817",
                 }
+        },
+            {
+                "status": "FAILURE",
+                "errorCode": "INVALID_BET_ID",
+                // Missing `sizeCancelled` field.
+                "instruction": {
+                    "betId": "758934758934",
+                }
             }
         ]
     });
@@ -46,10 +54,16 @@ async fn cancel_bets_unsuccessful() {
     let result = client
         .send_request(cancel_orders::Parameters {
             market_id: Some(market_id),
-            instructions: Some(vec![CancelInstruction {
-                bet_id: BetId::new("298537625817"),
-                size_reduction: None,
-            }]),
+            instructions: Some(vec![
+                CancelInstruction {
+                    bet_id: BetId::new("298537625817"),
+                    size_reduction: None,
+                },
+                CancelInstruction {
+                    bet_id: BetId::new("758934758934"),
+                    size_reduction: None,
+                },
+            ]),
             customer_ref: None,
         })
         .await
@@ -59,16 +73,28 @@ async fn cancel_bets_unsuccessful() {
     let expected = cancel_orders::ReturnType {
         customer_ref: Some(CustomerRef::new("0oxfjBrq8K2TZg2Ytqjo1".to_owned()).unwrap()),
         error_code: Some(ExecutionReportErrorCode::BetActionError),
-        instruction_reports: Some(vec![CancelInstructionReport {
-            status: InstructionReportStatus::Failure,
-            instruction: Some(CancelInstruction {
-                bet_id: BetId::new("298537625817"),
-                size_reduction: None,
-            }),
-            cancelled_date: None,
-            error_code: Some(InstructionReportErrorCode::BetTakenOrLapsed),
-            size_cancelled: Size::from(num!(0.0)),
-        }]),
+        instruction_reports: Some(vec![
+            CancelInstructionReport {
+                status: InstructionReportStatus::Failure,
+                instruction: Some(CancelInstruction {
+                    bet_id: BetId::new("298537625817"),
+                    size_reduction: None,
+                }),
+                cancelled_date: None,
+                error_code: Some(InstructionReportErrorCode::BetTakenOrLapsed),
+                size_cancelled: Option::Some(Size::from(num!(0.0))),
+            },
+            CancelInstructionReport {
+                status: InstructionReportStatus::Failure,
+                instruction: Some(CancelInstruction {
+                    bet_id: BetId::new("758934758934"),
+                    size_reduction: None,
+                }),
+                cancelled_date: None,
+                error_code: Some(InstructionReportErrorCode::InvalidBetId),
+                size_cancelled: None,
+            },
+        ]),
         market_id: Some(MarketId::new("1.210878100")),
         status: ExecutionReportStatus::Failure,
     };
