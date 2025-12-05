@@ -1710,7 +1710,8 @@
         <parameter name="placedDate" type="dateTime" mandatory="true">
             <description>The date, to the second, the bet was placed.</description>
         </parameter>
-        <parameter name="matchedDate" type="dateTime" mandatory="true">
+        <!-- matchedDate is sometimes omitted by the Betfair API; cannot be mandatory -->
+        <parameter name="matchedDate" type="dateTime" mandatory="false">
             <description>The date, to the second, of the last matched bet fragment (where applicable).</description>
         </parameter>
         <parameter name="averagePriceMatched" type="Price">
@@ -2185,7 +2186,8 @@
         <parameter type="CancelInstruction" name="instruction">
             <description>The instruction that was requested</description>
         </parameter>
-        <parameter mandatory="true" name="sizeCancelled" type="Size">
+        <!-- sizeCancelled is sometimes omitted in cancelOrders responses; treat it as optional -->
+        <parameter mandatory="false" name="sizeCancelled" type="Size">
             <description/>
         </parameter>
         <parameter name="cancelledDate" type="dateTime">
