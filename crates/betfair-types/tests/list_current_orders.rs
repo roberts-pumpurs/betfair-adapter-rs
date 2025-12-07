@@ -22,6 +22,8 @@ fn parse_fixture_missing_matched_date() {
     use betfair_types::types::sports_aping::list_current_orders;
     use json_rpc_types::Response;
 
+    // Betfair forum notes `matchedDate` is sometimes missing despite being documented as mandatory:
+    // https://forum.developer.betfair.com/forum/sports-exchange-api/exchange-api/2473-cancelinstructionreport-sizecancelled-required-but-absent
     let data =
         std::fs::read_to_string("./tests/resources/list_current_orders_missing_matched_date.json")
             .unwrap();

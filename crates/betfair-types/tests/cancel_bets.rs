@@ -40,6 +40,8 @@ fn test_deserialize_missing_size_cancelled() {
             {
                 "status": "FAILURE",
                 "errorCode": "INVALID_BET_ID",
+                // Betfair forum notes `sizeCancelled` can be missing even though docs say mandatory:
+                // https://forum.developer.betfair.com/forum/sports-exchange-api/exchange-api/2473-cancelinstructionreport-sizecancelled-required-but-absent
                 // Deliberately omit sizeCancelled to match Betfair behaviour.
                 "instruction": {
                     "betId": "758934758934"
