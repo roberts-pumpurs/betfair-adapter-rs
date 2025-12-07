@@ -149,4 +149,4 @@ tracing-error = "0.2"
 clap = { version = "4", features = ["derive"] }
 xshell = "0.2"
 color-eyre = "0.6"
-toml = "0.8"
+toml = "0.9"
