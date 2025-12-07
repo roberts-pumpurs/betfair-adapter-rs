@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.8](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-rpc-server-mock-v0.6.7...betfair-rpc-server-mock-v0.6.8) - 2025-12-07
+
+### Fixed
+
+- size cancelled and matcheddate not mandatory ([#104](https://github.com/roberts-pumpurs/betfair-adapter-rs/pull/104))
+
 ## [0.6.6](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-rpc-server-mock-v0.6.5...betfair-rpc-server-mock-v0.6.6) - 2025-11-26
 
 ### Added
