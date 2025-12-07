@@ -30,6 +30,29 @@ fn test_deserialize2() {
 }
 
 #[test]
+fn test_deserialize_missing_size_cancelled() {
+    let data = json!({
+        "customerRef": "0oxfjBrq8K2TZg2Ytqjo1",
+        "status": "FAILURE",
+        "errorCode": "BET_ACTION_ERROR",
+        "marketId": "1.210878100",
+        "instructionReports": [
+            {
+                "status": "FAILURE",
+                "errorCode": "INVALID_BET_ID",
+                // Betfair forum notes `sizeCancelled` can be missing even though docs say mandatory:
+                // https://forum.developer.betfair.com/forum/sports-exchange-api/exchange-api/2473-cancelinstructionreport-sizecancelled-required-but-absent
+                // Deliberately omit sizeCancelled to match Betfair behaviour.
+                "instruction": {
+                    "betId": "758934758934"
+                }
+            }
+        ]
+    });
+    serde_json::from_value::<CancelExecutionReport>(data).unwrap();
+}
+
+#[test]
 fn parse_fixture() {
     use betfair_types::types::sports_aping::cancel_orders;
     use json_rpc_types::Response;
