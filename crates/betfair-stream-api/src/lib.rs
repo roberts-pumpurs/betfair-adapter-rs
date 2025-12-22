@@ -77,6 +77,14 @@ pub struct Cache {
     state: StreamState,
 }
 
+impl Cache {
+    pub fn new() -> Self {
+        Self {
+            state: StreamState::new(),
+        }
+    }
+}
+
 /// Variants of messages produced by the cache-based processor.
 ///
 /// `CachedMessage` represents high-level events derived from raw Betfair streaming responses,
@@ -163,9 +171,7 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
         BetfairStreamBuilder {
             client,
             heartbeat_interval: None,
-            processor: Cache {
-                state: StreamState::new(),
-            },
+            processor: Cache::new(),
         }
     }
 
