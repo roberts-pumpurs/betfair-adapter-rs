@@ -21,7 +21,7 @@ async fn test_can_build_prod_cache_from_stream_data() {
     let mut framed = Framed::new(file, StreamAPIClientCodec).take(500);
     while let Some(frame) = framed.next().await {
         let frame = frame.unwrap();
-        match frame {
+        match frame.response {
             ResponseMessage::Connection(_) => {}
             ResponseMessage::MarketChange(msg) => {
                 cached_state.market_change_update(msg);

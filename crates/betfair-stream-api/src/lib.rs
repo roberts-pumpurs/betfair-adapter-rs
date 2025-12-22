@@ -111,8 +111,8 @@ pub enum CachedMessage {
 impl MessageProcessor for Cache {
     type Output = CachedMessage;
 
-    fn process_message(&mut self, message: ResponseMessage) -> Option<Self::Output> {
-        match message {
+    fn process_message(&mut self, message: ResponseMessageWithRaw) -> Option<Self::Output> {
+        match message.response {
             ResponseMessage::Connection(connection_message) => {
                 Some(CachedMessage::Connection(connection_message))
             }
@@ -137,8 +137,8 @@ pub struct Forwarder;
 impl MessageProcessor for Forwarder {
     type Output = ResponseMessage;
 
-    fn process_message(&mut self, message: ResponseMessage) -> Option<Self::Output> {
-        Some(message)
+    fn process_message(&mut self, message: ResponseMessageWithRaw) -> Option<Self::Output> {
+        Some(message.response)
     }
 }
 /// Trait for processing incoming Betfair streaming `ResponseMessage` objects into user-defined outputs.
@@ -151,7 +151,7 @@ pub trait MessageProcessor: Send + Sync + 'static {
     /// Process an incoming `ResponseMessage`.
     ///
     /// Returns `Some(Output)` to forward a processed message, or `None` to drop it.
-    fn process_message(&mut self, message: ResponseMessage) -> Option<Self::Output>;
+    fn process_message(&mut self, message: ResponseMessageWithRaw) -> Option<Self::Output>;
 }
 
 impl<T: MessageProcessor> BetfairStreamBuilder<T> {
@@ -476,7 +476,7 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
                 tracing::warn!("failed to send connection message to channel: {:?}", err)
             })
             .map_err(|_| HandshakeErr::Fatal)?;
-        let ResponseMessage::Connection(_) = &res else {
+        let ResponseMessage::Connection(_) = &res.response else {
             tracing::warn!("stream responded with invalid connection message");
             return Err(HandshakeErr::Reauthenticate);
         };
@@ -528,7 +528,7 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
             })
             .map_err(|_| HandshakeErr::Fatal)?;
         tracing::info!(?message, "message from stream");
-        let ResponseMessage::Status(status_message) = &message else {
+        let ResponseMessage::Status(status_message) = &message.response else {
             tracing::warn!("expected status message, got {message:?}");
             return Err(HandshakeErr::WaitAndRetry);
         };
@@ -593,8 +593,14 @@ fn tls_connector() -> eyre::Result<tokio_rustls::TlsConnector> {
 /// Defines the encoding and decoding of Betfair stream api data structures using tokio
 pub struct StreamAPIClientCodec;
 
+#[derive(Debug, Clone)]
+pub struct ResponseMessageWithRaw {
+    pub response_raw: String,
+    pub response: ResponseMessage,
+}
+
 impl Decoder for StreamAPIClientCodec {
-    type Item = ResponseMessage;
+    type Item = ResponseMessageWithRaw;
     type Error = eyre::Report;
 
     fn decode(&mut self, src: &mut bytes::BytesMut) -> Result<Option<Self::Item>, Self::Error> {
@@ -613,9 +619,13 @@ impl Decoder for StreamAPIClientCodec {
             // Separate out the delimiter bytes
             let (json_part, _) = line.split_at(line.len().saturating_sub(delimiter_size));
 
-            // Now we can parse it as JSON
-            let data = serde_json::from_slice::<Self::Item>(json_part)?;
-            return Ok(Some(data));
+            // Return the raw JSON string
+            let message_raw = String::from_utf8(json_part.to_vec())?;
+            let message = serde_json::from_str::<ResponseMessage>(&message_raw)?;
+            return Ok(Some(ResponseMessageWithRaw {
+                response_raw: message_raw,
+                response: message,
+            }));
         }
         Ok(None)
     }
@@ -663,15 +673,16 @@ mod tests {
 
     #[test]
     fn can_decode_single_message() {
-        let msg = r#"{"op":"connection","connectionId":"002-051134157842-432409"}"#;
+        let msg_str = r#"{"op":"connection","connectionId":"002-051134157842-432409"}"#;
         let separator = "\r\n";
-        let data = format!("{msg}{separator}");
+        let data = format!("{msg_str}{separator}");
 
         let mut codec = StreamAPIClientCodec;
         let mut buf = bytes::BytesMut::from(data.as_bytes());
         let msg = codec.decode(&mut buf).unwrap().unwrap();
 
-        assert!(matches!(msg, ResponseMessage::Connection(_)));
+        assert!(matches!(msg.response, ResponseMessage::Connection(_)));
+        assert_eq!(&msg.response_raw, msg_str);
     }
 
     #[test]
@@ -687,8 +698,8 @@ mod tests {
         let msg_one = codec.decode(&mut buf).unwrap().unwrap();
         let msg_two = codec.decode(&mut buf).unwrap().unwrap();
 
-        assert!(matches!(msg_one, ResponseMessage::Connection(_)));
-        assert!(matches!(msg_two, ResponseMessage::OrderChange(_)));
+        assert!(matches!(msg_one.response, ResponseMessage::Connection(_)));
+        assert!(matches!(msg_two.response, ResponseMessage::OrderChange(_)));
     }
 
     #[test]
@@ -709,8 +720,8 @@ mod tests {
         buf.write_str(separator).unwrap();
         let msg_two = codec.decode(&mut buf).unwrap().unwrap();
 
-        assert!(matches!(msg_one, ResponseMessage::Connection(_)));
-        assert!(matches!(msg_two, ResponseMessage::OrderChange(_)));
+        assert!(matches!(msg_one.response, ResponseMessage::Connection(_)));
+        assert!(matches!(msg_two.response, ResponseMessage::OrderChange(_)));
     }
 
     #[test]
@@ -730,8 +741,8 @@ mod tests {
         buf.write_str(data.as_str()).unwrap();
         let msg_two = codec.decode(&mut buf).unwrap().unwrap();
 
-        assert!(matches!(msg_one, ResponseMessage::Connection(_)));
-        assert!(matches!(msg_two, ResponseMessage::OrderChange(_)));
+        assert!(matches!(msg_one.response, ResponseMessage::Connection(_)));
+        assert!(matches!(msg_two.response, ResponseMessage::OrderChange(_)));
     }
 
     #[test]
