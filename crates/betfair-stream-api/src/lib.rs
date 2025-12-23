@@ -85,6 +85,12 @@ impl Cache {
     }
 }
 
+impl Default for Cache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Variants of messages produced by the cache-based processor.
 ///
 /// `CachedMessage` represents high-level events derived from raw Betfair streaming responses,
