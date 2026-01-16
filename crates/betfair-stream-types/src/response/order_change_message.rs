@@ -117,7 +117,8 @@ pub struct Order {
     #[serde(rename = "sc")]
     pub size_cancelled: Size,
     /// Regulator Code - the regulator of the order
-    #[serde(rename = "rc")]
+    /// This is occasionally missing, so we default to an empty string.
+    #[serde(rename = "rc", default)]
     pub regulator_code: String,
     /// Size - the original placed size of the order
     #[serde(rename = "s")]
@@ -126,7 +127,8 @@ pub struct Order {
     #[serde(with = "ts_millis", rename = "pd")]
     pub place_date: chrono::DateTime<chrono::Utc>,
     /// Regulator Auth Code - the auth code returned by the regulator
-    #[serde(rename = "rac")]
+    /// This is occasionally missing, so we default to an empty string.
+    #[serde(rename = "rac", default)]
     pub regulator_auth_code: String,
     /// Matched Date - the date the order was matched (null if the order is not matched)
     #[serde(skip_serializing_if = "Option::is_none")]
