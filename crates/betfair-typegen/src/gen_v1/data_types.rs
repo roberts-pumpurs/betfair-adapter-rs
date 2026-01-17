@@ -145,6 +145,11 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                         "double" | "float" => quote! {
                             #[serde(deserialize_with = "super::deserialize_f64", default)]
                         },
+                        "string" => {
+                            quote! { // Very occasionally fields such as `runnerName` are omitted.
+                                #[serde(default)]
+                            }
+                        }
                         _ => quote! {},
                     },
                     TypePlural::Map { key: _, value: _ } => quote! {

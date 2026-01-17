@@ -61,7 +61,13 @@ fn test_deserialize() {
                         "foo": "bar",
                         "baz": null
                     }
-                }
+                },
+                {
+                    "selectionId": 12_062_412, // Missing runnerName, as rarely witnessed in live data.
+                    "handicap": 0.0,
+                    "sortPriority": 3
+                },
+
             ],
             "competition": {
                 "id": "8347200",
@@ -85,8 +91,9 @@ fn test_deserialize() {
 
     // Check that we correctly deserialize metadata containing null values.
     let runners = result[0].runners.as_ref().unwrap();
-    assert_eq!(runners.len(), 2);
+    assert_eq!(runners.len(), 3);
     assert!(runners[0].metadata.is_none());
     assert!(runners[1].metadata.is_some());
     assert_eq!(runners[1].metadata.as_ref().unwrap().len(), 1);
+    assert_eq!(runners[2].runner_name.len(), 0);
 }

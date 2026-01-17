@@ -73,6 +73,13 @@ fn fixture_streaming_ocm_full_image() {
     let data = std::fs::read_to_string("./tests/resources/streaming_ocm_FULL_IMAGE.json").unwrap();
     let _res = serde_json::from_str::<ResponseMessage>(&data).unwrap();
 }
+#[test]
+fn fixture_streaming_ocm_full_image_missing_rc() {
+    let data =
+        std::fs::read_to_string("./tests/resources/streaming_ocm_FULL_IMAGE_MISSING_RC.json")
+            .unwrap();
+    let _res = serde_json::from_str::<ResponseMessage>(&data).unwrap();
+}
 
 #[test]
 fn fixture_streaming_ocm_new_full_image() {
