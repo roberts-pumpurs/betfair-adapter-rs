@@ -122,15 +122,9 @@ impl Price {
     /// | 50 → 100   | 5         |
     /// | 100 → 1000 | 10        |
     /// ```
-    fn adjust_price_to_betfair_boundaries(
-        current_price: f64,
-    ) -> Result<f64, PriceParseError> {
+    fn adjust_price_to_betfair_boundaries(current_price: f64) -> Result<f64, PriceParseError> {
         #[inline]
-        fn round_to_nearest(
-            x: f64,
-            lower_range: f64,
-            increment: f64,
-        ) -> f64 {
+        fn round_to_nearest(x: f64, lower_range: f64, increment: f64) -> f64 {
             // For f64, round to nearest increment to avoid floating-point precision issues
             let steps_raw = (x - lower_range) / increment;
             let steps = steps_raw.round();
@@ -254,10 +248,7 @@ mod tests {
     #[case(num!(5.487), num!(5.4))]
     #[case(num!(999.0), num!(990.0))]
     #[case(num!(1000.0), num!(1000.0))]
-    fn correctly_adjusts_prices(
-        #[case] input_price: f64,
-        #[case] expected: f64,
-    ) {
+    fn correctly_adjusts_prices(#[case] input_price: f64, #[case] expected: f64) {
         let actual = Price::adjust_price_to_betfair_boundaries(input_price).unwrap();
 
         let diff = (expected - actual).abs();

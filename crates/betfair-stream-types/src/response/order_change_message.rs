@@ -1,7 +1,7 @@
-use betfair_types::numeric::F64Ord;
 use betfair_types::customer_order_ref::CustomerOrderRef;
 use betfair_types::customer_strategy_ref::CustomerStrategyRef;
 use betfair_types::handicap::Handicap;
+use betfair_types::numeric::F64Ord;
 use betfair_types::price::Price;
 use betfair_types::size::Size;
 use betfair_types::types::sports_aping::{BetId, MarketId, SelectionId};

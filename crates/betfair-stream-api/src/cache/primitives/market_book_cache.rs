@@ -182,9 +182,7 @@ impl MarketBookCache {
 
     /// Returns a reference to the runners in the market.
     #[must_use]
-    pub const fn runners(
-        &self,
-    ) -> &HashMap<(SelectionId, Option<F64Ord>), RunnerBookCache> {
+    pub const fn runners(&self) -> &HashMap<(SelectionId, Option<F64Ord>), RunnerBookCache> {
         &self.runners
     }
 
