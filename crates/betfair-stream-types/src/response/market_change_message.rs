@@ -1,4 +1,4 @@
-use betfair_types::NumericOrdPrimitive;
+use betfair_types::numeric::F64Ord;
 use betfair_types::price::Price;
 use betfair_types::size::Size;
 use betfair_types::types::sports_aping::{MarketId, SelectionId};
@@ -79,7 +79,7 @@ pub struct MarketDefinition {
         deserialize_with = "betfair_types::types::deserialize_f64_option",
         default
     )]
-    pub each_way_divisor: Option<NumericOrdPrimitive>,
+    pub each_way_divisor: Option<F64Ord>,
 
     /// The market regulators.
     pub regulators: Vec<String>,
@@ -89,7 +89,7 @@ pub struct MarketDefinition {
 
     /// The base rate for the market.
     #[serde(deserialize_with = "betfair_types::types::deserialize_f64")]
-    pub market_base_rate: NumericOrdPrimitive,
+    pub market_base_rate: F64Ord,
 
     /// The number of winners in the market.
     pub number_of_winners: i32,
@@ -105,7 +105,7 @@ pub struct MarketDefinition {
         deserialize_with = "betfair_types::types::deserialize_f64_option",
         default
     )]
-    pub line_max_unit: Option<NumericOrdPrimitive>,
+    pub line_max_unit: Option<F64Ord>,
 
     /// Indicates if the market is in play.
     pub in_play: bool,
@@ -130,7 +130,7 @@ pub struct MarketDefinition {
         deserialize_with = "betfair_types::types::deserialize_f64_option",
         default
     )]
-    pub line_min_unit: Option<NumericOrdPrimitive>,
+    pub line_min_unit: Option<F64Ord>,
 
     /// The event ID associated with the market.
     pub event_id: String,
@@ -194,7 +194,7 @@ pub struct MarketDefinition {
         deserialize_with = "betfair_types::types::deserialize_f64_option",
         default
     )]
-    pub line_interval: Option<NumericOrdPrimitive>,
+    pub line_interval: Option<F64Ord>,
 
     /// The status of the market.
     pub status: StreamMarketDefinitionStatus,
@@ -237,7 +237,7 @@ pub struct KeyLineSelection {
         default
     )]
     #[serde(rename = "hc")]
-    pub handicap: Option<NumericOrdPrimitive>,
+    pub handicap: Option<F64Ord>,
 }
 
 /// Represents the price ladder definition.
@@ -341,7 +341,7 @@ pub struct RunnerChange {
         default
     )]
     #[serde(rename = "hc")]
-    pub handicap: Option<NumericOrdPrimitive>,
+    pub handicap: Option<F64Ord>,
 
     /// Best Display Available To Back (includes virtual prices)- `LevelPriceVol` triple delta of
     /// price changes, keyed by level (0 vol is remove)
@@ -370,14 +370,14 @@ pub struct RunnerDefinition {
         default
     )]
     #[serde(rename = "hc")]
-    pub handicap: Option<NumericOrdPrimitive>,
+    pub handicap: Option<F64Ord>,
     /// The adjustment factor for the runner.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(
         deserialize_with = "betfair_types::types::deserialize_f64_option",
         default
     )]
-    pub adjustment_factor: Option<NumericOrdPrimitive>,
+    pub adjustment_factor: Option<F64Ord>,
     /// The BSP value for the runner.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(
@@ -385,7 +385,7 @@ pub struct RunnerDefinition {
         default
     )]
     #[serde(rename = "bsp")]
-    pub bsp: Option<NumericOrdPrimitive>,
+    pub bsp: Option<F64Ord>,
     /// The status of the runner.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<StreamRunnerDefinitionStatus>,

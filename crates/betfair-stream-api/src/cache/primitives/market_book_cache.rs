@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use betfair_adapter::betfair_types::NumericOrdPrimitive;
+use betfair_adapter::betfair_types::numeric::F64Ord;
 use betfair_adapter::betfair_types::size::Size;
 use betfair_adapter::betfair_types::types::sports_aping::{MarketId, SelectionId};
 use betfair_stream_types::response::market_change_message::{
@@ -20,7 +20,7 @@ pub struct MarketBookCache {
     active: bool,
     total_matched: Size,
     market_definition: Option<Box<MarketDefinition>>,
-    runners: HashMap<(SelectionId, Option<NumericOrdPrimitive>), RunnerBookCache>,
+    runners: HashMap<(SelectionId, Option<F64Ord>), RunnerBookCache>,
 }
 
 /// Represents the market book cache.
@@ -184,7 +184,7 @@ impl MarketBookCache {
     #[must_use]
     pub const fn runners(
         &self,
-    ) -> &HashMap<(SelectionId, Option<NumericOrdPrimitive>), RunnerBookCache> {
+    ) -> &HashMap<(SelectionId, Option<F64Ord>), RunnerBookCache> {
         &self.runners
     }
 

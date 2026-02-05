@@ -1,4 +1,4 @@
-use betfair_types::NumericOrdPrimitive;
+use betfair_types::numeric::F64Ord;
 use betfair_types::customer_order_ref::CustomerOrderRef;
 use betfair_types::customer_strategy_ref::CustomerStrategyRef;
 use betfair_types::handicap::Handicap;
@@ -166,7 +166,7 @@ pub struct Order {
         deserialize_with = "betfair_types::types::deserialize_f64_option",
         default
     )]
-    pub bsp: Option<NumericOrdPrimitive>,
+    pub bsp: Option<F64Ord>,
     /// Strategy Reference - the customer's strategy reference for this order (empty string if one
     /// was not set)
     #[serde(rename = "rfs", default)]

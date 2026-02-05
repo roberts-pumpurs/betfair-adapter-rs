@@ -2,17 +2,6 @@
 //!
 //! This module provides a unified interface for numeric operations using `f64`.
 
-pub type NumericPrimitive = f64;
-
-/// Type alias for general decimal values (not Price/Size specific)
-/// This is used for fields like handicap, market rates, etc.
-///
-/// This is a wrapper around f64 that implements Eq/Ord/Hash
-/// using total_cmp, which allows it to be used in structs that derive Eq.
-pub type NumericOrdPrimitive = F64Ord;
-
-pub type NumericU8Primitive = u8;
-
 /// Wrapper around f64 that implements Eq, Ord, and Hash using total_cmp
 /// This allows f64 to be used in contexts that require these traits
 #[derive(Debug, Clone, Copy, Default, serde::Serialize, serde::Deserialize)]

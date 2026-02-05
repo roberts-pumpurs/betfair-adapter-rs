@@ -1,6 +1,6 @@
 //! Runner book cache (used for market book Stream API caching)
 
-use betfair_adapter::betfair_types::NumericOrdPrimitive;
+use betfair_adapter::betfair_types::numeric::F64Ord;
 use betfair_adapter::betfair_types::price::Price;
 use betfair_adapter::betfair_types::size::Size;
 use betfair_adapter::betfair_types::types::sports_aping::SelectionId;
@@ -27,7 +27,7 @@ pub struct RunnerBookCache {
     starting_price_lay: Available<UpdateSet2>,
     starting_price_near: Option<Price>,
     starting_price_far: Option<Price>,
-    handicap: Option<NumericOrdPrimitive>,
+    handicap: Option<F64Ord>,
     definition: Option<RunnerDefinition>,
 }
 
@@ -245,7 +245,7 @@ impl RunnerBookCache {
     }
 
     #[must_use]
-    pub const fn handicap(&self) -> Option<NumericOrdPrimitive> {
+    pub const fn handicap(&self) -> Option<F64Ord> {
         self.handicap
     }
 

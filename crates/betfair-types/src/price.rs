@@ -2,16 +2,16 @@ use core::ops::{Add, Div, Mul, Sub};
 
 use serde::{Deserialize, Serialize};
 
-use crate::numeric::{NumericOps, NumericOrdPrimitive, NumericPrimitive};
+use crate::numeric::{F64Ord, NumericOps};
 
 #[derive(thiserror::Error, Clone, Debug, PartialEq, Eq)]
 pub enum PriceParseError {
     #[error("InvalidPriceSpecified: {0}")]
-    InvalidPriceSpecified(NumericOrdPrimitive),
+    InvalidPriceSpecified(F64Ord),
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct Price(NumericPrimitive);
+pub struct Price(f64);
 
 impl PartialEq for Price {
     fn eq(&self, other: &Self) -> bool {
@@ -69,23 +69,23 @@ impl Mul for Price {
     }
 }
 
-impl Div<NumericPrimitive> for Price {
+impl Div<f64> for Price {
     type Output = Self;
 
-    fn div(self, rhs: NumericPrimitive) -> Self::Output {
+    fn div(self, rhs: f64) -> Self::Output {
         let lhs = self.0;
         Self(lhs / rhs)
     }
 }
 
-impl From<Price> for NumericPrimitive {
+impl From<Price> for f64 {
     fn from(value: Price) -> Self {
         value.0
     }
 }
 
 impl Price {
-    pub fn new(price: NumericPrimitive) -> Result<Self, PriceParseError> {
+    pub fn new(price: f64) -> Result<Self, PriceParseError> {
         let price = Self(Self::adjust_price_to_betfair_boundaries(price)?);
         Ok(price)
     }
@@ -95,7 +95,7 @@ impl Price {
     /// # Safety
     /// The caller must ensure that the price is within the Betfair boundaries.
     #[must_use]
-    pub const unsafe fn new_unchecked(price: NumericPrimitive) -> Self {
+    pub const unsafe fn new_unchecked(price: f64) -> Self {
         Self(price)
     }
 
@@ -123,14 +123,14 @@ impl Price {
     /// | 100 → 1000 | 10        |
     /// ```
     fn adjust_price_to_betfair_boundaries(
-        current_price: NumericPrimitive,
-    ) -> Result<NumericPrimitive, PriceParseError> {
+        current_price: f64,
+    ) -> Result<f64, PriceParseError> {
         #[inline]
         fn round_to_nearest(
-            x: NumericPrimitive,
-            lower_range: NumericPrimitive,
-            increment: NumericPrimitive,
-        ) -> NumericPrimitive {
+            x: f64,
+            lower_range: f64,
+            increment: f64,
+        ) -> f64 {
             // For f64, round to nearest increment to avoid floating-point precision issues
             let steps_raw = (x - lower_range) / increment;
             let steps = steps_raw.round();
@@ -188,9 +188,7 @@ impl Price {
             x if (num!(100.0)..=num!(1000.0)).contains(&x) => {
                 Ok(round_to_nearest(x, num!(100.0), num!(10.0)))
             }
-            x => Err(PriceParseError::InvalidPriceSpecified(
-                crate::numeric::F64Ord(x),
-            )),
+            x => Err(PriceParseError::InvalidPriceSpecified(F64Ord(x))),
         }
     }
 }
@@ -225,7 +223,7 @@ mod tests {
     #[case(num!(1.00))]
     #[case(num!(1000.01))]
     #[case(num!(11000.00))]
-    fn correctly_detects_price_adjustment_errors(#[case] price: NumericPrimitive) {
+    fn correctly_detects_price_adjustment_errors(#[case] price: f64) {
         let actual = Price::adjust_price_to_betfair_boundaries(price).unwrap_err();
 
         let expected = PriceParseError::InvalidPriceSpecified(price.into());
@@ -257,8 +255,8 @@ mod tests {
     #[case(num!(999.0), num!(990.0))]
     #[case(num!(1000.0), num!(1000.0))]
     fn correctly_adjusts_prices(
-        #[case] input_price: NumericPrimitive,
-        #[case] expected: NumericPrimitive,
+        #[case] input_price: f64,
+        #[case] expected: f64,
     ) {
         let actual = Price::adjust_price_to_betfair_boundaries(input_price).unwrap();
 
