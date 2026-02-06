@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use crate::numeric::{NumericOps, NumericPrimitive};
+use crate::numeric::NumericOps;
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
-pub struct Size(NumericPrimitive);
+pub struct Size(f64);
 
 impl PartialEq for Size {
     fn eq(&self, other: &Self) -> bool {
@@ -33,7 +33,7 @@ impl core::hash::Hash for Size {
 
 impl Size {
     #[must_use]
-    pub fn new(size: NumericPrimitive) -> Self {
+    pub fn new(size: f64) -> Self {
         let size = size.round_2dp();
         Self(size)
     }
@@ -42,7 +42,7 @@ impl Size {
     /// # Safety
     /// The caller must ensure that the size is valid on Betfair.
     #[must_use]
-    pub const unsafe fn new_unchecked(size: NumericPrimitive) -> Self {
+    pub const unsafe fn new_unchecked(size: f64) -> Self {
         Self(size)
     }
 
@@ -52,7 +52,7 @@ impl Size {
 
     #[must_use]
     pub fn zero() -> Self {
-        Self(NumericPrimitive::zero())
+        Self(f64::zero())
     }
 
     pub fn checked_add(&self, other: &Self) -> Option<Self> {
@@ -87,13 +87,13 @@ impl Size {
     }
 }
 
-impl From<NumericPrimitive> for Size {
-    fn from(val: NumericPrimitive) -> Self {
+impl From<f64> for Size {
+    fn from(val: f64) -> Self {
         Self::new(val)
     }
 }
 
-impl From<Size> for NumericPrimitive {
+impl From<Size> for f64 {
     fn from(value: Size) -> Self {
         value.0
     }
@@ -126,7 +126,7 @@ mod tests {
 
     #[rstest]
     #[case(num!(1.022192999293999))]
-    fn size_gets_rounded_to_two_decimal_places(#[case] size_raw: NumericPrimitive) {
+    fn size_gets_rounded_to_two_decimal_places(#[case] size_raw: f64) {
         let size = Size::from(size_raw);
 
         let expected = num!(1.02);

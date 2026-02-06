@@ -2,8 +2,8 @@
 
 use std::collections::HashMap;
 
-use betfair_adapter::betfair_types::NumericOrdPrimitive;
 use betfair_adapter::betfair_types::customer_strategy_ref::CustomerStrategyRef;
+use betfair_adapter::betfair_types::numeric::F64Ord;
 use betfair_adapter::betfair_types::types::sports_aping::{BetId, MarketId, SelectionId};
 use betfair_stream_types::response::UpdateSet2;
 use betfair_stream_types::response::order_change_message::{Order, StrategyMatchChange};
@@ -19,7 +19,7 @@ pub struct OrderBookRunner {
     pub matched_lays: Available<UpdateSet2>,
     pub matched_backs: Available<UpdateSet2>,
     pub unmatched_orders: HashMap<BetId, Order>,
-    pub handicap: Option<NumericOrdPrimitive>,
+    pub handicap: Option<F64Ord>,
     pub strategy_matches: HashMap<CustomerStrategyRef, StrategyMatch>,
 }
 

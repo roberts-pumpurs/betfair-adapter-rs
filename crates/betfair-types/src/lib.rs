@@ -13,7 +13,7 @@ pub mod size;
 pub mod tests;
 
 // Re-export numeric types for convenience
-pub use numeric::{NumericOrdPrimitive, NumericPrimitive, NumericU8Primitive};
+pub use numeric::F64Ord;
 
 pub mod keep_alive {
     pub use crate::shared::*;
