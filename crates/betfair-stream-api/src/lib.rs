@@ -140,6 +140,15 @@ pub trait MessageProcessor: Send + Sync + 'static {
     /// The processed message type produced by `process_message`
     type Output: Send + Clone + Sync + 'static + core::fmt::Debug;
 
+    /// Called with the raw JSON bytes before [`Self::process_message`].
+    ///
+    /// Override this to inspect, log, or forward the original JSON from Betfair
+    /// before the parsed message is consumed by the processor.
+    /// The default implementation is a no-op.
+    fn on_raw_message(&mut self, raw: &[u8]) {
+        let _ = raw;
+    }
+
     /// Process an incoming `ResponseMessage`.
     ///
     /// Returns `Some(Output)` to forward a processed message, or `None` to drop it.
@@ -345,7 +354,8 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
                         };
 
                         match message {
-                            Ok(message) => {
+                            Ok((raw, message)) => {
+                                self.processor.on_raw_message(&raw);
                                 let message = self.processor.process_message(message);
                                 tracing::debug!(?message, "received from betfair");
                                 let Some(message) = message else {
@@ -443,7 +453,7 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
         stream: &mut Framed<tokio_rustls::client::TlsStream<TcpStream>, StreamAPIClientCodec>,
     ) -> Result<(), HandshakeErr> {
         // await con message
-        let res = stream
+        let (raw, res) = stream
             .next()
             .await
             .transpose()
@@ -453,6 +463,7 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
             .map_err(|_| HandshakeErr::WaitAndRetry)?
             .ok_or(HandshakeErr::WaitAndRetry)?;
         tracing::info!(?res, "message from stream");
+        self.processor.on_raw_message(&raw);
         let message = self
             .processor
             .process_message(res.clone())
@@ -494,7 +505,7 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
             .map_err(|_| HandshakeErr::WaitAndRetry)?;
 
         // await status message
-        let message = stream
+        let (raw, message) = stream
             .next()
             .await
             .transpose()
@@ -503,6 +514,7 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
             })
             .map_err(|_| HandshakeErr::WaitAndRetry)?
             .ok_or(HandshakeErr::WaitAndRetry)?;
+        self.processor.on_raw_message(&raw);
         let processed_message = self
             .processor
             .process_message(message.clone())
@@ -588,7 +600,7 @@ fn tls_connector() -> eyre::Result<tokio_rustls::TlsConnector> {
 pub struct StreamAPIClientCodec;
 
 impl Decoder for StreamAPIClientCodec {
-    type Item = ResponseMessage;
+    type Item = (bytes::Bytes, ResponseMessage);
     type Error = eyre::Report;
 
     fn decode(&mut self, src: &mut bytes::BytesMut) -> Result<Option<Self::Item>, Self::Error> {
@@ -602,14 +614,17 @@ impl Decoder for StreamAPIClientCodec {
             };
 
             // Extract up to and including the delimiter
-            let line = src.split_to(pos + 1);
+            let mut line = src.split_to(pos + 1);
 
-            // Separate out the delimiter bytes
-            let (json_part, _) = line.split_at(line.len().saturating_sub(delimiter_size));
+            // Strip the delimiter bytes
+            line.truncate(line.len().saturating_sub(delimiter_size));
+
+            // Freeze into zero-copy Bytes before parsing
+            let raw = line.freeze();
 
             // Now we can parse it as JSON
-            let data = serde_json::from_slice::<Self::Item>(json_part)?;
-            return Ok(Some(data));
+            let data = serde_json::from_slice::<ResponseMessage>(&raw)?;
+            return Ok(Some((raw, data)));
         }
         Ok(None)
     }
@@ -657,15 +672,16 @@ mod tests {
 
     #[test]
     fn can_decode_single_message() {
-        let msg = r#"{"op":"connection","connectionId":"002-051134157842-432409"}"#;
+        let json = r#"{"op":"connection","connectionId":"002-051134157842-432409"}"#;
         let separator = "\r\n";
-        let data = format!("{msg}{separator}");
+        let data = format!("{json}{separator}");
 
         let mut codec = StreamAPIClientCodec;
         let mut buf = bytes::BytesMut::from(data.as_bytes());
-        let msg = codec.decode(&mut buf).unwrap().unwrap();
+        let (raw, msg) = codec.decode(&mut buf).unwrap().unwrap();
 
         assert!(matches!(msg, ResponseMessage::Connection(_)));
+        assert_eq!(&raw[..], json.as_bytes());
     }
 
     #[test]
@@ -678,11 +694,16 @@ mod tests {
 
         let mut codec = StreamAPIClientCodec;
         let mut buf = bytes::BytesMut::from(data.as_bytes());
-        let msg_one = codec.decode(&mut buf).unwrap().unwrap();
-        let msg_two = codec.decode(&mut buf).unwrap().unwrap();
+        let (raw_one, msg_one) = codec.decode(&mut buf).unwrap().unwrap();
+        let (raw_two, msg_two) = codec.decode(&mut buf).unwrap().unwrap();
 
         assert!(matches!(msg_one, ResponseMessage::Connection(_)));
+        assert_eq!(
+            &raw_one[..],
+            r#"{"op":"connection","connectionId":"002-051134157842-432409"}"#.as_bytes()
+        );
         assert!(matches!(msg_two, ResponseMessage::OrderChange(_)));
+        assert_eq!(&raw_two[..], r#"{"op":"ocm","id":3,"clk":"AAAAAAAA","status":503,"pt":1498137379766,"ct":"HEARTBEAT"}"#.as_bytes());
     }
 
     #[test]
@@ -696,12 +717,12 @@ mod tests {
 
         let mut codec = StreamAPIClientCodec;
         let mut buf = bytes::BytesMut::from(data.as_bytes());
-        let msg_one = codec.decode(&mut buf).unwrap().unwrap();
+        let (_raw_one, msg_one) = codec.decode(&mut buf).unwrap().unwrap();
         let msg_two_attempt = codec.decode(&mut buf).unwrap();
         assert!(msg_two_attempt.is_none());
         buf.write_str(msg_two_pt_two).unwrap();
         buf.write_str(separator).unwrap();
-        let msg_two = codec.decode(&mut buf).unwrap().unwrap();
+        let (_raw_two, msg_two) = codec.decode(&mut buf).unwrap().unwrap();
 
         assert!(matches!(msg_one, ResponseMessage::Connection(_)));
         assert!(matches!(msg_two, ResponseMessage::OrderChange(_)));
@@ -717,12 +738,12 @@ mod tests {
 
         let mut codec = StreamAPIClientCodec;
         let mut buf = bytes::BytesMut::from(data.as_bytes());
-        let msg_one = codec.decode(&mut buf).unwrap().unwrap();
+        let (_raw_one, msg_one) = codec.decode(&mut buf).unwrap().unwrap();
         let msg_two_attempt = codec.decode(&mut buf).unwrap();
         assert!(msg_two_attempt.is_none());
         let data = format!("{msg_two}{separator}");
         buf.write_str(data.as_str()).unwrap();
-        let msg_two = codec.decode(&mut buf).unwrap().unwrap();
+        let (_raw_two, msg_two) = codec.decode(&mut buf).unwrap().unwrap();
 
         assert!(matches!(msg_one, ResponseMessage::Connection(_)));
         assert!(matches!(msg_two, ResponseMessage::OrderChange(_)));
