@@ -124,7 +124,7 @@ rustls-native-certs = "0.8"
 
 # tls
 rustls-pemfile = "2"
-rcgen = { version = "0.13", features = ["pem"] }
+rcgen = { version = "0.14", features = ["pem"] }
 rsa = "0.9"
 
 # Type gen
