@@ -17,6 +17,7 @@ use betfair_stream_types::{
         status_message::{ErrorCode, StatusMessage},
     },
 };
+pub use bytes::Bytes;
 use cache::{
     primitives::{MarketBookCache, OrderBookCache},
     tracker::StreamState,
@@ -36,10 +37,7 @@ use tokio::{
     time::sleep,
 };
 use tokio_stream::wrappers::{IntervalStream, ReceiverStream};
-use tokio_util::{
-    bytes,
-    codec::{Decoder, Encoder, Framed},
-};
+use tokio_util::codec::{Decoder, Encoder, Framed};
 
 /// A Betfair Stream API client that handles connection, handshake, incoming/outgoing messages,
 /// heartbeat and automatic reconnects.
@@ -140,13 +138,19 @@ pub trait MessageProcessor: Send + Sync + 'static {
     /// The processed message type produced by `process_message`
     type Output: Send + Clone + Sync + 'static + core::fmt::Debug;
 
-    /// Called with the raw JSON bytes before [`Self::process_message`].
+    /// Called with the raw JSON bytes and a reference to the parsed message
+    /// before [`Self::process_message`].
     ///
     /// Override this to inspect, log, or forward the original JSON from Betfair
     /// before the parsed message is consumed by the processor.
+    ///
+    /// `raw` is a reference-counted [`bytes::Bytes`] buffer — cloning it is O(1)
+    /// and avoids copying the underlying data, making it cheap to store or forward.
+    ///
     /// The default implementation is a no-op.
-    fn on_raw_message(&mut self, raw: &[u8]) {
+    fn on_message_received(&mut self, raw: Bytes, message: &ResponseMessage) {
         let _ = raw;
+        let _ = message;
     }
 
     /// Process an incoming `ResponseMessage`.
@@ -355,7 +359,7 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
 
                         match message {
                             Ok((raw, message)) => {
-                                self.processor.on_raw_message(&raw);
+                                self.processor.on_message_received(raw, &message);
                                 let message = self.processor.process_message(message);
                                 tracing::debug!(?message, "received from betfair");
                                 let Some(message) = message else {
@@ -463,7 +467,7 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
             .map_err(|_| HandshakeErr::WaitAndRetry)?
             .ok_or(HandshakeErr::WaitAndRetry)?;
         tracing::info!(?res, "message from stream");
-        self.processor.on_raw_message(&raw);
+        self.processor.on_message_received(raw, &res);
         let message = self
             .processor
             .process_message(res.clone())
@@ -514,7 +518,7 @@ impl<T: MessageProcessor> BetfairStreamBuilder<T> {
             })
             .map_err(|_| HandshakeErr::WaitAndRetry)?
             .ok_or(HandshakeErr::WaitAndRetry)?;
-        self.processor.on_raw_message(&raw);
+        self.processor.on_message_received(raw, &message);
         let processed_message = self
             .processor
             .process_message(message.clone())
