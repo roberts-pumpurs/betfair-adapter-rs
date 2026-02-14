@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use betfair_stream_types::response::ResponseMessage;
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 
 fn fixture(name: &str) -> String {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
