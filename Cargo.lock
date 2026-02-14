@@ -277,6 +277,7 @@ version = "0.7.0"
 dependencies = [
  "betfair-typegen",
  "chrono",
+ "criterion",
  "json-rpc-types",
  "redact",
  "rstest",
