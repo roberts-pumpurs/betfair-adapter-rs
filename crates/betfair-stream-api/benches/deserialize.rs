@@ -4,7 +4,9 @@ use betfair_stream_types::response::ResponseMessage;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 fn fixture(name: &str) -> String {
-    let path = Path::new("crates/betfair-stream-types/tests/resources").join(name);
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../betfair-stream-types/tests/resources")
+        .join(name);
     std::fs::read_to_string(&path)
         .unwrap_or_else(|e| panic!("failed to read fixture {}: {e}", path.display()))
 }
