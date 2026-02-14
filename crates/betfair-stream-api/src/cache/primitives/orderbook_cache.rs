@@ -43,11 +43,11 @@ impl OrderBookCache {
     }
 
     /// Updates the cache with changes from the order market.
-    pub fn update_cache(&mut self, change: OrderMarketChange, publish_time: DateTime<Utc>) {
+    pub fn update_cache(&mut self, mut change: OrderMarketChange, publish_time: DateTime<Utc>) {
         self.publish_time = publish_time;
         self.closed = change.closed.unwrap_or(self.closed);
 
-        if let Some(ref order_runner_change) = change.order_runner_change {
+        if let Some(ref mut order_runner_change) = change.order_runner_change {
             for runner_change in order_runner_change {
                 let runner = self
                     .runners
@@ -62,7 +62,7 @@ impl OrderBookCache {
                 if let Some(ref mb) = runner_change.matched_backs {
                     runner.update_matched_backs(mb);
                 }
-                if let Some(ref uo) = runner_change.unmatched_orders {
+                if let Some(uo) = runner_change.unmatched_orders.take() {
                     runner.update_unmatched(uo);
                 }
                 if let Some(ref sm) = runner_change.strategy_matches {
