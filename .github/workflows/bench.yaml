@@ -30,21 +30,33 @@ jobs:
         run: git checkout ${{ github.event.pull_request.base.sha }}
 
       - name: Bench base
-        run: cargo bench -p betfair-stream-api -- --save-baseline base
+        id: bench-base
+        run: |
+          if cargo bench -p betfair-stream-api --bench --no-run 2>/dev/null; then
+            cargo bench -p betfair-stream-api --bench -- --save-baseline base
+          else
+            echo "No benchmark targets on base branch, skipping"
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+          fi
 
       # Run benchmarks on PR head
       - name: Checkout PR head
         run: git checkout ${{ github.event.pull_request.head.sha }}
 
       - name: Bench head
-        run: cargo bench -p betfair-stream-api -- --save-baseline head
+        run: cargo bench -p betfair-stream-api --bench -- --save-baseline head
 
       # Compare and post results
       - name: Compare benchmarks
         id: compare
         run: |
           echo 'report<<EOF' >> "$GITHUB_OUTPUT"
-          critcmp base head >> "$GITHUB_OUTPUT"
+          if [ "${{ steps.bench-base.outputs.skipped }}" = "true" ]; then
+            echo "No benchmarks on base branch — showing head results only:" >> "$GITHUB_OUTPUT"
+            critcmp head >> "$GITHUB_OUTPUT"
+          else
+            critcmp base head >> "$GITHUB_OUTPUT"
+          fi
           echo 'EOF' >> "$GITHUB_OUTPUT"
 
       - name: Find existing comment
