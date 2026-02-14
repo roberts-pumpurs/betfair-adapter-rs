@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use betfair_adapter::betfair_types::types::sports_aping::MarketId;
 use betfair_stream_types::response::market_change_message::MarketChangeMessage;
@@ -8,7 +9,7 @@ use crate::cache::primitives::MarketBookCache;
 
 #[derive(Debug, Clone)]
 pub struct MarketStreamTracker {
-    market_state: HashMap<MarketId, MarketBookCache>,
+    market_state: HashMap<MarketId, Arc<MarketBookCache>>,
     updates_processed: u64,
 }
 
@@ -23,7 +24,7 @@ impl MarketStreamTracker {
     pub(crate) fn process(
         &mut self,
         msg: MarketChangeMessage,
-    ) -> (Option<Vec<&MarketBookCache>>, HasFullImage) {
+    ) -> (Option<Vec<Arc<MarketBookCache>>>, HasFullImage) {
         let mut img = HasFullImage(false);
         let Some(publish_time) = msg.publish_time else {
             tracing::warn!("No publish time in market change message");
@@ -31,7 +32,7 @@ impl MarketStreamTracker {
         };
 
         if let Some(data) = msg.0.data {
-            let mut updated_caches: Vec<&MarketBookCache> = Vec::with_capacity(data.len());
+            let mut updated_caches: Vec<Arc<MarketBookCache>> = Vec::with_capacity(data.len());
             let mut market_ids = Vec::with_capacity(data.len());
             for market_change in data {
                 let Some(market_id) = market_change.market_id.clone() else {
@@ -43,15 +44,15 @@ impl MarketStreamTracker {
                     .entry(market_id.clone())
                     .or_insert_with(|| {
                         img = HasFullImage(true);
-                        MarketBookCache::new(market_id.clone(), publish_time)
+                        Arc::new(MarketBookCache::new(market_id.clone(), publish_time))
                     });
 
                 let full_image = market_change.full_image.unwrap_or(false);
                 if full_image {
                     img = HasFullImage(true);
-                    *market = MarketBookCache::new(market_id.clone(), publish_time);
+                    *market = Arc::new(MarketBookCache::new(market_id.clone(), publish_time));
                 }
-                market.update_cache(market_change, publish_time, true);
+                Arc::make_mut(market).update_cache(market_change, publish_time, true);
                 market_ids.push(market_id);
             }
 
@@ -61,7 +62,7 @@ impl MarketStreamTracker {
                     continue;
                 };
 
-                updated_caches.push(market);
+                updated_caches.push(Arc::clone(market));
                 self.updates_processed = self.updates_processed.saturating_add(1);
             }
             return (Some(updated_caches), img);
@@ -78,6 +79,6 @@ impl MarketStreamTracker {
     }
 
     pub fn states(&self) -> Vec<&MarketBookCache> {
-        self.market_state.values().collect()
+        self.market_state.values().map(|arc| arc.as_ref()).collect()
     }
 }

@@ -103,11 +103,11 @@ pub enum CachedMessage {
     Connection(ConnectionMessage),
 
     /// A batch of market book updates, each describing the current state or changes of a market.
-    MarketChange(Vec<MarketBookCache>),
+    MarketChange(Vec<Arc<MarketBookCache>>),
 
     /// A batch of order book updates, representing new orders, matched orders,
     /// and cancellations in the order cache.
-    OrderChange(Vec<OrderBookCache>),
+    OrderChange(Vec<Arc<OrderBookCache>>),
 
     /// A status message from the stream, used for heartbeats,
     /// subscription confirmations, or error notifications.
@@ -125,12 +125,10 @@ impl MessageProcessor for Cache {
             ResponseMessage::MarketChange(market_change_message) => self
                 .state
                 .market_change_update(market_change_message)
-                .map(|markets| markets.into_iter().cloned().collect::<Vec<_>>())
                 .map(CachedMessage::MarketChange),
             ResponseMessage::OrderChange(order_change_message) => self
                 .state
                 .order_change_update(order_change_message)
-                .map(|markets| markets.into_iter().cloned().collect::<Vec<_>>())
                 .map(CachedMessage::OrderChange),
             ResponseMessage::Status(status_message) => Some(CachedMessage::Status(status_message)),
         }
