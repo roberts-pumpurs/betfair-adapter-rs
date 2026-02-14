@@ -165,9 +165,9 @@ where
             serde_json::from_value(data).expect("data item should be deserialized")
         });
 
-        let change_type = map.remove("ct").and_then(|ct| {
-            serde_json::from_value(ct).expect("ct should be deserialized")
-        });
+        let change_type = map
+            .remove("ct")
+            .and_then(|ct| serde_json::from_value(ct).expect("ct should be deserialized"));
 
         let clock = map
             .get("clk")
@@ -188,9 +188,9 @@ where
 
         let conflate_ms = map.get("conflateMs").and_then(serde_json::Value::as_i64);
 
-        let segment_type = map.remove("segmentType").and_then(|st| {
-            serde_json::from_value(st).expect("segmentType should be deserialized")
-        });
+        let segment_type = map
+            .remove("segmentType")
+            .and_then(|st| serde_json::from_value(st).expect("segmentType should be deserialized"));
 
         let status = map
             .get("status")

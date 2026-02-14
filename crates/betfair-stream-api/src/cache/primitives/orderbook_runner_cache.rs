@@ -42,10 +42,7 @@ impl OrderBookRunner {
         }
     }
 
-    pub(crate) fn update_unmatched(
-        &mut self,
-        unmatched_orders: impl IntoIterator<Item = Order>,
-    ) {
+    pub(crate) fn update_unmatched(&mut self, unmatched_orders: impl IntoIterator<Item = Order>) {
         for order in unmatched_orders {
             let id = order.id.clone();
             self.unmatched_orders.insert(id, order);
