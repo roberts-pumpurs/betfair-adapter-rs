@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-typegen-v0.6.8...betfair-typegen-v0.7.0) - 2026-02-14
+
+### Fixed
+
+- allow certain fields to be missing as witnessed in live data ([#108](https://github.com/roberts-pumpurs/betfair-adapter-rs/pull/108))
+
+### Other
+
+- remove NumericPrimitives as no longer needed ([#110](https://github.com/roberts-pumpurs/betfair-adapter-rs/pull/110))
+
 ## [0.6.8](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-typegen-v0.6.7...betfair-typegen-v0.6.8) - 2025-12-07
 
 ### Fixed

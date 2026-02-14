@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-stream-api-v0.6.8...betfair-stream-api-v0.7.0) - 2026-02-14
+
+### Added
+
+- raw stream message access ([#111](https://github.com/roberts-pumpurs/betfair-adapter-rs/pull/111))
+
+### Other
+
+- remove NumericPrimitives as no longer needed ([#110](https://github.com/roberts-pumpurs/betfair-adapter-rs/pull/110))
+
 ## [0.6.7](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-stream-api-v0.6.6...betfair-stream-api-v0.6.7) - 2025-11-29
 
 ### Fixed
