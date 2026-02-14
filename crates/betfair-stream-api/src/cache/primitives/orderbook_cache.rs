@@ -31,7 +31,7 @@ impl OrderBookCache {
             market_id,
             publish_time,
             closed: false,
-            runners: HashMap::new(),
+            runners: HashMap::with_capacity(8),
             last_change: None,
         }
     }

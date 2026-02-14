@@ -34,7 +34,7 @@ impl MarketBookCache {
             publish_time,
             market_definition: None,
             total_matched: Size::zero(),
-            runners: HashMap::new(),
+            runners: HashMap::with_capacity(16),
         }
     }
 
@@ -132,6 +132,9 @@ impl MarketBookCache {
 
     /// Updates the market definition with the given market definition.
     pub fn update_market_definition(&mut self, market_definition: Box<MarketDefinition>) {
+        if self.runners.is_empty() {
+            self.runners.reserve(market_definition.runners.len());
+        }
         for runner_definition in &market_definition.runners {
             let selection_id = runner_definition.id;
             let Some(selection_id) = selection_id else {
