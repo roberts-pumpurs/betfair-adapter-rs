@@ -1,7 +1,7 @@
 use std::path::Path;
 
-use betfair_stream_api::cache::tracker::StreamState;
 use betfair_stream_api::cache::primitives::MarketBookCache;
+use betfair_stream_api::cache::tracker::StreamState;
 use betfair_stream_api::{Cache, MessageProcessor};
 use betfair_stream_types::response::ResponseMessage;
 use betfair_stream_types::response::market_change_message::MarketChangeMessage;
@@ -71,7 +71,12 @@ fn cache_clone_isolated(c: &mut Criterion) {
     state.market_change_update(image_msg);
 
     // Get owned copies for repeated cloning
-    let owned: Vec<MarketBookCache> = state.market_stream_tracker.states().into_iter().cloned().collect();
+    let owned: Vec<MarketBookCache> = state
+        .market_stream_tracker
+        .states()
+        .into_iter()
+        .cloned()
+        .collect();
 
     c.bench_function("cache_clone_isolated", |b| {
         b.iter(|| {
