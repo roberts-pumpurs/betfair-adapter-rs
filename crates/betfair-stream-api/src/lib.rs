@@ -75,6 +75,22 @@ pub struct Cache {
     state: StreamState,
 }
 
+impl Cache {
+    /// Creates a new `Cache` with an empty `StreamState`.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            state: StreamState::new(),
+        }
+    }
+}
+
+impl Default for Cache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Variants of messages produced by the cache-based processor.
 ///
 /// `CachedMessage` represents high-level events derived from raw Betfair streaming responses,
