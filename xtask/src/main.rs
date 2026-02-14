@@ -21,6 +21,10 @@ enum Args {
         #[clap(short, long, default_value_t = false)]
         write: bool,
     },
+    Bench {
+        #[clap(last = true)]
+        args: Vec<String>,
+    },
     SubscribeToMarket,
     /// Generate a Betfair certificate for non-interactive bot usage
     /// Reference:
@@ -132,6 +136,10 @@ fn main() -> eyre::Result<()> {
             } else {
                 cmd!(sh, "typos").run()?;
             }
+        }
+        Args::Bench { args } => {
+            println!("cargo bench");
+            cmd!(sh, "cargo bench -p betfair-stream-api {args...}").run()?;
         }
         Args::SubscribeToMarket => {
             println!("stream-api-subscribe to market");
