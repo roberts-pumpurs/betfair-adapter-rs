@@ -222,6 +222,7 @@ dependencies = [
  "backon",
  "betfair-adapter",
  "betfair-stream-types",
+ "betfair-types",
  "bytes",
  "chrono",
  "criterion",
