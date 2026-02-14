@@ -140,19 +140,24 @@ fn main() -> eyre::Result<()> {
         }
         Args::Bench { save_baseline } => {
             println!("cargo bench");
-            for bench_name in ["deserialize", "cache_update", "process_message"] {
+            let benches = [
+                ("betfair-types", "numeric"),
+                ("betfair-stream-types", "serialize"),
+                ("betfair-stream-api", "deserialize"),
+                ("betfair-stream-api", "cache_update"),
+                ("betfair-stream-api", "process_message"),
+                ("betfair-stream-api", "codec"),
+                ("betfair-adapter", "rpc"),
+            ];
+            for (crate_name, bench_name) in benches {
                 if let Some(ref baseline) = save_baseline {
                     cmd!(
                         sh,
-                        "cargo bench -p betfair-stream-api --bench {bench_name} -- --save-baseline {baseline}"
+                        "cargo bench -p {crate_name} --bench {bench_name} -- --save-baseline {baseline}"
                     )
                     .run()?;
                 } else {
-                    cmd!(
-                        sh,
-                        "cargo bench -p betfair-stream-api --bench {bench_name}"
-                    )
-                    .run()?;
+                    cmd!(sh, "cargo bench -p {crate_name} --bench {bench_name}").run()?;
                 }
             }
         }
