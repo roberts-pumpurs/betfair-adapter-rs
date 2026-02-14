@@ -35,6 +35,34 @@ pub enum ResponseMessage {
     Status(status_message::StatusMessage),
 }
 
+/// Lightweight discriminant for [`ResponseMessage`] variants.
+///
+/// Use this to identify the message type without inspecting the full payload.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum MessageKind {
+    /// A connection handshake message.
+    Connection,
+    /// A market data change message.
+    MarketChange,
+    /// An order data change message.
+    OrderChange,
+    /// A status/heartbeat message.
+    Status,
+}
+
+impl ResponseMessage {
+    /// Returns the discriminant of this message without cloning the payload.
+    #[inline]
+    pub const fn kind(&self) -> MessageKind {
+        match self {
+            Self::Connection(_) => MessageKind::Connection,
+            Self::MarketChange(_) => MessageKind::MarketChange,
+            Self::OrderChange(_) => MessageKind::OrderChange,
+            Self::Status(_) => MessageKind::Status,
+        }
+    }
+}
+
 /// Change Type - set to indicate the type of change - if null this is a delta.
 #[derive(
     Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
