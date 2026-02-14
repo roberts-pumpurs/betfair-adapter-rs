@@ -5,3 +5,4 @@ example_config.toml
 certs
 .DS_Store
 .direnv
+.envrc
