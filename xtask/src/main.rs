@@ -21,6 +21,11 @@ enum Args {
         #[clap(short, long, default_value_t = false)]
         write: bool,
     },
+    Bench {
+        /// Criterion --save-baseline name
+        #[clap(long)]
+        save_baseline: Option<String>,
+    },
     SubscribeToMarket,
     /// Generate a Betfair certificate for non-interactive bot usage
     /// Reference:
@@ -131,6 +136,24 @@ fn main() -> eyre::Result<()> {
                 cmd!(sh, "typos -w").run()?;
             } else {
                 cmd!(sh, "typos").run()?;
+            }
+        }
+        Args::Bench { save_baseline } => {
+            println!("cargo bench");
+            for bench_name in ["deserialize", "cache_update", "process_message"] {
+                if let Some(ref baseline) = save_baseline {
+                    cmd!(
+                        sh,
+                        "cargo bench -p betfair-stream-api --bench {bench_name} -- --save-baseline {baseline}"
+                    )
+                    .run()?;
+                } else {
+                    cmd!(
+                        sh,
+                        "cargo bench -p betfair-stream-api --bench {bench_name}"
+                    )
+                    .run()?;
+                }
             }
         }
         Args::SubscribeToMarket => {
