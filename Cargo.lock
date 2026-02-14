@@ -169,7 +169,9 @@ name = "betfair-adapter"
 version = "0.7.0"
 dependencies = [
  "backon",
+ "betfair-rpc-server-mock",
  "betfair-types",
+ "criterion",
  "eyre",
  "pretty_assertions",
  "redact",

@@ -33,3 +33,10 @@ test-log.workspace = true
 wiremock.workspace = true
 pretty_assertions.workspace = true
 toml.workspace = true
+criterion.workspace = true
+betfair-rpc-server-mock.workspace = true
+serde_json.workspace = true
+
+[[bench]]
+name = "rpc"
+harness = false
