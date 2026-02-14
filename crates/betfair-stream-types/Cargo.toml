@@ -21,3 +21,8 @@ serde_json.workspace = true
 
 [dev-dependencies]
 json-rpc-types.workspace = true
+criterion.workspace = true
+
+[[bench]]
+name = "serialize"
+harness = false

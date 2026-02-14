@@ -246,6 +246,7 @@ version = "0.7.0"
 dependencies = [
  "betfair-types",
  "chrono",
+ "criterion",
  "json-rpc-types",
  "serde",
  "serde_json",
