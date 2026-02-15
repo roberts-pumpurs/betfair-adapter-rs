@@ -1,39 +1,52 @@
 //! Inspired by  [this source](https://github.com/betcode-org/betfair/blob/1ece2bf0ffede3a41bf14ba4ea1c7004f25964dd/betfairlightweight/streaming/cache.py)
 
-use alloc::collections::BTreeMap;
-
 use betfair_adapter::betfair_types::price::Price;
 use betfair_adapter::betfair_types::size::Size;
 use betfair_stream_types::response::{Position, UpdateSet2, UpdateSet3};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
+extern crate alloc;
+use alloc::vec::Vec;
+
 /// Data structure to hold prices/traded amount
+/// Uses a sorted Vec for better cache locality on small collections (typically 5-20 entries)
 #[derive(Debug, PartialEq, PartialOrd, Clone, Serialize, Deserialize, Eq, Hash, Ord)]
 pub struct Available<T: UpdateSet> {
-    pub book: BTreeMap<T::Key, T::Value>,
+    pub book: Vec<(T::Key, T::Value)>,
 }
 
 impl<T: UpdateSet> Available<T> {
     pub fn new<A: AsRef<[T]>>(prices: A) -> Self {
-        let mut instance = Self {
-            book: BTreeMap::new(),
-        };
-
-        instance.update(prices);
-        instance
+        let mut book: Vec<(T::Key, T::Value)> = prices
+            .as_ref()
+            .iter()
+            .filter(|p| !p.should_be_deleted())
+            .map(|p| (p.key(), p.value()))
+            .collect();
+        book.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+        Self { book }
     }
 
     pub fn update<A: AsRef<[T]>>(&mut self, book_update: A) {
         for prices in book_update.as_ref() {
             let key = prices.key(); // this is either `price` or `position`
-            let value = prices.value(); // this is either `(price, size)` or `size`
 
-            // If the "key" is zero, then we need to delete the item
-            if prices.should_be_deleted() {
-                self.book.remove(&key);
-            } else {
-                self.book.insert(key, value);
+            match self.book.binary_search_by(|entry| entry.0.cmp(&key)) {
+                Ok(idx) => {
+                    // Key exists - either update or delete
+                    if prices.should_be_deleted() {
+                        self.book.remove(idx);
+                    } else {
+                        self.book[idx].1 = prices.value();
+                    }
+                }
+                Err(idx) => {
+                    // Key doesn't exist - insert if not a deletion
+                    if !prices.should_be_deleted() {
+                        self.book.insert(idx, (key, prices.value()));
+                    }
+                }
             }
         }
     }
@@ -114,15 +127,16 @@ mod tests {
     fn test_init() {
         let init = setup_set3();
 
-        let mut expected = BTreeMap::new();
-        expected.insert(
-            Position(num_u8!(0)),
-            (Price::new(num!(1.01)).unwrap(), Size::new(num!(12))),
-        );
-        expected.insert(
-            Position(num_u8!(1)),
-            (Price::new(num!(1.02)).unwrap(), Size::new(num!(34.45))),
-        );
+        let expected = vec![
+            (
+                Position(num_u8!(0)),
+                (Price::new(num!(1.01)).unwrap(), Size::new(num!(12))),
+            ),
+            (
+                Position(num_u8!(1)),
+                (Price::new(num!(1.02)).unwrap(), Size::new(num!(34.45))),
+            ),
+        ];
 
         assert_eq!(init.book, expected);
     }
@@ -136,10 +150,11 @@ mod tests {
         ];
         let init = Available::new(prices);
 
-        let mut expected = BTreeMap::new();
-        expected.insert(Price::new(num!(1.02)).unwrap(), Size::new(num!(1157.21)));
-        expected.insert(Price::new(num!(13)).unwrap(), Size::new(num!(28.01)));
-        expected.insert(Price::new(num!(27)).unwrap(), Size::new(num!(0.95)));
+        let expected = vec![
+            (Price::new(num!(1.02)).unwrap(), Size::new(num!(1157.21))),
+            (Price::new(num!(13)).unwrap(), Size::new(num!(28.01))),
+            (Price::new(num!(27)).unwrap(), Size::new(num!(0.95))),
+        ];
 
         assert_eq!(init.book, expected);
     }
@@ -149,7 +164,7 @@ mod tests {
         let mut init = setup_set3();
         init.clear();
 
-        assert_eq!(init.book, BTreeMap::new());
+        assert_eq!(init.book, Vec::new());
     }
 
     #[test]
@@ -163,10 +178,11 @@ mod tests {
             Price::new(num!(27)).unwrap(),
             Size::new(num!(2)),
         )];
-        let mut expected = BTreeMap::new();
-        expected.insert(Price::new(num!(1.02)).unwrap(), Size::new(num!(1157.21)));
-        expected.insert(Price::new(num!(13)).unwrap(), Size::new(num!(28.01)));
-        expected.insert(Price::new(num!(27)).unwrap(), Size::new(num!(2)));
+        let expected = vec![
+            (Price::new(num!(1.02)).unwrap(), Size::new(num!(1157.21))),
+            (Price::new(num!(13)).unwrap(), Size::new(num!(28.01))),
+            (Price::new(num!(27)).unwrap(), Size::new(num!(2))),
+        ];
 
         let mut actual = init;
         actual.update(update);
@@ -193,15 +209,16 @@ mod tests {
             Price::new(num!(1.02)).unwrap(),
             Size::new(num!(22)),
         )];
-        let mut expected = BTreeMap::new();
-        expected.insert(
-            Position(num_u8!(1)),
-            (Price::new(num!(1.02)).unwrap(), Size::new(num!(22))),
-        );
-        expected.insert(
-            Position(num_u8!(0)),
-            (Price::new(num!(1.01)).unwrap(), Size::new(num!(12))),
-        );
+        let expected = vec![
+            (
+                Position(num_u8!(0)),
+                (Price::new(num!(1.01)).unwrap(), Size::new(num!(12))),
+            ),
+            (
+                Position(num_u8!(1)),
+                (Price::new(num!(1.02)).unwrap(), Size::new(num!(22))),
+            ),
+        ];
 
         let mut actual = init;
         actual.update(update);
@@ -219,8 +236,7 @@ mod tests {
             Price::new(num!(27)).unwrap(),
             Size::new(num!(0)),
         )];
-        let mut expected = BTreeMap::new();
-        expected.insert(Price::new(num!(13)).unwrap(), Size::new(num!(28.01)));
+        let expected = vec![(Price::new(num!(13)).unwrap(), Size::new(num!(28.01)))];
 
         let mut actual = init;
         actual.update(update);
@@ -247,11 +263,10 @@ mod tests {
             Price::new(num!(1.02)).unwrap(),
             Size::new(num!(0)),
         )];
-        let mut expected = BTreeMap::new();
-        expected.insert(
+        let expected = vec![(
             Position(num_u8!(0)),
             (Price::new(num!(1.01)).unwrap(), Size::new(num!(12))),
-        );
+        )];
 
         let mut actual = init;
         actual.update(update);
