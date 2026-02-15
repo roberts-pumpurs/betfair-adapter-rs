@@ -54,7 +54,9 @@ fn size_new(c: &mut Criterion) {
 }
 
 fn f64ord_hash(c: &mut Criterion) {
-    let values: Vec<F64Ord> = (0..100).map(|i| F64Ord::new(i as f64 * 0.5 + 1.0)).collect();
+    let values: Vec<F64Ord> = (0..100)
+        .map(|i| F64Ord::new(i as f64 * 0.5 + 1.0))
+        .collect();
     c.bench_function("f64ord_hash", |b| {
         b.iter(|| {
             for v in &values {
@@ -73,7 +75,9 @@ fn f64ord_btreemap_lookup(c: &mut Criterion) {
         let key = F64Ord::new(1.0 + i as f64 * 0.02);
         map.insert(key, i as f64 * 10.0);
     }
-    let lookup_keys: Vec<F64Ord> = (0..50).map(|i| F64Ord::new(1.0 + i as f64 * 0.02)).collect();
+    let lookup_keys: Vec<F64Ord> = (0..50)
+        .map(|i| F64Ord::new(1.0 + i as f64 * 0.02))
+        .collect();
 
     c.bench_function("f64ord_btreemap_lookup", |b| {
         b.iter(|| {
