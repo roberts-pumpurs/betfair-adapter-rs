@@ -54,6 +54,7 @@ betfair-stream-api → betfair-adapter → betfair-types → (generated at build
 ## Conventions
 
 - Conventional commits required (enforced by CI).
+- NEVER include "Co authored by" statements in the commits 
 - Workspace lints: `rust_2018_idioms = "deny"`, `unused_must_use = "deny"`.
 - rustfmt config: `reorder_imports = true`, `use_field_init_shorthand = true`.
 - CI runs: clippy, fmt check, nextest, cargo-deny, typos, cargo-machete, and doc generation.
