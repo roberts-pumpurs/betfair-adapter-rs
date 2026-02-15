@@ -1,12 +1,13 @@
 use std::path::Path;
-use std::sync::Arc;
 
 use betfair_stream_api::cache::primitives::MarketBookCache;
 use betfair_stream_api::cache::tracker::StreamState;
 use betfair_stream_api::{Cache, MessageProcessor};
 use betfair_stream_types::response::ResponseMessage;
 use betfair_stream_types::response::market_change_message::MarketChangeMessage;
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use std::hint::black_box;
+
+use criterion::{Criterion, criterion_group, criterion_main};
 
 fn fixture(name: &str) -> String {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -63,18 +64,25 @@ fn process_message_image(c: &mut Criterion) {
     });
 }
 
-/// Isolate the cost of cloning Arc-wrapped MarketBookCache (measures P0 optimization)
+/// Isolate the cost of cloning a populated MarketBookCache (measures P0 bottleneck)
 fn cache_clone_isolated(c: &mut Criterion) {
     let image_json = fixture("streaming_mcm_SUB_IMAGE.json");
     let image_msg = parse_market_change(&image_json);
 
     let mut state = StreamState::new();
-    let owned = state.market_change_update(image_msg).unwrap();
+    state.market_change_update(image_msg);
+
+    // Get owned copies for repeated cloning
+    let owned: Vec<MarketBookCache> = state
+        .market_stream_tracker
+        .states()
+        .into_iter()
+        .cloned()
+        .collect();
 
     c.bench_function("cache_clone_isolated", |b| {
         b.iter(|| {
-            let cloned: Vec<Arc<MarketBookCache>> =
-                black_box(&owned).iter().map(Arc::clone).collect();
+            let cloned: Vec<MarketBookCache> = black_box(&owned).iter().cloned().collect();
             black_box(cloned);
         });
     });
