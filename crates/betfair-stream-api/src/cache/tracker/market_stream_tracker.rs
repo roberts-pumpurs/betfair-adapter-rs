@@ -34,26 +34,29 @@ impl MarketStreamTracker {
         if let Some(data) = msg.0.data {
             let mut updated_caches: Vec<Arc<MarketBookCache>> = Vec::with_capacity(data.len());
             let mut market_ids = Vec::with_capacity(data.len());
-            for market_change in data {
-                let Some(market_id) = market_change.market_id.clone() else {
+            for mut market_change in data {
+                // Take ownership instead of cloning from the Option
+                let Some(market_id) = market_change.market_id.take() else {
                     continue;
                 };
 
-                let market = self
-                    .market_state
-                    .entry(market_id.clone())
-                    .or_insert_with(|| {
-                        img = HasFullImage(true);
-                        Arc::new(MarketBookCache::new(market_id.clone(), publish_time))
-                    });
+                // Only clone when inserting a new market (not in the common update case)
+                if !self.market_state.contains_key(&market_id) {
+                    img = HasFullImage(true);
+                    self.market_state.insert(
+                        market_id.clone(), // Clone needed for HashMap key
+                        Arc::new(MarketBookCache::new(market_id.clone(), publish_time)),
+                    );
+                }
 
+                let market = self.market_state.get_mut(&market_id).unwrap();
                 let full_image = market_change.full_image.unwrap_or(false);
                 if full_image {
                     img = HasFullImage(true);
                     *market = Arc::new(MarketBookCache::new(market_id.clone(), publish_time));
                 }
                 Arc::make_mut(market).update_cache(market_change, publish_time, true);
-                market_ids.push(market_id);
+                market_ids.push(market_id); // Move, no clone
             }
 
             for market_id in market_ids {
