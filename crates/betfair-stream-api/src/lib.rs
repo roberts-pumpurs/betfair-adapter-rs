@@ -5,6 +5,9 @@
 //! Users can customize how incoming messages are handled by implementing the `MessageProcessor` trait
 //! or using the built-in `Cache` processor for maintaining market and order caches.
 extern crate alloc;
+
+#[cfg(feature = "simd")]
+use simd_json;
 pub mod cache;
 use backon::{BackoffBuilder as _, ExponentialBuilder};
 use betfair_adapter::{Authenticated, BetfairRpcClient, Unauthenticated};
@@ -637,11 +640,22 @@ impl Decoder for StreamAPIClientCodec {
             // Strip the delimiter bytes
             line.truncate(line.len().saturating_sub(delimiter_size));
 
-            // Freeze into zero-copy Bytes before parsing
-            let raw = line.freeze();
+            #[cfg(feature = "simd")]
+            let (raw, data) = {
+                // simd-json requires mutable buffer and modifies it in place
+                let raw = line.clone().freeze();
+                let data = simd_json::from_slice::<ResponseMessage>(&mut line)
+                    .map_err(|e| eyre::eyre!("simd-json parse error: {}", e))?;
+                (raw, data)
+            };
 
-            // Now we can parse it as JSON
-            let data = serde_json::from_slice::<ResponseMessage>(&raw)?;
+            #[cfg(not(feature = "simd"))]
+            let (raw, data) = {
+                let raw = line.freeze();
+                let data = serde_json::from_slice::<ResponseMessage>(&raw)?;
+                (raw, data)
+            };
+
             return Ok(Some((raw, data)));
         }
         Ok(None)
