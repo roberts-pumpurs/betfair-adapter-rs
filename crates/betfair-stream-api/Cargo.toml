@@ -12,6 +12,9 @@ categories.workspace = true
 documentation.workspace = true
 exclude.workspace = true
 
+[features]
+simd = ["dep:simd-json"]
+
 [dependencies]
 backon.workspace = true
 tokio.workspace = true
@@ -30,6 +33,7 @@ tokio-stream.workspace = true
 rustls.workspace = true
 serde_json.workspace = true
 rustls-native-certs.workspace = true
+simd-json = { version = "0.14", optional = true }
 
 [dev-dependencies]
 pretty_assertions.workspace = true

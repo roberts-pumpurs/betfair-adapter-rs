@@ -18,6 +18,8 @@ chrono.workspace = true
 typed-builder.workspace = true
 betfair-types.workspace = true
 serde_json.workspace = true
+compact_str.workspace = true
+smallvec.workspace = true
 
 [dev-dependencies]
 json-rpc-types.workspace = true
