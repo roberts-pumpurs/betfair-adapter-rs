@@ -6,7 +6,9 @@ use betfair_stream_types::request::market_subscription_message::{
     Fields, MarketDataFilter, MarketFilter, MarketSubscriptionMessage,
 };
 use betfair_types::types::sports_aping::{EventTypeId, MarketId};
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use std::hint::black_box;
+
+use criterion::{Criterion, criterion_group, criterion_main};
 
 fn ser_market_subscription(c: &mut Criterion) {
     let msg = RequestMessage::MarketSubscription(MarketSubscriptionMessage {

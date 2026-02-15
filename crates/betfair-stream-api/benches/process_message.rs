@@ -5,7 +5,9 @@ use betfair_stream_api::cache::tracker::StreamState;
 use betfair_stream_api::{Cache, MessageProcessor};
 use betfair_stream_types::response::ResponseMessage;
 use betfair_stream_types::response::market_change_message::MarketChangeMessage;
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use std::hint::black_box;
+
+use criterion::{Criterion, criterion_group, criterion_main};
 
 fn fixture(name: &str) -> String {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))

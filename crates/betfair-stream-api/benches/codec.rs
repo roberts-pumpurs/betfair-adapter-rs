@@ -8,7 +8,9 @@ use betfair_stream_types::request::market_subscription_message::{
 };
 use betfair_types::types::sports_aping::{EventTypeId, MarketId};
 use bytes::BytesMut;
-use criterion::{BatchSize, Criterion, black_box, criterion_group, criterion_main};
+use std::hint::black_box;
+
+use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use tokio_util::codec::Encoder;
 
 fn codec_encode_market_subscription(c: &mut Criterion) {
