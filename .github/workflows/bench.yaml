@@ -1,0 +1,83 @@
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+name: bench
+jobs:
+  bench:
+    runs-on: ubuntu-22.04
+    name: benchmark
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Setup repo
+        uses: ./.github/actions/setup-repo
+
+      - name: Install critcmp
+        run: cargo install critcmp --locked
+
+      # Run benchmarks on PR base (the branch we're merging into)
+      - name: Checkout base branch
+        run: git checkout ${{ github.event.pull_request.base.sha }}
+
+      - name: Bench base
+        id: bench-base
+        run: |
+          if cargo xtask bench --save-baseline base; then
+            echo "skipped=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "No benchmark targets on base branch, skipping"
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Run benchmarks on PR head
+      - name: Checkout PR head
+        run: git checkout ${{ github.event.pull_request.head.sha }}
+
+      - name: Bench head
+        run: cargo xtask bench --save-baseline head
+
+      # Compare and post results
+      - name: Compare benchmarks
+        id: compare
+        run: |
+          echo 'report<<EOF' >> "$GITHUB_OUTPUT"
+          if [ "${{ steps.bench-base.outputs.skipped }}" = "true" ]; then
+            echo "No benchmarks on base branch — showing head results only:" >> "$GITHUB_OUTPUT"
+            critcmp head >> "$GITHUB_OUTPUT"
+          else
+            critcmp base head >> "$GITHUB_OUTPUT"
+          fi
+          echo 'EOF' >> "$GITHUB_OUTPUT"
+
+      - name: Find existing comment
+        uses: peter-evans/find-comment@v3
+        id: find-comment
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: github-actions[bot]
+          body-includes: "## Benchmark comparison"
+
+      - name: Post or update PR comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          edit-mode: replace
+          body: |
+            ## Benchmark comparison
+
+            **Base:** `${{ github.event.pull_request.base.sha }}` | **Head:** `${{ github.event.pull_request.head.sha }}`
+
+            ```
+            ${{ steps.compare.outputs.report }}
+            ```

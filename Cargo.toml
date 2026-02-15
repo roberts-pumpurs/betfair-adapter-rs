@@ -140,6 +140,7 @@ wiremock = "0.6"
 test-log = { version = "0.2", features = ["trace"], default-features = false }
 pretty_assertions = "1"
 json-rpc-types = "1"
+criterion = { version = "0.8", features = ["html_reports"] }
 
 # Tracing
 tracing = { version = "0.1" }

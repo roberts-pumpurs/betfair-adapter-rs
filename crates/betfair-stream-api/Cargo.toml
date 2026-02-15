@@ -33,6 +33,24 @@ rustls-native-certs.workspace = true
 
 [dev-dependencies]
 pretty_assertions.workspace = true
+criterion.workspace = true
+betfair-types.workspace = true
 
 [lints]
 workspace = true
+
+[[bench]]
+name = "deserialize"
+harness = false
+
+[[bench]]
+name = "cache_update"
+harness = false
+
+[[bench]]
+name = "process_message"
+harness = false
+
+[[bench]]
+name = "codec"
+harness = false
