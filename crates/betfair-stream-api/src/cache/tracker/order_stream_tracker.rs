@@ -16,7 +16,7 @@ pub struct OrderStreamTracker {
 impl OrderStreamTracker {
     pub(crate) fn new() -> Self {
         Self {
-            market_state: HashMap::new(),
+            market_state: HashMap::with_capacity(64),
             updates_processed: 0,
         }
     }

@@ -36,9 +36,9 @@ impl OrderBookRunner {
             selection_id,
             matched_lays: Available::new(&[]),
             matched_backs: Available::new(&[]),
-            unmatched_orders: HashMap::new(),
+            unmatched_orders: HashMap::with_capacity(16),
             handicap: None,
-            strategy_matches: HashMap::new(),
+            strategy_matches: HashMap::with_capacity(4),
         }
     }
 
