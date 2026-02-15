@@ -141,7 +141,6 @@ fn main() -> eyre::Result<()> {
         Args::Bench { save_baseline } => {
             println!("cargo bench");
             let benches = [
-                ("betfair-types", "numeric"),
                 ("betfair-stream-types", "serialize"),
                 ("betfair-stream-api", "deserialize"),
                 ("betfair-stream-api", "cache_update"),
