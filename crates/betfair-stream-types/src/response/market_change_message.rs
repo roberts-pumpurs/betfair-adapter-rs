@@ -2,6 +2,7 @@ use betfair_types::numeric::F64Ord;
 use betfair_types::price::Price;
 use betfair_types::size::Size;
 use betfair_types::types::sports_aping::{MarketId, SelectionId};
+use compact_str::CompactString;
 use serde::{Deserialize, Serialize};
 
 use super::{DataChange, DatasetChangeMessage, UpdateSet2, UpdateSet3};
@@ -64,15 +65,15 @@ pub struct MarketChange {
 pub struct MarketDefinition {
     /// The venue of the market.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub venue: Option<String>,
+    pub venue: Option<CompactString>,
     /// The type of race.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub race_type: Option<String>,
+    pub race_type: Option<CompactString>,
     /// The time the market was settled.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub settled_time: Option<String>,
+    pub settled_time: Option<CompactString>,
     /// The timezone of the market.
-    pub timezone: String,
+    pub timezone: CompactString,
     /// The divisor for each way betting.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(
@@ -82,10 +83,10 @@ pub struct MarketDefinition {
     pub each_way_divisor: Option<F64Ord>,
 
     /// The market regulators.
-    pub regulators: Vec<String>,
+    pub regulators: Vec<CompactString>,
 
     /// The type of market.
-    pub market_type: String,
+    pub market_type: CompactString,
 
     /// The base rate for the market.
     #[serde(deserialize_with = "betfair_types::types::deserialize_f64")]
@@ -96,7 +97,7 @@ pub struct MarketDefinition {
 
     /// The country code for the market.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub country_code: Option<String>,
+    pub country_code: Option<CompactString>,
 
     /// For Handicap and Line markets, the maximum value for the outcome, in market units for this
     /// market (eg 100 runs).
@@ -133,7 +134,7 @@ pub struct MarketDefinition {
     pub line_min_unit: Option<F64Ord>,
 
     /// The event ID associated with the market.
-    pub event_id: String,
+    pub event_id: CompactString,
 
     /// Indicates if cross matching is enabled.
     pub cross_matching: bool,
@@ -154,7 +155,7 @@ pub struct MarketDefinition {
 
     /// The time the market was suspended.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub suspend_time: Option<String>,
+    pub suspend_time: Option<CompactString>,
 
     /// Indicates if discounts are allowed.
     pub discount_allowed: bool,
@@ -169,18 +170,18 @@ pub struct MarketDefinition {
     pub version: i64,
 
     /// The Event Type the market is contained within.
-    pub event_type_id: String,
+    pub event_type_id: CompactString,
 
     /// Indicates if the market is complete.
     pub complete: bool,
 
     /// The open date of the market.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub open_date: Option<String>,
+    pub open_date: Option<CompactString>,
 
     /// The time of the market.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub market_time: Option<String>,
+    pub market_time: Option<CompactString>,
 
     /// Indicates if the BSP has been reconciled.
     pub bsp_reconciled: bool,
@@ -359,7 +360,7 @@ pub struct RunnerDefinition {
     pub sort_priority: Option<i32>,
     /// The removal date of the runner.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub removal_date: Option<String>,
+    pub removal_date: Option<CompactString>,
     /// Selection Id - the id of the runner (selection)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<SelectionId>,

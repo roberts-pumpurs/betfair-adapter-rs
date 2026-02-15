@@ -1,3 +1,4 @@
+use compact_str::CompactString;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -8,5 +9,5 @@ pub struct ConnectionMessage {
     pub id: Option<i32>,
     /// The connection id
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub connection_id: Option<String>,
+    pub connection_id: Option<CompactString>,
 }

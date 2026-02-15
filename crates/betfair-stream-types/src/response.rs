@@ -1,6 +1,7 @@
 use betfair_types::price::Price;
 use betfair_types::size::Size;
 use chrono::{DateTime, TimeZone as _, Utc};
+use compact_str::CompactString;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -140,10 +141,10 @@ pub struct DatasetChangeMessage<T: DeserializeOwned + DataChange<T>> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
-pub struct Clock(pub String);
+pub struct Clock(pub CompactString);
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
-pub struct InitialClock(pub String);
+pub struct InitialClock(pub CompactString);
 
 impl<'de, T> Deserialize<'de> for DatasetChangeMessage<T>
 where
@@ -172,7 +173,7 @@ where
         let clock = map
             .get("clk")
             .and_then(|clk| clk.as_str())
-            .map(|clk| Clock(clk.to_owned()));
+            .map(|clk| Clock(CompactString::from(clk)));
 
         let heartbeat_ms = map.get("heartbeatMs").and_then(serde_json::Value::as_i64);
 
@@ -184,7 +185,7 @@ where
         let initial_clock = map
             .get("initialClk")
             .and_then(|ic| ic.as_str())
-            .map(|ic| InitialClock(ic.to_owned()));
+            .map(|ic| InitialClock(CompactString::from(ic)));
 
         let conflate_ms = map.get("conflateMs").and_then(serde_json::Value::as_i64);
 
@@ -299,7 +300,7 @@ mod tests {
         assert_eq!(
             msg,
             ResponseMessage::Connection(connection_message::ConnectionMessage {
-                connection_id: Some("206-221122192222-702491".to_owned()),
+                connection_id: Some("206-221122192222-702491".into()),
                 id: None,
             })
         );
