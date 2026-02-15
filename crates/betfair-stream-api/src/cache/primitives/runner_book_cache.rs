@@ -1,5 +1,7 @@
 //! Runner book cache (used for market book Stream API caching)
 
+use std::sync::Arc;
+
 use betfair_adapter::betfair_types::numeric::F64Ord;
 use betfair_adapter::betfair_types::price::Price;
 use betfair_adapter::betfair_types::size::Size;
@@ -28,7 +30,7 @@ pub struct RunnerBookCache {
     starting_price_near: Option<Price>,
     starting_price_far: Option<Price>,
     handicap: Option<F64Ord>,
-    definition: Option<RunnerDefinition>,
+    definition: Option<Arc<RunnerDefinition>>,
 }
 
 impl RunnerBookCache {
@@ -78,7 +80,9 @@ impl RunnerBookCache {
         })
     }
 
-    pub fn new_from_runner_definition(runner_definition: RunnerDefinition) -> eyre::Result<Self> {
+    pub fn new_from_runner_definition(
+        runner_definition: Arc<RunnerDefinition>,
+    ) -> eyre::Result<Self> {
         let Some(selection_id) = runner_definition.id else {
             bail!("Invalid selection id");
         };
@@ -119,7 +123,7 @@ impl RunnerBookCache {
         self.traded.update(traded);
     }
 
-    pub fn set_definition(&mut self, definition: RunnerDefinition) {
+    pub fn set_definition(&mut self, definition: Arc<RunnerDefinition>) {
         self.definition = Some(definition);
     }
 
@@ -250,8 +254,8 @@ impl RunnerBookCache {
     }
 
     #[must_use]
-    pub const fn definition(&self) -> Option<&RunnerDefinition> {
-        self.definition.as_ref()
+    pub fn definition(&self) -> Option<&RunnerDefinition> {
+        self.definition.as_deref()
     }
 }
 

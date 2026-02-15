@@ -133,25 +133,32 @@ impl MarketBookCache {
 
     /// Updates the market definition with the given market definition.
     pub fn update_market_definition(&mut self, market_definition: Box<MarketDefinition>) {
+        // Take ownership of runners before storing the definition
+        let mut market_def = *market_definition;
+        let runner_defs = std::mem::take(&mut market_def.runners);
+
         if self.runners.is_empty() {
-            self.runners.reserve(market_definition.runners.len());
+            self.runners.reserve(runner_defs.len());
         }
-        for runner_definition in &market_definition.runners {
+
+        for runner_definition in runner_defs {
             let selection_id = runner_definition.id;
             let Some(selection_id) = selection_id else {
                 continue;
             };
             let hc = runner_definition.handicap;
             let key = (selection_id, hc);
+
+            let arc_def = Arc::new(runner_definition);
             let runner = self.runners.get_mut(&key);
             if let Some(runner) = runner {
-                runner.set_definition(runner_definition.clone());
+                runner.set_definition(Arc::clone(&arc_def));
             } else {
-                self.add_runner_from_definition(runner_definition.clone());
+                self.add_runner_from_definition(arc_def);
             }
         }
 
-        self.market_definition = Some(Arc::from(*market_definition));
+        self.market_definition = Some(Arc::new(market_def));
     }
 
     /// Adds a runner from a change.
@@ -167,7 +174,7 @@ impl MarketBookCache {
     }
 
     /// Adds a runner from a definition.
-    fn add_runner_from_definition(&mut self, runner_definition: RunnerDefinition) {
+    fn add_runner_from_definition(&mut self, runner_definition: Arc<RunnerDefinition>) {
         let Some(selection_id) = runner_definition.id else {
             return;
         };
