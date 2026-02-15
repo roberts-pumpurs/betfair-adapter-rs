@@ -1,6 +1,7 @@
 //! Market book cache
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use betfair_adapter::betfair_types::numeric::F64Ord;
 use betfair_adapter::betfair_types::size::Size;
@@ -19,7 +20,7 @@ pub struct MarketBookCache {
     publish_time: DateTime<Utc>,
     active: bool,
     total_matched: Size,
-    market_definition: Option<Box<MarketDefinition>>,
+    market_definition: Option<Arc<MarketDefinition>>,
     runners: HashMap<(SelectionId, Option<F64Ord>), RunnerBookCache>,
 }
 
@@ -150,7 +151,7 @@ impl MarketBookCache {
             }
         }
 
-        self.market_definition = Some(market_definition);
+        self.market_definition = Some(Arc::from(*market_definition));
     }
 
     /// Adds a runner from a change.
@@ -190,9 +191,8 @@ impl MarketBookCache {
     }
 
     /// Returns the market definition if it exists.
-    #[expect(clippy::borrowed_box)]
     #[must_use]
-    pub const fn market_definition(&self) -> Option<&Box<MarketDefinition>> {
+    pub fn market_definition(&self) -> Option<&Arc<MarketDefinition>> {
         self.market_definition.as_ref()
     }
 
@@ -341,7 +341,7 @@ mod tests {
 
         assert_eq!(
             init.market_definition,
-            Some(Box::new(mock_market_definition))
+            Some(Arc::new(mock_market_definition))
         );
     }
 
