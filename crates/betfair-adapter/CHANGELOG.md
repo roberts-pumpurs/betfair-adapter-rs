@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-adapter-v0.7.0...betfair-adapter-v0.7.1) - 2026-02-15
+
+### Other
+
+- add benchmark comparison workflow for PRs ([#113](https://github.com/roberts-pumpurs/betfair-adapter-rs/pull/113))
+
 ## [0.6.3](https://github.com/roberts-pumpurs/betfair-adapter-rs/compare/betfair-adapter-v0.6.2...betfair-adapter-v0.6.3) - 2025-11-03
 
 ### Other
