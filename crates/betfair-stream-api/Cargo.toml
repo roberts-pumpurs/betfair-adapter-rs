@@ -39,6 +39,7 @@ simd-json = { version = "0.14", optional = true }
 pretty_assertions.workspace = true
 criterion.workspace = true
 betfair-types.workspace = true
+smallvec.workspace = true
 
 [lints]
 workspace = true

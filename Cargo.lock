@@ -263,6 +263,7 @@ dependencies = [
  "serde",
  "serde_json",
  "simd-json",
+ "smallvec",
  "tokio",
  "tokio-rustls",
  "tokio-stream",

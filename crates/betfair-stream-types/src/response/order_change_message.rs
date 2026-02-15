@@ -8,6 +8,7 @@ use betfair_types::types::sports_aping::{BetId, MarketId, SelectionId};
 use chrono::{DateTime, Utc};
 use compact_str::CompactString;
 use serde::{Deserialize, Serialize};
+use smallvec::SmallVec;
 
 use super::{DataChange, DatasetChangeMessage, UpdateSet2};
 
@@ -39,7 +40,7 @@ pub struct OrderMarketChange {
     pub account_id: Option<i64>,
     /// Order Changes - a list of changes to orders on a selection.
     #[serde(rename = "orc")]
-    pub order_runner_change: Option<Vec<OrderRunnerChange>>,
+    pub order_runner_change: Option<SmallVec<[OrderRunnerChange; 4]>>,
     /// Closed - indicates if the market is closed.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub closed: Option<bool>,
@@ -59,12 +60,12 @@ pub struct OrderRunnerChange {
     /// (selection)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "mb")]
-    pub matched_backs: Option<Vec<UpdateSet2>>,
+    pub matched_backs: Option<SmallVec<[UpdateSet2; 4]>>,
     /// Matched Lays - matched amounts by distinct matched price on the Lay side for this runner
     /// (selection)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "ml")]
-    pub matched_lays: Option<Vec<UpdateSet2>>,
+    pub matched_lays: Option<SmallVec<[UpdateSet2; 4]>>,
 
     /// Strategy Matches - Matched Backs and Matched Lays grouped by strategy reference
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -74,7 +75,7 @@ pub struct OrderRunnerChange {
     /// Unmatched Orders - orders on this runner (selection) that are not fully matched
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "uo")]
-    pub unmatched_orders: Option<Vec<Order>>,
+    pub unmatched_orders: Option<SmallVec<[Order; 2]>>,
     /// Selection Id - the id of the runner (selection)
     pub id: SelectionId,
     /// Handicap - the handicap of the runner (selection) (null if not applicable)
@@ -242,10 +243,10 @@ pub struct StrategyMatchChange {
     /// Matched Backs - matched amounts by distinct matched price on the Back side for this
     /// strategy
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub mb: Option<Vec<UpdateSet2>>,
+    pub mb: Option<SmallVec<[UpdateSet2; 4]>>,
     /// Matched Lays - matched amounts by distinct matched price on the Lay side for this strategy
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ml: Option<Vec<UpdateSet2>>,
+    pub ml: Option<SmallVec<[UpdateSet2; 4]>>,
 }
 
 mod ts_millis {

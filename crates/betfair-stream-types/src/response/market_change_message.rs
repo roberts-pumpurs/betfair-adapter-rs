@@ -4,6 +4,7 @@ use betfair_types::size::Size;
 use betfair_types::types::sports_aping::{MarketId, SelectionId};
 use compact_str::CompactString;
 use serde::{Deserialize, Serialize};
+use smallvec::SmallVec;
 
 use super::{DataChange, DatasetChangeMessage, UpdateSet2, UpdateSet3};
 use crate::request::market_subscription_message::StreamMarketFilterBettingType;
@@ -35,7 +36,7 @@ pub struct MarketChange {
     /// Runner Changes - a list of changes to runners (or null if un-changed)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "rc")]
-    pub runner_change: Option<Vec<RunnerChange>>,
+    pub runner_change: Option<SmallVec<[RunnerChange; 4]>>,
     /// Image - replace existing prices / data with the data supplied: it is not a delta (or null
     /// if delta)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -276,23 +277,23 @@ pub struct RunnerChange {
     /// vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "batb")]
-    pub best_available_to_back: Option<Vec<UpdateSet3>>,
+    pub best_available_to_back: Option<SmallVec<[UpdateSet3; 4]>>,
 
     /// Starting Price Back - `PriceVol` tuple delta of price changes (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "spb")]
-    pub starting_price_back: Option<Vec<UpdateSet2>>,
+    pub starting_price_back: Option<SmallVec<[UpdateSet2; 4]>>,
 
     /// Best Display Available To Lay (includes virtual prices)- `LevelPriceVol` triple delta of
     /// price changes, keyed by level (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "bdatl")]
-    pub best_display_available_to_lay: Option<Vec<UpdateSet3>>,
+    pub best_display_available_to_lay: Option<SmallVec<[UpdateSet3; 4]>>,
 
     /// Traded - `PriceVol` tuple delta of price changes (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "trd")]
-    pub traded: Option<Vec<UpdateSet2>>,
+    pub traded: Option<SmallVec<[UpdateSet2; 4]>>,
 
     /// Starting Price Far - The far starting price (or null if un-changed)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -307,12 +308,12 @@ pub struct RunnerChange {
     /// Available To Back - `PriceVol` tuple delta of price changes (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "atb")]
-    pub available_to_back: Option<Vec<UpdateSet2>>,
+    pub available_to_back: Option<SmallVec<[UpdateSet2; 4]>>,
 
     /// Starting Price Lay - `PriceVol` tuple delta of price changes (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "spl")]
-    pub starting_price_lay: Option<Vec<UpdateSet2>>,
+    pub starting_price_lay: Option<SmallVec<[UpdateSet2; 4]>>,
 
     /// Starting Price Near - The far starting price (or null if un-changed)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -322,13 +323,13 @@ pub struct RunnerChange {
     /// Available To Lay - `PriceVol` tuple delta of price changes (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "atl")]
-    pub available_to_lay: Option<Vec<UpdateSet2>>,
+    pub available_to_lay: Option<SmallVec<[UpdateSet2; 4]>>,
 
     /// Best Available To Lay - `LevelPriceVol` triple delta of price changes, keyed by level (0
     /// vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "batl")]
-    pub best_available_to_lay: Option<Vec<UpdateSet3>>,
+    pub best_available_to_lay: Option<SmallVec<[UpdateSet3; 4]>>,
 
     /// Selection Id - the id of the runner (selection)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -348,7 +349,7 @@ pub struct RunnerChange {
     /// price changes, keyed by level (0 vol is remove)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "bdatb")]
-    pub best_display_available_to_back: Option<Vec<UpdateSet3>>,
+    pub best_display_available_to_back: Option<SmallVec<[UpdateSet3; 4]>>,
 }
 
 /// Represents the definition of a runner.

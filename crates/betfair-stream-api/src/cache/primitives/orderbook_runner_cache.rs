@@ -49,11 +49,11 @@ impl OrderBookRunner {
         }
     }
 
-    pub(crate) fn update_matched_lays(&mut self, ml: &Vec<UpdateSet2>) {
+    pub(crate) fn update_matched_lays(&mut self, ml: impl AsRef<[UpdateSet2]>) {
         self.matched_lays.update(ml);
     }
 
-    pub(crate) fn update_matched_backs(&mut self, mb: &Vec<UpdateSet2>) {
+    pub(crate) fn update_matched_backs(&mut self, mb: impl AsRef<[UpdateSet2]>) {
         self.matched_backs.update(mb);
     }
 

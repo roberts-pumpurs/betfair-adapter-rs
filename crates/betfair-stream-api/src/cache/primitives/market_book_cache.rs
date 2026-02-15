@@ -219,6 +219,7 @@ mod tests {
     use betfair_stream_types::response::market_change_message::{
         MarketChangeMessage, StreamRunnerDefinitionStatus,
     };
+    use smallvec::smallvec;
 
     fn init() -> (MarketId, DateTime<Utc>, MarketBookCache) {
         let market_id = MarketId::new("1.23456789");
@@ -272,9 +273,9 @@ mod tests {
     fn test_update_multiple_rc() {
         // update data with multiple rc entries for the same selection
         let (market_id, _, mut init) = init();
-        let data = vec![
+        let data = smallvec![
             RunnerChange {
-                available_to_back: Some(vec![UpdateSet2(
+                available_to_back: Some(smallvec![UpdateSet2(
                     Price::new(num!(1.01)).unwrap(),
                     Size::new(num!(200)),
                 )]),
@@ -282,7 +283,7 @@ mod tests {
                 ..Default::default()
             },
             RunnerChange {
-                available_to_lay: Some(vec![UpdateSet2(
+                available_to_lay: Some(smallvec![UpdateSet2(
                     Price::new(num!(1.02)).unwrap(),
                     Size::new(num!(200)),
                 )]),
@@ -347,9 +348,9 @@ mod tests {
     #[test]
     fn test_update_market_definition_in_change() {
         let (market_id, _, mut init) = init();
-        let data = vec![
+        let data = smallvec![
             RunnerChange {
-                available_to_back: Some(vec![UpdateSet2(
+                available_to_back: Some(smallvec![UpdateSet2(
                     Price::new(num!(1.01)).unwrap(),
                     Size::new(num!(200)),
                 )]),
@@ -357,7 +358,7 @@ mod tests {
                 ..Default::default()
             },
             RunnerChange {
-                available_to_back: Some(vec![UpdateSet2(
+                available_to_back: Some(smallvec![UpdateSet2(
                     Price::new(num!(1.02)).unwrap(),
                     Size::new(num!(400)),
                 )]),
@@ -441,7 +442,7 @@ mod tests {
         {
             let market_change = MarketChange {
                 market_id: Some(market_id.clone()),
-                runner_change: Some(vec![RunnerChange {
+                runner_change: Some(smallvec![RunnerChange {
                     total_value: Some(Size::new(num!(123.0))),
                     id: Some(SelectionId(13_536_143)),
                     ..Default::default()
@@ -457,8 +458,8 @@ mod tests {
         {
             let market_change = MarketChange {
                 market_id: Some(market_id.clone()),
-                runner_change: Some(vec![RunnerChange {
-                    traded: Some(vec![]),
+                runner_change: Some(smallvec![RunnerChange {
+                    traded: Some(smallvec![]),
                     id: Some(SelectionId(13_536_143)),
                     ..Default::default()
                 }]),
@@ -473,8 +474,8 @@ mod tests {
         {
             let market_change = MarketChange {
                 market_id: Some(market_id),
-                runner_change: Some(vec![RunnerChange {
-                    traded: Some(vec![UpdateSet2(
+                runner_change: Some(smallvec![RunnerChange {
+                    traded: Some(smallvec![UpdateSet2(
                         Price::new(num!(12.0)).unwrap(),
                         Size::new(num!(2.0)),
                     )]),
@@ -498,7 +499,7 @@ mod tests {
         {
             let market_change = MarketChange {
                 market_id: Some(market_id.clone()),
-                runner_change: Some(vec![RunnerChange {
+                runner_change: Some(smallvec![RunnerChange {
                     total_value: Some(Size::new(num!(123.0))),
                     id: Some(SelectionId(13_536_143)),
                     ..Default::default()
@@ -511,8 +512,8 @@ mod tests {
         {
             let market_change = MarketChange {
                 market_id: Some(market_id),
-                runner_change: Some(vec![RunnerChange {
-                    traded: Some(vec![UpdateSet2(
+                runner_change: Some(smallvec![RunnerChange {
+                    traded: Some(smallvec![UpdateSet2(
                         Price::new(num!(12.0)).unwrap(),
                         Size::new(num!(2.0)),
                     )]),
