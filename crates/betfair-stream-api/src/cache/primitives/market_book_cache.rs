@@ -149,16 +149,21 @@ impl MarketBookCache {
             let hc = runner_definition.handicap;
             let key = (selection_id, hc);
 
-            let arc_def = Arc::new(runner_definition);
-            let runner = self.runners.get_mut(&key);
-            if let Some(runner) = runner {
-                runner.set_definition(Arc::clone(&arc_def));
+            if let Some(runner) = self.runners.get_mut(&key) {
+                runner.set_definition(runner_definition);
             } else {
-                self.add_runner_from_definition(arc_def);
+                self.add_runner_from_definition(Arc::new(runner_definition));
             }
         }
 
-        self.market_definition = Some(Arc::new(market_def));
+        // Reuse existing Arc allocation if we're the sole owner
+        match &mut self.market_definition {
+            Some(arc) => match Arc::get_mut(arc) {
+                Some(inner) => *inner = market_def,
+                None => *arc = Arc::new(market_def),
+            },
+            None => self.market_definition = Some(Arc::new(market_def)),
+        }
     }
 
     /// Adds a runner from a change.

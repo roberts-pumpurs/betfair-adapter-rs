@@ -123,8 +123,14 @@ impl RunnerBookCache {
         self.traded.update(traded);
     }
 
-    pub fn set_definition(&mut self, definition: Arc<RunnerDefinition>) {
-        self.definition = Some(definition);
+    pub fn set_definition(&mut self, new_def: RunnerDefinition) {
+        match &mut self.definition {
+            Some(arc) => match Arc::get_mut(arc) {
+                Some(inner) => *inner = new_def,
+                None => *arc = Arc::new(new_def),
+            },
+            None => self.definition = Some(Arc::new(new_def)),
+        }
     }
 
     #[must_use]
