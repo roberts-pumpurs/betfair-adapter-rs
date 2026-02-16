@@ -55,6 +55,8 @@ impl CodeInjectorV1 {
                 #[allow(unused_imports)]
                 use chrono::{DateTime, Utc};
                 use typed_builder::TypedBuilder;
+                #[allow(unused_imports)]
+                use smallvec::SmallVec;
             },
             enum_derives: quote! {
                 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]

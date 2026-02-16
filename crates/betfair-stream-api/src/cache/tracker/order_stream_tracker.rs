@@ -35,24 +35,27 @@ impl OrderStreamTracker {
             let mut updated_caches = Vec::with_capacity(data.len());
             let mut market_ids = Vec::with_capacity(data.len());
             for market_change in data {
-                // Clone once upfront (MarketId is Arc-based so this is cheap)
+                // Clone once upfront (MarketId uses CompactString so this is cheap)
                 let market_id = market_change.market_id.clone();
-
-                // Only clone again when inserting a new market (not in the common update case)
-                if !self.market_state.contains_key(&market_id) {
-                    img = HasFullImage(true);
-                    self.market_state.insert(
-                        market_id.clone(), // Clone needed for HashMap key
-                        Arc::new(OrderBookCache::new(market_id.clone(), publish_time)),
-                    );
-                }
-
-                let market = self.market_state.get_mut(&market_id).unwrap();
                 let full_image = market_change.full_image.unwrap_or(false);
-                if full_image {
-                    img = HasFullImage(true);
-                    *market = Arc::new(OrderBookCache::new(market_id.clone(), publish_time));
-                }
+
+                // Single hash lookup via entry API instead of contains_key + insert + get_mut
+                let market = match self.market_state.entry(market_id.clone()) {
+                    std::collections::hash_map::Entry::Vacant(e) => {
+                        img = HasFullImage(true);
+                        let id_clone = e.key().clone();
+                        e.insert(Arc::new(OrderBookCache::new(id_clone, publish_time)))
+                    }
+                    std::collections::hash_map::Entry::Occupied(e) => {
+                        let m = e.into_mut();
+                        if full_image {
+                            img = HasFullImage(true);
+                            *m = Arc::new(OrderBookCache::new(market_id.clone(), publish_time));
+                        }
+                        m
+                    }
+                };
+
                 Arc::make_mut(market).update_cache(market_change, publish_time);
                 market_ids.push(market_id); // Move, no additional clone
             }

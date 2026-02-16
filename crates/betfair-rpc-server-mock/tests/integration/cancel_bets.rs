@@ -73,7 +73,7 @@ async fn cancel_bets_unsuccessful() {
     let expected = cancel_orders::ReturnType {
         customer_ref: Some(CustomerRef::new("0oxfjBrq8K2TZg2Ytqjo1".to_owned()).unwrap()),
         error_code: Some(ExecutionReportErrorCode::BetActionError),
-        instruction_reports: Some(vec![
+        instruction_reports: vec![
             CancelInstructionReport {
                 status: InstructionReportStatus::Failure,
                 instruction: Some(CancelInstruction {
@@ -94,7 +94,7 @@ async fn cancel_bets_unsuccessful() {
                 error_code: Some(InstructionReportErrorCode::InvalidBetId),
                 size_cancelled: None,
             },
-        ]),
+        ],
         market_id: Some(MarketId::new("1.210878100")),
         status: ExecutionReportStatus::Failure,
     };

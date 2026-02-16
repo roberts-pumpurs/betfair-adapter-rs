@@ -143,7 +143,7 @@ async fn single_market_book() {
         cross_matching: Some(true),
         runners_voidable: Some(false),
         version: Some(4910),
-        runners: Some(vec![
+        runners: vec![
             betfair_types::types::sports_aping::Runner {
                 selection_id: betfair_types::types::sports_aping::SelectionId(12_062_411),
                 handicap: num_ord!(0),
@@ -154,7 +154,7 @@ async fn single_market_book() {
                 removal_date: None,
                 sp: None,
                 ex: Some(betfair_types::types::sports_aping::ExchangePrices {
-                    available_to_back: Some(vec![
+                    available_to_back: vec![
                         betfair_types::types::sports_aping::PriceSize {
                             price: Price::new(num!(1.19)).unwrap(),
                             size: Size::new(num!(57.52)),
@@ -167,16 +167,18 @@ async fn single_market_book() {
                             price: Price::new(num!(1.01)).unwrap(),
                             size: Size::new(num!(21.14)),
                         },
-                    ]),
-                    available_to_lay: Some(vec![PriceSize {
+                    ]
+                    .into(),
+                    available_to_lay: vec![PriceSize {
                         price: Price::new(num!(1.43)).unwrap(),
                         size: Size::new(num!(31.11)),
-                    }]),
-                    traded_volume: Some(vec![]),
+                    }]
+                    .into(),
+                    traded_volume: vec![],
                 }),
-                orders: None,
-                matches: None,
-                matches_by_strategy: None,
+                orders: vec![],
+                matches: vec![],
+                matches_by_strategy: Default::default(),
             },
             Runner {
                 selection_id: SelectionId(50_310_375),
@@ -188,7 +190,7 @@ async fn single_market_book() {
                 removal_date: None,
                 sp: None,
                 ex: Some(ExchangePrices {
-                    available_to_back: Some(vec![
+                    available_to_back: vec![
                         PriceSize {
                             price: Price::new(num!(3.75)).unwrap(),
                             size: Size::new(num!(5.21)),
@@ -201,18 +203,20 @@ async fn single_market_book() {
                             price: Price::new(num!(1.01)).unwrap(),
                             size: Size::new(num!(21.14)),
                         },
-                    ]),
-                    available_to_lay: Some(vec![PriceSize {
+                    ]
+                    .into(),
+                    available_to_lay: vec![PriceSize {
                         price: Price::new(num!(4.8)).unwrap(),
                         size: Size::new(num!(4.37)),
-                    }]),
-                    traded_volume: Some(vec![]),
+                    }]
+                    .into(),
+                    traded_volume: vec![],
                 }),
-                orders: None,
-                matches: None,
-                matches_by_strategy: None,
+                orders: vec![],
+                matches: vec![],
+                matches_by_strategy: Default::default(),
             },
-        ]),
+        ],
         key_line_description: None,
     };
     assert_eq!(result, &expected);

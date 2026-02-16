@@ -136,22 +136,22 @@ async fn list_market_catalogue() {
             id: Some(CompetitionId(CompactString::from("8347200".to_owned()))),
             name: Some(CompactString::from("Euroleague Women".to_owned())),
         }),
-        runners: Some(vec![
+        runners: vec![
             RunnerCatalog {
                 selection_id: SelectionId(12_062_411),
                 runner_name: CompactString::from("Atomeromu Szekszard Women".to_owned()),
                 handicap: num_ord!(0),
                 sort_priority: 1,
-                metadata: None,
+                metadata: Default::default(),
             },
             RunnerCatalog {
                 selection_id: SelectionId(50_310_375),
                 runner_name: CompactString::from("Olympiakos Piraeus BC".to_owned()),
                 handicap: num_ord!(0),
                 sort_priority: 2,
-                metadata: None,
+                metadata: Default::default(),
             },
-        ]),
+        ],
         description: Some(MarketDescription {
             persistence_enabled: Some(true),
             bsp_market: false,

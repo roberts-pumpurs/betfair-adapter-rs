@@ -40,21 +40,25 @@ impl MarketStreamTracker {
                     continue;
                 };
 
-                // Only clone when inserting a new market (not in the common update case)
-                if !self.market_state.contains_key(&market_id) {
-                    img = HasFullImage(true);
-                    self.market_state.insert(
-                        market_id.clone(), // Clone needed for HashMap key
-                        Arc::new(MarketBookCache::new(market_id.clone(), publish_time)),
-                    );
-                }
-
-                let market = self.market_state.get_mut(&market_id).unwrap();
                 let full_image = market_change.full_image.unwrap_or(false);
-                if full_image {
-                    img = HasFullImage(true);
-                    *market = Arc::new(MarketBookCache::new(market_id.clone(), publish_time));
-                }
+
+                // Single hash lookup via entry API instead of contains_key + insert + get_mut
+                let market = match self.market_state.entry(market_id.clone()) {
+                    std::collections::hash_map::Entry::Vacant(e) => {
+                        img = HasFullImage(true);
+                        let id_clone = e.key().clone();
+                        e.insert(Arc::new(MarketBookCache::new(id_clone, publish_time)))
+                    }
+                    std::collections::hash_map::Entry::Occupied(e) => {
+                        let m = e.into_mut();
+                        if full_image {
+                            img = HasFullImage(true);
+                            *m = Arc::new(MarketBookCache::new(market_id.clone(), publish_time));
+                        }
+                        m
+                    }
+                };
+
                 Arc::make_mut(market).update_cache(market_change, publish_time, true);
                 market_ids.push(market_id); // Move, no clone
             }
