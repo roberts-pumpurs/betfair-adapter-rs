@@ -98,11 +98,11 @@ impl Server {
 
     #[must_use]
     pub fn secrets_provider(&self) -> SecretProvider {
-        let identity = reqwest::Identity::from_pem(CERTIFICATE.as_bytes()).unwrap();
+        let identity = Identity::from_pem(CERTIFICATE.as_bytes()).unwrap();
 
         SecretProvider {
             application_key: ApplicationKey::new(APP_KEY.to_owned()),
-            identity: Identity::new(identity),
+            identity,
             password: Password::new(PASSWORD.to_owned()),
             username: Username::new(USERNAME.to_owned()),
         }

@@ -16,6 +16,7 @@ typed-builder.workspace = true
 redact.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+compact_str.workspace = true
 
 [build-dependencies]
 betfair-typegen.workspace = true
@@ -28,4 +29,4 @@ rstest.workspace = true
 json-rpc-types.workspace = true
 
 [package.metadata.cargo-machete]
-ignored = ["chrono", "typed-builder"]
+ignored = ["chrono", "typed-builder", "compact_str"]

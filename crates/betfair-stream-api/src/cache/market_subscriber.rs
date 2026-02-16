@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use betfair_adapter::betfair_types::types::sports_aping::MarketId;
 use betfair_stream_types::request::RequestMessage;
 use betfair_stream_types::request::market_subscription_message::{
@@ -103,7 +101,7 @@ impl MarketSubscriber {
     pub async fn unsubscribe_from_all_markets(
         &mut self,
     ) -> Result<(), tokio::sync::mpsc::error::SendError<RequestMessage>> {
-        let market_that_does_not_exist = MarketId(Arc::new("1.23456789".to_owned()));
+        let market_that_does_not_exist = MarketId::new("1.23456789");
         self.filter = MarketFilter::default();
 
         let req = RequestMessage::MarketSubscription(MarketSubscriptionMessage {

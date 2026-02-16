@@ -1,11 +1,10 @@
-use std::sync::Arc;
-
 use betfair_stream_types::request::RequestMessage;
 use betfair_stream_types::request::heartbeat_message::HeartbeatMessage;
 use betfair_stream_types::request::market_subscription_message::{
     Fields, MarketDataFilter, MarketFilter, MarketSubscriptionMessage,
 };
 use betfair_types::types::sports_aping::{EventTypeId, MarketId};
+use compact_str::CompactString;
 use std::hint::black_box;
 
 use criterion::{Criterion, criterion_group, criterion_main};
@@ -23,7 +22,7 @@ fn ser_market_subscription(c: &mut Criterion) {
                     MarketId::new("1.206502771"),
                     MarketId::new("1.206502772"),
                 ])
-                .event_type_ids(vec![EventTypeId(Arc::new("7".to_owned()))])
+                .event_type_ids(vec![EventTypeId(CompactString::from("7"))])
                 .turn_in_play_enabled(true)
                 .build(),
         )),

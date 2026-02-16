@@ -3,11 +3,13 @@ use std::time::Duration;
 
 use backon::{BackoffBuilder, ExponentialBuilder};
 use betfair_types::bot_login::BotLoginResponse;
-use reqwest::{Client, header};
+use bytes::Bytes;
+use http::header;
+use http_body_util::{BodyExt, Full};
 use tokio::task::JoinHandle;
 use tokio::time::{Instant, interval, sleep};
 
-use super::BetfairRpcClient;
+use super::{BetfairRpcClient, HyperClient};
 use crate::secret::{self, SessionToken};
 use crate::{
     ApiError, ApplicationKey, Authenticated, BetfairConfigBuilder, Identity, Unauthenticated, urls,
@@ -34,7 +36,7 @@ impl BetfairRpcClient<Unauthenticated> {
     > {
         let mut backoff = ExponentialBuilder::new().build();
         let mut first_call = true;
-        let (session_token, authenticated_client) = loop {
+        let (session_token, authenticated_client, default_headers) = loop {
             if !first_call {
                 // add exponential recovery
                 let next = backoff.next();
@@ -54,10 +56,13 @@ impl BetfairRpcClient<Unauthenticated> {
         let state = Authenticated {
             session_token,
             authenticated_client,
+            default_headers,
         };
         let client = Arc::new(BetfairRpcClient {
             state,
             bot_login_client: self.bot_login_client,
+            bot_login_headers: self.bot_login_headers,
+            root_cert_store: self.root_cert_store,
             rest_base: self.rest_base,
             keep_alive: self.keep_alive,
             bot_login: self.bot_login,
@@ -111,13 +116,21 @@ impl BetfairRpcClient<Unauthenticated> {
         let stream = config.stream.url();
         let secret_provider = config.secrets_provider;
 
+        // Load native root certificates once — reused for all TLS clients
+        let root_cert_store = Arc::new(load_native_root_certs()?);
+
         // Use this to get the session token
-        let bot_login_client =
-            login_client(&secret_provider.application_key, &secret_provider.identity)?;
+        let (bot_login_client, bot_login_headers) = login_client(
+            &secret_provider.application_key,
+            &secret_provider.identity,
+            &root_cert_store,
+        )?;
 
         Ok(Self {
             state: Unauthenticated,
             bot_login_client,
+            bot_login_headers,
+            root_cert_store,
             rest_base,
             keep_alive,
             bot_login,
@@ -132,23 +145,53 @@ impl BetfairRpcClient<Unauthenticated> {
 impl<T> BetfairRpcClient<T> {
     /// Performs a non-interactive login to obtain a session token and authenticated client.
     #[tracing::instrument(skip(self), err)]
-    pub(super) async fn bot_log_in(&self) -> Result<(SessionToken, reqwest::Client), ApiError> {
-        let login_response = self
-            .bot_login_client
-            .post(self.bot_login.url().as_str())
-            .form(&[
-                ("username", self.secret_provider.username.0.expose_secret()),
-                ("password", self.secret_provider.password.0.expose_secret()),
-            ])
-            .send()
-            .await?
-            .json::<BotLoginResponse>()
-            .await?;
+    pub(super) async fn bot_log_in(
+        &self,
+    ) -> Result<(SessionToken, HyperClient, http::HeaderMap), ApiError> {
+        let url: http::Uri = self
+            .bot_login
+            .url()
+            .as_str()
+            .parse()
+            .map_err(|e: http::uri::InvalidUri| eyre::eyre!(e))?;
+
+        let form_body = serde_urlencoded::to_string([
+            ("username", self.secret_provider.username.0.expose_secret()),
+            ("password", self.secret_provider.password.0.expose_secret()),
+        ])
+        .map_err(|e| eyre::eyre!(e))?;
+
+        let mut request_builder = http::Request::builder().method(http::Method::POST).uri(url);
+
+        for (key, value) in &self.bot_login_headers {
+            request_builder = request_builder.header(key, value);
+        }
+
+        let request = request_builder.body(Full::new(Bytes::from(form_body)))?;
+
+        let response = self.bot_login_client.request(request).await?;
+        let status = response.status();
+        let body = response.into_body().collect().await.map_err(|e| {
+            ApiError::EyreError(eyre::eyre!("failed to collect response body: {e}"))
+        })?;
+        let bytes = body.to_bytes();
+
+        if !status.is_success() {
+            return Err(ApiError::EyreError(eyre::eyre!(
+                "bot login failed with status {status}: {}",
+                String::from_utf8_lossy(&bytes)
+            )));
+        }
+
+        let login_response = serde_json::from_slice::<BotLoginResponse>(&bytes)?;
         let login_response = login_response.0.map_err(ApiError::BotLoginError)?;
         let session_token = SessionToken(login_response.session_token);
-        let authenticated_client =
-            logged_in_client(&self.secret_provider.application_key, &session_token)?;
-        Ok((session_token, authenticated_client))
+        let (authenticated_client, default_headers) = logged_in_client(
+            &self.secret_provider.application_key,
+            &session_token,
+            &self.root_cert_store,
+        )?;
+        Ok((session_token, authenticated_client, default_headers))
     }
 
     // TODO implement interactive login
@@ -158,7 +201,8 @@ impl<T> BetfairRpcClient<T> {
 fn logged_in_client(
     app_key: &ApplicationKey,
     session_token: &SessionToken,
-) -> eyre::Result<reqwest::Client> {
+    root_cert_store: &Arc<rustls::RootCertStore>,
+) -> eyre::Result<(HyperClient, http::HeaderMap)> {
     let mut headers = header::HeaderMap::new();
     headers.insert(
         "X-Application",
@@ -180,15 +224,17 @@ fn logged_in_client(
         "X-Authentication",
         header::HeaderValue::from_str(session_token.0.expose_secret().as_str())?,
     );
-    Ok(reqwest::Client::builder()
-        .use_rustls_tls()
-        .default_headers(headers)
-        .build()?)
+
+    let client = build_https_client(None, root_cert_store)?;
+    Ok((client, headers))
 }
 
-/// Creates a login client with the specified application key and identity.
-fn login_client(application_key: &ApplicationKey, identity: &Identity) -> Result<Client, ApiError> {
-    const KEEP_ALIVE_INTERVAL: core::time::Duration = core::time::Duration::from_secs(15);
+/// Creates a login client with the specified application key and identity (client certificate).
+fn login_client(
+    application_key: &ApplicationKey,
+    identity: &Identity,
+    root_cert_store: &Arc<rustls::RootCertStore>,
+) -> Result<(HyperClient, http::HeaderMap), ApiError> {
     let mut headers = header::HeaderMap::new();
     headers.insert(
         "X-Application",
@@ -202,12 +248,60 @@ fn login_client(application_key: &ApplicationKey, identity: &Identity) -> Result
         "Content-Type",
         header::HeaderValue::from_static("application/x-www-form-urlencoded"),
     );
-    let temp_client = reqwest::Client::builder()
-        .use_rustls_tls()
-        .identity(identity.0.expose_secret().clone())
-        .default_headers(headers)
-        .http2_keep_alive_interval(KEEP_ALIVE_INTERVAL)
-        .http2_keep_alive_while_idle(true)
-        .build()?;
-    Ok(temp_client)
+
+    let pem_identity = identity.0.expose_secret();
+    let client = build_https_client(Some(pem_identity), root_cert_store)
+        .map_err(|e| ApiError::EyreError(eyre::eyre!(e)))?;
+    Ok((client, headers))
+}
+
+/// Loads native root certificates from the OS certificate store.
+/// This should be called once and the result cached/shared.
+fn load_native_root_certs() -> Result<rustls::RootCertStore, ApiError> {
+    let mut root_store = rustls::RootCertStore::empty();
+    for cert in rustls_native_certs::load_native_certs().certs {
+        root_store
+            .add(cert)
+            .map_err(|e| ApiError::EyreError(eyre::eyre!(e)))?;
+    }
+    Ok(root_store)
+}
+
+/// Builds a hyper HTTPS client, optionally with client certificate authentication.
+fn build_https_client(
+    client_cert: Option<&secret::PemIdentity>,
+    root_cert_store: &Arc<rustls::RootCertStore>,
+) -> eyre::Result<HyperClient> {
+    let tls_config = build_tls_config(client_cert, root_cert_store)?;
+
+    let https_connector = hyper_rustls::HttpsConnectorBuilder::new()
+        .with_tls_config(tls_config)
+        .https_or_http()
+        .enable_http1()
+        .enable_http2()
+        .build();
+
+    let client = hyper_util::client::legacy::Client::builder(hyper_util::rt::TokioExecutor::new())
+        .pool_idle_timeout(Duration::from_secs(90))
+        .pool_max_idle_per_host(4)
+        .build(https_connector);
+
+    Ok(client)
+}
+
+/// Builds a rustls ClientConfig, optionally with client certificate for mTLS.
+fn build_tls_config(
+    client_cert: Option<&secret::PemIdentity>,
+    root_cert_store: &Arc<rustls::RootCertStore>,
+) -> eyre::Result<rustls::ClientConfig> {
+    let builder =
+        rustls::ClientConfig::builder().with_root_certificates(Arc::clone(root_cert_store));
+
+    let config = if let Some(identity) = client_cert {
+        builder.with_client_auth_cert(identity.certs.clone(), identity.key.clone_key())?
+    } else {
+        builder.with_no_client_auth()
+    };
+
+    Ok(config)
 }

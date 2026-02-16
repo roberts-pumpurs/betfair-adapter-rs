@@ -40,6 +40,7 @@ pretty_assertions.workspace = true
 criterion.workspace = true
 betfair-types.workspace = true
 smallvec.workspace = true
+compact_str.workspace = true
 
 [lints]
 workspace = true

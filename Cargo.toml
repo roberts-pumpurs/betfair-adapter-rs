@@ -121,6 +121,9 @@ smallvec = { version = "1.13", features = ["serde"] }
 
 # HTTP
 hyper = { version = "1", features = ["full"] }
+hyper-util = { version = "0.1", features = ["client-legacy", "tokio", "http1", "http2"] }
+hyper-rustls = { version = "0.27", default-features = false, features = ["http1", "http2", "tls12", "logging", "ring"] }
+http-body-util = "0.1"
 reqwest = { version = "0.12", default-features = false, features = ["json", "http2", "gzip", "deflate", "rustls-tls", "stream"] }
 url = "2"
 http = "1"
@@ -156,3 +159,7 @@ clap = { version = "4", features = ["derive"] }
 xshell = "0.2"
 color-eyre = "0.6"
 toml = "0.8"
+
+[profile.bench]
+lto = "thin"
+codegen-units = 1
