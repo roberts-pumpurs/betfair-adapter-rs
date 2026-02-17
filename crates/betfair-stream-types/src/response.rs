@@ -1,6 +1,7 @@
 use betfair_types::price::Price;
 use betfair_types::size::Size;
 use chrono::{DateTime, TimeZone as _, Utc};
+use compact_str::CompactString;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -140,10 +141,10 @@ pub struct DatasetChangeMessage<T: DeserializeOwned + DataChange<T>> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
-pub struct Clock(pub String);
+pub struct Clock(pub CompactString);
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
-pub struct InitialClock(pub String);
+pub struct InitialClock(pub CompactString);
 
 impl<'de, T> Deserialize<'de> for DatasetChangeMessage<T>
 where
@@ -154,49 +155,63 @@ where
         D: Deserializer<'de>,
         T: DeserializeOwned + DataChange<T>,
     {
-        let v = Value::deserialize(deserializer)?;
-        let id = v
+        let mut map = serde_json::Map::deserialize(deserializer)?;
+
+        let id = map
             .get("id")
             .and_then(serde_json::Value::as_i64)
             .map(|id| id as i32);
-        let data = v.get(T::key()).and_then(|data| {
-            serde_json::from_value(data.clone()).expect("data item should be deserialized")
+
+        let data = map.remove(T::key()).and_then(|data| {
+            serde_json::from_value(data).expect("data item should be deserialized")
         });
 
-        let res = Self {
-            id,
-            change_type: v.get("ct").and_then(|ct| {
-                serde_json::from_value(ct.clone()).expect("ct should be deserialized")
-            }),
-            clock: v
-                .get("clk")
-                .and_then(|clk| clk.as_str())
-                .map(|clk| Clock(clk.to_owned())),
-            heartbeat_ms: v.get("heartbeatMs").and_then(serde_json::Value::as_i64),
-            publish_time: v
-                .get("pt")
-                .and_then(serde_json::Value::as_i64)
-                .and_then(|pt| Utc.timestamp_millis_opt(pt).latest()),
-            initial_clock: v
-                .get("initialClk")
-                .and_then(|ic| ic.as_str())
-                .map(|ic| InitialClock(ic.to_owned())),
-            data,
-            conflate_ms: v.get("conflateMs").and_then(serde_json::Value::as_i64),
-            segment_type: v.get("segmentType").and_then(|st| {
-                serde_json::from_value(st.clone()).expect("segmentType should be deserialized")
-            }),
-            status: v
-                .get("status")
-                .and_then(serde_json::Value::as_i64)
-                .map(|s| s as i32),
-        };
+        let change_type = map
+            .remove("ct")
+            .and_then(|ct| serde_json::from_value(ct).expect("ct should be deserialized"));
 
-        Ok(res)
+        let clock = map
+            .get("clk")
+            .and_then(|clk| clk.as_str())
+            .map(|clk| Clock(CompactString::from(clk)));
+
+        let heartbeat_ms = map.get("heartbeatMs").and_then(serde_json::Value::as_i64);
+
+        let publish_time = map
+            .get("pt")
+            .and_then(serde_json::Value::as_i64)
+            .and_then(|pt| Utc.timestamp_millis_opt(pt).latest());
+
+        let initial_clock = map
+            .get("initialClk")
+            .and_then(|ic| ic.as_str())
+            .map(|ic| InitialClock(CompactString::from(ic)));
+
+        let conflate_ms = map.get("conflateMs").and_then(serde_json::Value::as_i64);
+
+        let segment_type = map
+            .remove("segmentType")
+            .and_then(|st| serde_json::from_value(st).expect("segmentType should be deserialized"));
+
+        let status = map
+            .get("status")
+            .and_then(serde_json::Value::as_i64)
+            .map(|s| s as i32);
+
+        Ok(Self {
+            id,
+            change_type,
+            clock,
+            heartbeat_ms,
+            publish_time,
+            initial_clock,
+            data,
+            conflate_ms,
+            segment_type,
+            status,
+        })
     }
 }
-
-use serde_json::Value;
 
 #[derive(Debug, PartialEq, PartialOrd, Clone, Serialize, Deserialize, Eq, Hash, Ord)]
 pub struct UpdateSet2(pub Price, pub Size);
@@ -285,7 +300,7 @@ mod tests {
         assert_eq!(
             msg,
             ResponseMessage::Connection(connection_message::ConnectionMessage {
-                connection_id: Some("206-221122192222-702491".to_owned()),
+                connection_id: Some("206-221122192222-702491".into()),
                 id: None,
             })
         );

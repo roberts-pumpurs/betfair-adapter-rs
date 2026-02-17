@@ -18,11 +18,46 @@ pub struct Username(pub redact::Secret<String>);
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct Password(pub redact::Secret<String>);
 
-#[derive(Debug, Clone, serde::Deserialize)]
+/// TLS client identity (certificate + private key) in PEM format.
+///
+/// This replaces `reqwest::Identity` with a custom type that stores
+/// the raw PEM bytes, which are then parsed into rustls types when
+/// building the TLS client.
+#[derive(Clone, serde::Deserialize)]
 pub struct Identity(
-    #[serde(deserialize_with = "serde_utils::deserialize_identity")]
-    pub  redact::Secret<reqwest::Identity>,
+    #[serde(deserialize_with = "serde_utils::deserialize_identity")] pub redact::Secret<PemIdentity>,
 );
+
+/// Holds parsed PEM certificate chain and private key for TLS client authentication.
+pub struct PemIdentity {
+    pub certs: Vec<rustls::pki_types::CertificateDer<'static>>,
+    pub key: rustls::pki_types::PrivateKeyDer<'static>,
+}
+
+impl Clone for PemIdentity {
+    fn clone(&self) -> Self {
+        Self {
+            certs: self.certs.clone(),
+            key: self.key.clone_key(),
+        }
+    }
+}
+
+impl core::fmt::Debug for Identity {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Identity")
+            .field("0", &"<redacted>")
+            .finish()
+    }
+}
+
+impl core::fmt::Debug for PemIdentity {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("PemIdentity")
+            .field("certs", &format!("{} cert(s)", self.certs.len()))
+            .finish()
+    }
+}
 
 impl ApplicationKey {
     #[must_use]
@@ -52,9 +87,33 @@ impl Password {
 }
 
 impl Identity {
-    #[must_use]
-    pub const fn new(identity: reqwest::Identity) -> Self {
-        Self(redact::Secret::new(identity))
+    /// Create a new `Identity` from raw PEM bytes (certificate + private key).
+    pub fn from_pem(pem_bytes: &[u8]) -> Result<Self, std::io::Error> {
+        let pem_identity = PemIdentity::from_pem(pem_bytes)?;
+        Ok(Self(redact::Secret::new(pem_identity)))
+    }
+}
+
+impl PemIdentity {
+    /// Parse PEM bytes into certificate chain and private key.
+    pub fn from_pem(pem_bytes: &[u8]) -> Result<Self, std::io::Error> {
+        use rustls::pki_types::{CertificateDer, PrivateKeyDer, pem::PemObject};
+
+        let certs: Vec<CertificateDer<'static>> = CertificateDer::pem_slice_iter(pem_bytes)
+            .collect::<Result<_, _>>()
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+
+        let key = PrivateKeyDer::from_pem_slice(pem_bytes)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+
+        if certs.is_empty() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "no certificates found in PEM",
+            ));
+        }
+
+        Ok(Self { certs, key })
     }
 }
 
@@ -63,17 +122,17 @@ mod serde_utils {
 
     pub(crate) fn deserialize_identity<'de, D>(
         deserializer: D,
-    ) -> Result<redact::Secret<reqwest::Identity>, D::Error>
+    ) -> Result<redact::Secret<super::PemIdentity>, D::Error>
     where
         D: Deserializer<'de>,
     {
         let raw_string = String::deserialize(deserializer)?;
-        let identity = reqwest::Identity::from_pem(raw_string.as_bytes())
+        let pem_identity = super::PemIdentity::from_pem(raw_string.as_bytes())
             .inspect_err(|err| {
                 tracing::error!(?err, "cannot parse identity");
             })
             .map_err(serde::de::Error::custom)?;
-        Ok(redact::Secret::new(identity))
+        Ok(redact::Secret::new(pem_identity))
     }
 }
 #[cfg(test)]

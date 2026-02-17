@@ -3,6 +3,7 @@
 //! This module defines types for representing status messages received from the Betfair
 //! streaming API, indicating the success or failure of operations such as authentication,
 //! subscription, and other control messages.
+use compact_str::CompactString;
 use core::error::Error as StdError;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -42,7 +43,7 @@ pub struct StatusSuccess {
     pub connections_available: Option<i32>,
     /// The connection id
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub connection_id: Option<String>,
+    pub connection_id: Option<CompactString>,
     /// Is the connection now closed
     #[serde(skip_serializing_if = "Option::is_none")]
     pub connection_closed: Option<bool>,
@@ -59,12 +60,12 @@ pub struct StatusError {
     pub id: Option<i32>,
     /// Additional message in case of a failure
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub error_message: Option<String>,
+    pub error_message: Option<CompactString>,
     /// The type of error in case of a failure
     pub error_code: ErrorCode,
     /// The connection id
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub connection_id: Option<String>,
+    pub connection_id: Option<CompactString>,
     /// Is the connection now closed
     #[serde(skip_serializing_if = "Option::is_none")]
     pub connection_closed: Option<bool>,
@@ -198,7 +199,7 @@ mod tests {
         let error = StatusError {
             id: Some(1),
             error_code: ErrorCode::InvalidSessionInformation,
-            error_message: Some("Session expired or invalid".to_owned()),
+            error_message: Some("Session expired or invalid".into()),
             connection_id: None,
             connection_closed: None,
         };

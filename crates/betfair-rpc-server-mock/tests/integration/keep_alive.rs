@@ -16,11 +16,5 @@ async fn keep_alive() {
     let client = server.client().await;
     let (client, _) = client.authenticate().await.unwrap();
     let ka = client.keep_alive().unwrap();
-    ka.execute()
-        .await
-        .unwrap()
-        .json_err()
-        .await
-        .unwrap()
-        .unwrap();
+    ka.execute().await.unwrap().json_err().unwrap().unwrap();
 }

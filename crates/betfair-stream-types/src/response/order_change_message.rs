@@ -6,7 +6,9 @@ use betfair_types::price::Price;
 use betfair_types::size::Size;
 use betfair_types::types::sports_aping::{BetId, MarketId, SelectionId};
 use chrono::{DateTime, Utc};
+use compact_str::CompactString;
 use serde::{Deserialize, Serialize};
+use smallvec::SmallVec;
 
 use super::{DataChange, DatasetChangeMessage, UpdateSet2};
 
@@ -38,7 +40,7 @@ pub struct OrderMarketChange {
     pub account_id: Option<i64>,
     /// Order Changes - a list of changes to orders on a selection.
     #[serde(rename = "orc")]
-    pub order_runner_change: Option<Vec<OrderRunnerChange>>,
+    pub order_runner_change: Option<SmallVec<[OrderRunnerChange; 4]>>,
     /// Closed - indicates if the market is closed.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub closed: Option<bool>,
@@ -58,12 +60,12 @@ pub struct OrderRunnerChange {
     /// (selection)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "mb")]
-    pub matched_backs: Option<Vec<UpdateSet2>>,
+    pub matched_backs: Option<SmallVec<[UpdateSet2; 4]>>,
     /// Matched Lays - matched amounts by distinct matched price on the Lay side for this runner
     /// (selection)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "ml")]
-    pub matched_lays: Option<Vec<UpdateSet2>>,
+    pub matched_lays: Option<SmallVec<[UpdateSet2; 4]>>,
 
     /// Strategy Matches - Matched Backs and Matched Lays grouped by strategy reference
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -73,7 +75,7 @@ pub struct OrderRunnerChange {
     /// Unmatched Orders - orders on this runner (selection) that are not fully matched
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "uo")]
-    pub unmatched_orders: Option<Vec<Order>>,
+    pub unmatched_orders: Option<SmallVec<[Order; 2]>>,
     /// Selection Id - the id of the runner (selection)
     pub id: SelectionId,
     /// Handicap - the handicap of the runner (selection) (null if not applicable)
@@ -107,7 +109,7 @@ pub struct Order {
     /// if no portion of the order is lapsed
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "lsrc")]
-    pub lapse_status_reason_code: Option<String>,
+    pub lapse_status_reason_code: Option<CompactString>,
     /// Price - the original placed price of the order. Line markets operate at even-money odds of
     /// 2.0. However, price for these markets refers to the line positions available as defined by
     /// the markets min-max range and interval steps
@@ -119,7 +121,7 @@ pub struct Order {
     /// Regulator Code - the regulator of the order
     /// This is occasionally missing, so we default to an empty string.
     #[serde(rename = "rc", default)]
-    pub regulator_code: String,
+    pub regulator_code: CompactString,
     /// Size - the original placed size of the order
     #[serde(rename = "s")]
     pub size: Size,
@@ -129,7 +131,7 @@ pub struct Order {
     /// Regulator Auth Code - the auth code returned by the regulator
     /// This is occasionally missing, so we default to an empty string.
     #[serde(rename = "rac", default)]
-    pub regulator_auth_code: String,
+    pub regulator_auth_code: CompactString,
     /// Matched Date - the date the order was matched (null if the order is not matched)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(with = "ts_millis::option", default, rename = "md")]
@@ -241,10 +243,10 @@ pub struct StrategyMatchChange {
     /// Matched Backs - matched amounts by distinct matched price on the Back side for this
     /// strategy
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub mb: Option<Vec<UpdateSet2>>,
+    pub mb: Option<SmallVec<[UpdateSet2; 4]>>,
     /// Matched Lays - matched amounts by distinct matched price on the Lay side for this strategy
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ml: Option<Vec<UpdateSet2>>,
+    pub ml: Option<SmallVec<[UpdateSet2; 4]>>,
 }
 
 mod ts_millis {

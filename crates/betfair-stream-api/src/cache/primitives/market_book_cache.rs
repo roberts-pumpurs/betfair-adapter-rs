@@ -1,6 +1,7 @@
 //! Market book cache
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use betfair_adapter::betfair_types::numeric::F64Ord;
 use betfair_adapter::betfair_types::size::Size;
@@ -19,7 +20,7 @@ pub struct MarketBookCache {
     publish_time: DateTime<Utc>,
     active: bool,
     total_matched: Size,
-    market_definition: Option<Box<MarketDefinition>>,
+    market_definition: Option<Arc<MarketDefinition>>,
     runners: HashMap<(SelectionId, Option<F64Ord>), RunnerBookCache>,
 }
 
@@ -34,7 +35,7 @@ impl MarketBookCache {
             publish_time,
             market_definition: None,
             total_matched: Size::zero(),
-            runners: HashMap::new(),
+            runners: HashMap::with_capacity(16),
         }
     }
 
@@ -132,22 +133,37 @@ impl MarketBookCache {
 
     /// Updates the market definition with the given market definition.
     pub fn update_market_definition(&mut self, market_definition: Box<MarketDefinition>) {
-        for runner_definition in &market_definition.runners {
+        // Take ownership of runners before storing the definition
+        let mut market_def = *market_definition;
+        let runner_defs = std::mem::take(&mut market_def.runners);
+
+        if self.runners.is_empty() {
+            self.runners.reserve(runner_defs.len());
+        }
+
+        for runner_definition in runner_defs {
             let selection_id = runner_definition.id;
             let Some(selection_id) = selection_id else {
                 continue;
             };
             let hc = runner_definition.handicap;
             let key = (selection_id, hc);
-            let runner = self.runners.get_mut(&key);
-            if let Some(runner) = runner {
-                runner.set_definition(runner_definition.clone());
+
+            if let Some(runner) = self.runners.get_mut(&key) {
+                runner.set_definition(runner_definition);
             } else {
-                self.add_runner_from_definition(runner_definition.clone());
+                self.add_runner_from_definition(Arc::new(runner_definition));
             }
         }
 
-        self.market_definition = Some(market_definition);
+        // Reuse existing Arc allocation if we're the sole owner
+        match &mut self.market_definition {
+            Some(arc) => match Arc::get_mut(arc) {
+                Some(inner) => *inner = market_def,
+                None => *arc = Arc::new(market_def),
+            },
+            None => self.market_definition = Some(Arc::new(market_def)),
+        }
     }
 
     /// Adds a runner from a change.
@@ -163,7 +179,7 @@ impl MarketBookCache {
     }
 
     /// Adds a runner from a definition.
-    fn add_runner_from_definition(&mut self, runner_definition: RunnerDefinition) {
+    fn add_runner_from_definition(&mut self, runner_definition: Arc<RunnerDefinition>) {
         let Some(selection_id) = runner_definition.id else {
             return;
         };
@@ -187,9 +203,8 @@ impl MarketBookCache {
     }
 
     /// Returns the market definition if it exists.
-    #[expect(clippy::borrowed_box)]
     #[must_use]
-    pub const fn market_definition(&self) -> Option<&Box<MarketDefinition>> {
+    pub fn market_definition(&self) -> Option<&Arc<MarketDefinition>> {
         self.market_definition.as_ref()
     }
 
@@ -216,6 +231,7 @@ mod tests {
     use betfair_stream_types::response::market_change_message::{
         MarketChangeMessage, StreamRunnerDefinitionStatus,
     };
+    use smallvec::smallvec;
 
     fn init() -> (MarketId, DateTime<Utc>, MarketBookCache) {
         let market_id = MarketId::new("1.23456789");
@@ -269,9 +285,9 @@ mod tests {
     fn test_update_multiple_rc() {
         // update data with multiple rc entries for the same selection
         let (market_id, _, mut init) = init();
-        let data = vec![
+        let data = smallvec![
             RunnerChange {
-                available_to_back: Some(vec![UpdateSet2(
+                available_to_back: Some(smallvec![UpdateSet2(
                     Price::new(num!(1.01)).unwrap(),
                     Size::new(num!(200)),
                 )]),
@@ -279,7 +295,7 @@ mod tests {
                 ..Default::default()
             },
             RunnerChange {
-                available_to_lay: Some(vec![UpdateSet2(
+                available_to_lay: Some(smallvec![UpdateSet2(
                     Price::new(num!(1.02)).unwrap(),
                     Size::new(num!(200)),
                 )]),
@@ -337,16 +353,16 @@ mod tests {
 
         assert_eq!(
             init.market_definition,
-            Some(Box::new(mock_market_definition))
+            Some(Arc::new(mock_market_definition))
         );
     }
 
     #[test]
     fn test_update_market_definition_in_change() {
         let (market_id, _, mut init) = init();
-        let data = vec![
+        let data = smallvec![
             RunnerChange {
-                available_to_back: Some(vec![UpdateSet2(
+                available_to_back: Some(smallvec![UpdateSet2(
                     Price::new(num!(1.01)).unwrap(),
                     Size::new(num!(200)),
                 )]),
@@ -354,7 +370,7 @@ mod tests {
                 ..Default::default()
             },
             RunnerChange {
-                available_to_back: Some(vec![UpdateSet2(
+                available_to_back: Some(smallvec![UpdateSet2(
                     Price::new(num!(1.02)).unwrap(),
                     Size::new(num!(400)),
                 )]),
@@ -438,7 +454,7 @@ mod tests {
         {
             let market_change = MarketChange {
                 market_id: Some(market_id.clone()),
-                runner_change: Some(vec![RunnerChange {
+                runner_change: Some(smallvec![RunnerChange {
                     total_value: Some(Size::new(num!(123.0))),
                     id: Some(SelectionId(13_536_143)),
                     ..Default::default()
@@ -454,8 +470,8 @@ mod tests {
         {
             let market_change = MarketChange {
                 market_id: Some(market_id.clone()),
-                runner_change: Some(vec![RunnerChange {
-                    traded: Some(vec![]),
+                runner_change: Some(smallvec![RunnerChange {
+                    traded: Some(smallvec![]),
                     id: Some(SelectionId(13_536_143)),
                     ..Default::default()
                 }]),
@@ -470,8 +486,8 @@ mod tests {
         {
             let market_change = MarketChange {
                 market_id: Some(market_id),
-                runner_change: Some(vec![RunnerChange {
-                    traded: Some(vec![UpdateSet2(
+                runner_change: Some(smallvec![RunnerChange {
+                    traded: Some(smallvec![UpdateSet2(
                         Price::new(num!(12.0)).unwrap(),
                         Size::new(num!(2.0)),
                     )]),
@@ -495,7 +511,7 @@ mod tests {
         {
             let market_change = MarketChange {
                 market_id: Some(market_id.clone()),
-                runner_change: Some(vec![RunnerChange {
+                runner_change: Some(smallvec![RunnerChange {
                     total_value: Some(Size::new(num!(123.0))),
                     id: Some(SelectionId(13_536_143)),
                     ..Default::default()
@@ -508,8 +524,8 @@ mod tests {
         {
             let market_change = MarketChange {
                 market_id: Some(market_id),
-                runner_change: Some(vec![RunnerChange {
-                    traded: Some(vec![UpdateSet2(
+                runner_change: Some(smallvec![RunnerChange {
+                    traded: Some(smallvec![UpdateSet2(
                         Price::new(num!(12.0)).unwrap(),
                         Size::new(num!(2.0)),
                     )]),

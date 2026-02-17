@@ -90,10 +90,9 @@ fn test_deserialize() {
     assert_eq!(result.len(), 1);
 
     // Check that we correctly deserialize metadata containing null values.
-    let runners = result[0].runners.as_ref().unwrap();
+    let runners = &result[0].runners;
     assert_eq!(runners.len(), 3);
-    assert!(runners[0].metadata.is_none());
-    assert!(runners[1].metadata.is_some());
-    assert_eq!(runners[1].metadata.as_ref().unwrap().len(), 1);
+    assert!(runners[0].metadata.is_empty());
+    assert_eq!(runners[1].metadata.len(), 1);
     assert_eq!(runners[2].runner_name.len(), 0);
 }

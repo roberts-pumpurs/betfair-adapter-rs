@@ -1,6 +1,8 @@
 mod market_stream_tracker;
 mod order_stream_tracker;
 
+use std::sync::Arc;
+
 use betfair_stream_types::response::market_change_message::MarketChangeMessage;
 use betfair_stream_types::response::order_change_message::OrderChangeMessage;
 use betfair_stream_types::response::{
@@ -55,7 +57,10 @@ impl StreamState {
         }
     }
 
-    pub fn order_change_update(&mut self, msg: OrderChangeMessage) -> Option<Vec<&OrderBookCache>> {
+    pub fn order_change_update(
+        &mut self,
+        msg: OrderChangeMessage,
+    ) -> Option<Vec<Arc<OrderBookCache>>> {
         match msg.change_type {
             Some(ChangeType::SubImage) => {
                 self.update_clk(&msg);
@@ -76,7 +81,7 @@ impl StreamState {
     pub fn market_change_update(
         &mut self,
         msg: MarketChangeMessage,
-    ) -> Option<Vec<&MarketBookCache>> {
+    ) -> Option<Vec<Arc<MarketBookCache>>> {
         match msg.change_type {
             Some(ChangeType::SubImage) => {
                 self.update_clk(&msg);

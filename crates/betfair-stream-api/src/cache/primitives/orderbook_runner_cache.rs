@@ -36,27 +36,24 @@ impl OrderBookRunner {
             selection_id,
             matched_lays: Available::new(&[]),
             matched_backs: Available::new(&[]),
-            unmatched_orders: HashMap::new(),
+            unmatched_orders: HashMap::with_capacity(16),
             handicap: None,
-            strategy_matches: HashMap::new(),
+            strategy_matches: HashMap::with_capacity(4),
         }
     }
 
-    pub(crate) fn update_unmatched<'o>(
-        &mut self,
-        unmatched_orders: impl IntoIterator<Item = &'o Order>,
-    ) {
+    pub(crate) fn update_unmatched(&mut self, unmatched_orders: impl IntoIterator<Item = Order>) {
         for order in unmatched_orders {
-            self.unmatched_orders
-                .insert(order.id.clone(), order.clone());
+            let id = order.id.clone();
+            self.unmatched_orders.insert(id, order);
         }
     }
 
-    pub(crate) fn update_matched_lays(&mut self, ml: &Vec<UpdateSet2>) {
+    pub(crate) fn update_matched_lays(&mut self, ml: impl AsRef<[UpdateSet2]>) {
         self.matched_lays.update(ml);
     }
 
-    pub(crate) fn update_matched_backs(&mut self, mb: &Vec<UpdateSet2>) {
+    pub(crate) fn update_matched_backs(&mut self, mb: impl AsRef<[UpdateSet2]>) {
         self.matched_backs.update(mb);
     }
 

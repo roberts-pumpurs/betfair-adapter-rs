@@ -10,6 +10,16 @@ use crate::aping_ast::types::Name;
 use crate::gen_v1::documentation::CommentParse as _;
 use crate::gen_v1::type_resolver::TypePlural;
 
+/// Returns the SmallVec inline capacity for specific hot-path collection fields.
+/// Returns None for fields that should use plain Vec.
+fn smallvec_capacity(struct_name: &str, field_name: &str) -> Option<usize> {
+    match (struct_name, field_name) {
+        ("ExchangePrices", "availableToBack") => Some(3),
+        ("ExchangePrices", "availableToLay") => Some(3),
+        _ => None,
+    }
+}
+
 impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
     pub(crate) fn generate_data_type(&self, data_type: &DataType) -> TokenStream {
         let description = data_type.description.as_slice().object_comment();
@@ -103,6 +113,7 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
         fn generate_struct_field<T: CodeInjector>(
             generator: &GenV1GeneratorStrategy<T>,
             struct_field: &StructField,
+            struct_name: &str,
         ) -> TokenStream {
             let description = struct_field
                 .description
@@ -166,27 +177,70 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
                     pub #name: #data_type,
                 }
             } else {
-                let extra = match resolve_type_result.plural {
-                    TypePlural::Singular(ref value) => match value.as_str() {
-                        "double" | "float" => quote! {
-                            #[serde(deserialize_with = "super::deserialize_f64_option", default)]
-                        },
-                        _ => quote! {},
-                    },
-                    TypePlural::Map { key: _, value: _ } => quote! {
-                        #[serde(deserialize_with = "super::deserialize_map_skip_null", default)]
-                    },
-                    _ => quote! {},
-                };
+                match resolve_type_result.plural {
+                    // Collections: use Vec<T> with #[serde(default)] instead of Option<Vec<T>>
+                    TypePlural::List(ref inner_type) | TypePlural::Set(ref inner_type) => {
+                        if let Some(capacity) = smallvec_capacity(struct_name, original_name) {
+                            // Resolve the inner element type through the type resolver
+                            let inner_data_type =
+                                crate::aping_ast::types::DataTypeParameter::new(inner_type.clone());
+                            let inner_resolved = generator
+                                .type_resolver
+                                .resolve_type(&inner_data_type)
+                                .expect("inner type must resolve");
+                            let cap_lit = proc_macro2::Literal::usize_unsuffixed(capacity);
+                            quote! {
+                                #description
+                                #struct_parameter_derives
+                                #[serde(skip_serializing_if = "SmallVec::is_empty")]
+                                #[serde(rename = #original_name)]
+                                #[serde(default)]
+                                #[builder(default)]
+                                pub #name: smallvec::SmallVec<[#inner_resolved; #cap_lit]>,
+                            }
+                        } else {
+                            quote! {
+                                #description
+                                #struct_parameter_derives
+                                #[serde(skip_serializing_if = "Vec::is_empty")]
+                                #[serde(rename = #original_name)]
+                                #[serde(default)]
+                                #[builder(default)]
+                                pub #name: #data_type,
+                            }
+                        }
+                    }
+                    // Maps: use HashMap<K,V> with null-skipping deserializer instead of Option<HashMap<K,V>>
+                    TypePlural::Map { key: _, value: _ } => {
+                        quote! {
+                            #description
+                            #struct_parameter_derives
+                            #[serde(skip_serializing_if = "std::collections::HashMap::is_empty")]
+                            #[serde(rename = #original_name)]
+                            #[serde(deserialize_with = "super::deserialize_map_skip_null_default_empty", default)]
+                            #[builder(default)]
+                            pub #name: #data_type,
+                        }
+                    }
+                    // Scalars: keep Option<T> wrapping
+                    TypePlural::Singular(ref value) => {
+                        let extra = match value.as_str() {
+                            "double" | "float" => quote! {
+                                #[serde(deserialize_with = "super::deserialize_f64_option", default)]
+                            },
+                            _ => quote! {},
+                        };
 
-                quote! {
-                    #description
-                    #struct_parameter_derives
-                    #[serde(skip_serializing_if = "Option::is_none")]
-                    #[serde(rename = #original_name)]
-                    #extra
-                    #[builder(default, setter(strip_option))]
-                    pub #name: Option<#data_type>,
+                        quote! {
+                            #description
+                            #struct_parameter_derives
+                            #[serde(skip_serializing_if = "Option::is_none")]
+                            #[serde(rename = #original_name)]
+                            #extra
+                            #[builder(default, setter(strip_option))]
+                            pub #name: Option<#data_type>,
+                        }
+                    }
                 }
             }
         }
@@ -194,7 +248,7 @@ impl<T: CodeInjector> GenV1GeneratorStrategy<T> {
         let fields = struct_value
             .fields
             .iter()
-            .map(|x| generate_struct_field(self, x))
+            .map(|x| generate_struct_field(self, x, struct_value.name.0.as_str()))
             .fold(quote! {}, |acc, i| {
                 quote! {
                     #acc
@@ -317,7 +371,7 @@ mod test {
                 #[serde(skip_serializing_if="Option::is_none")]
                 #[serde (rename = "textQuery")]
                 #[builder(default, setter(strip_option))]
-                pub text_query: Option<std::sync::Arc<String> >,
+                pub text_query: Option<compact_str::CompactString >,
             }
         };
         assert_eq!(actual.to_string(), expected.to_string());
@@ -461,7 +515,7 @@ mod test {
             #[doc = "Type of price data returned by listMarketBook operation"]
             #[derive(Debug , Deserialize , Serialize , Clone , PartialEq , Eq , Hash)]
             #[serde (rename_all = "camelCase")]
-            pub struct MarketProjection(pub std::sync::Arc<String>);
+            pub struct MarketProjection(pub compact_str::CompactString);
         };
         assert_eq!(actual.to_string(), expected.to_string());
     }

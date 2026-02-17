@@ -18,9 +18,13 @@ pub enum ApiError {
     #[error(transparent)]
     HeartbeatApingException(#[from] betfair_types::types::heartbeat_aping::ApingException),
 
-    /// Represents an error from the Reqwest HTTP client.
+    /// Represents an HTTP client error from hyper.
     #[error(transparent)]
-    ReqwestError(#[from] reqwest::Error),
+    HyperError(#[from] hyper_util::client::legacy::Error),
+
+    /// Represents an HTTP error from hyper core.
+    #[error(transparent)]
+    HyperHttpError(#[from] hyper::http::Error),
 
     /// Represents an error from Serde JSON serialization/deserialization.
     #[error(transparent)]
@@ -49,4 +53,8 @@ pub enum ApiError {
     /// Represents an empty response from the server.
     #[error("Empty response from server")]
     EmptyResponse,
+
+    /// Represents an HTTP status error.
+    #[error("HTTP error: status {0}")]
+    HttpStatus(http::StatusCode),
 }

@@ -13,10 +13,18 @@ edition.workspace = true
 workspace = true
 
 [dependencies]
-reqwest.workspace = true
+hyper.workspace = true
+hyper-util.workspace = true
+hyper-rustls.workspace = true
+http-body-util.workspace = true
+http.workspace = true
+bytes.workspace = true
+rustls.workspace = true
+rustls-native-certs.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 serde_json.workspace = true
+serde_urlencoded.workspace = true
 redact.workspace = true
 tracing.workspace = true
 betfair-types.workspace = true

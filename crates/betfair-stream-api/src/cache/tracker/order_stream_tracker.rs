@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use betfair_adapter::betfair_types::types::sports_aping::MarketId;
 use betfair_stream_types::response::order_change_message::OrderChangeMessage;
@@ -8,14 +9,14 @@ use crate::cache::primitives::OrderBookCache;
 
 #[derive(Debug, Clone)]
 pub struct OrderStreamTracker {
-    market_state: HashMap<MarketId, OrderBookCache>,
+    market_state: HashMap<MarketId, Arc<OrderBookCache>>,
     updates_processed: u64,
 }
 
 impl OrderStreamTracker {
     pub(crate) fn new() -> Self {
         Self {
-            market_state: HashMap::new(),
+            market_state: HashMap::with_capacity(64),
             updates_processed: 0,
         }
     }
@@ -23,7 +24,7 @@ impl OrderStreamTracker {
     pub(crate) fn process(
         &mut self,
         msg: OrderChangeMessage,
-    ) -> (Option<Vec<&OrderBookCache>>, HasFullImage) {
+    ) -> (Option<Vec<Arc<OrderBookCache>>>, HasFullImage) {
         let mut img = HasFullImage(false);
         let Some(publish_time) = msg.publish_time else {
             tracing::warn!("No publish time in market change message");
@@ -34,22 +35,29 @@ impl OrderStreamTracker {
             let mut updated_caches = Vec::with_capacity(data.len());
             let mut market_ids = Vec::with_capacity(data.len());
             for market_change in data {
+                // Clone once upfront (MarketId uses CompactString so this is cheap)
                 let market_id = market_change.market_id.clone();
-                let market = self
-                    .market_state
-                    .entry(market_id.clone())
-                    .or_insert_with(|| {
-                        img = HasFullImage(true);
-                        OrderBookCache::new(market_id.clone(), publish_time)
-                    });
-
                 let full_image = market_change.full_image.unwrap_or(false);
-                if full_image {
-                    img = HasFullImage(true);
-                    *market = OrderBookCache::new(market_id.clone(), publish_time);
-                }
-                market.update_cache(market_change, publish_time);
-                market_ids.push(market_id);
+
+                // Single hash lookup via entry API instead of contains_key + insert + get_mut
+                let market = match self.market_state.entry(market_id.clone()) {
+                    std::collections::hash_map::Entry::Vacant(e) => {
+                        img = HasFullImage(true);
+                        let id_clone = e.key().clone();
+                        e.insert(Arc::new(OrderBookCache::new(id_clone, publish_time)))
+                    }
+                    std::collections::hash_map::Entry::Occupied(e) => {
+                        let m = e.into_mut();
+                        if full_image {
+                            img = HasFullImage(true);
+                            *m = Arc::new(OrderBookCache::new(market_id.clone(), publish_time));
+                        }
+                        m
+                    }
+                };
+
+                Arc::make_mut(market).update_cache(market_change, publish_time);
+                market_ids.push(market_id); // Move, no additional clone
             }
 
             for market_id in market_ids {
@@ -58,7 +66,7 @@ impl OrderStreamTracker {
                     continue;
                 };
 
-                updated_caches.push(market);
+                updated_caches.push(Arc::clone(market));
                 self.updates_processed = self.updates_processed.saturating_add(1);
             }
             return (Some(updated_caches), img);
@@ -75,6 +83,6 @@ impl OrderStreamTracker {
     }
 
     pub fn states(&self) -> Vec<&OrderBookCache> {
-        self.market_state.values().collect()
+        self.market_state.values().map(|arc| arc.as_ref()).collect()
     }
 }

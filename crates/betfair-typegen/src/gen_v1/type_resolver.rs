@@ -38,7 +38,7 @@ impl TypeResolverV1 {
         fn transform_to_rust_types(input: &str) -> String {
             // TODO make this a configurable thing
             match input {
-                "string" => "std::sync::Arc<String>".to_owned(),
+                "string" => "compact_str::CompactString".to_owned(),
                 "int" | "i32" => "i32".to_owned(),
                 "i64" => "i64".to_owned(),
                 "double" | "float" => "crate::numeric::F64Ord".to_owned(),

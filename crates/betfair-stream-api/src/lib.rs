@@ -5,6 +5,9 @@
 //! Users can customize how incoming messages are handled by implementing the `MessageProcessor` trait
 //! or using the built-in `Cache` processor for maintaining market and order caches.
 extern crate alloc;
+
+#[cfg(feature = "simd")]
+use simd_json;
 pub mod cache;
 use backon::{BackoffBuilder as _, ExponentialBuilder};
 use betfair_adapter::{Authenticated, BetfairRpcClient, Unauthenticated};
@@ -103,11 +106,11 @@ pub enum CachedMessage {
     Connection(ConnectionMessage),
 
     /// A batch of market book updates, each describing the current state or changes of a market.
-    MarketChange(Vec<MarketBookCache>),
+    MarketChange(Vec<Arc<MarketBookCache>>),
 
     /// A batch of order book updates, representing new orders, matched orders,
     /// and cancellations in the order cache.
-    OrderChange(Vec<OrderBookCache>),
+    OrderChange(Vec<Arc<OrderBookCache>>),
 
     /// A status message from the stream, used for heartbeats,
     /// subscription confirmations, or error notifications.
@@ -125,12 +128,10 @@ impl MessageProcessor for Cache {
             ResponseMessage::MarketChange(market_change_message) => self
                 .state
                 .market_change_update(market_change_message)
-                .map(|markets| markets.into_iter().cloned().collect::<Vec<_>>())
                 .map(CachedMessage::MarketChange),
             ResponseMessage::OrderChange(order_change_message) => self
                 .state
                 .order_change_update(order_change_message)
-                .map(|markets| markets.into_iter().cloned().collect::<Vec<_>>())
                 .map(CachedMessage::OrderChange),
             ResponseMessage::Status(status_message) => Some(CachedMessage::Status(status_message)),
         }
@@ -639,11 +640,22 @@ impl Decoder for StreamAPIClientCodec {
             // Strip the delimiter bytes
             line.truncate(line.len().saturating_sub(delimiter_size));
 
-            // Freeze into zero-copy Bytes before parsing
-            let raw = line.freeze();
+            #[cfg(feature = "simd")]
+            let (raw, data) = {
+                // simd-json requires mutable buffer and modifies it in place
+                let raw = line.clone().freeze();
+                let data = simd_json::from_slice::<ResponseMessage>(&mut line)
+                    .map_err(|e| eyre::eyre!("simd-json parse error: {}", e))?;
+                (raw, data)
+            };
 
-            // Now we can parse it as JSON
-            let data = serde_json::from_slice::<ResponseMessage>(&raw)?;
+            #[cfg(not(feature = "simd"))]
+            let (raw, data) = {
+                let raw = line.freeze();
+                let data = serde_json::from_slice::<ResponseMessage>(&raw)?;
+                (raw, data)
+            };
+
             return Ok(Some((raw, data)));
         }
         Ok(None)
