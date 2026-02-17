@@ -130,8 +130,6 @@ http = "1"
 rustls = { version = "0.23", default-features = false }
 rustls-native-certs = "0.8"
 
-# tls
-rustls-pemfile = "2"
 rcgen = { version = "0.13", features = ["pem"] }
 rsa = "0.9"
 

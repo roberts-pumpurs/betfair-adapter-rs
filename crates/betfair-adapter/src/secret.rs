@@ -97,66 +97,14 @@ impl Identity {
 impl PemIdentity {
     /// Parse PEM bytes into certificate chain and private key.
     pub fn from_pem(pem_bytes: &[u8]) -> Result<Self, std::io::Error> {
-        use std::io::BufRead;
+        use rustls::pki_types::{CertificateDer, PrivateKeyDer, pem::PemObject};
 
-        let mut reader = std::io::BufReader::new(pem_bytes);
-        let mut certs = Vec::new();
-        let mut key = None;
+        let certs: Vec<CertificateDer<'static>> = CertificateDer::pem_slice_iter(pem_bytes)
+            .collect::<Result<_, _>>()
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
 
-        // Read all PEM items
-        loop {
-            // Check if there is more data
-            let buf = reader.fill_buf()?;
-            if buf.is_empty() {
-                break;
-            }
-
-            // Try reading a certificate
-            if let Some(cert) = rustls_pemfile::certs(&mut reader).next() {
-                certs.push(cert?);
-                continue;
-            }
-
-            // Try reading a private key
-            if let Some(k) = rustls_pemfile::private_key(&mut reader)? {
-                key = Some(k);
-                continue;
-            }
-
-            break;
-        }
-
-        // If the simple approach didn't work, try a more robust approach
-        if certs.is_empty() || key.is_none() {
-            let mut reader = std::io::BufReader::new(pem_bytes);
-            certs.clear();
-            key = None;
-
-            for item in rustls_pemfile::read_all(&mut reader) {
-                match item? {
-                    rustls_pemfile::Item::X509Certificate(cert) => {
-                        certs.push(cert);
-                    }
-                    rustls_pemfile::Item::Pkcs1Key(k) => {
-                        key = Some(rustls::pki_types::PrivateKeyDer::Pkcs1(k));
-                    }
-                    rustls_pemfile::Item::Pkcs8Key(k) => {
-                        key = Some(rustls::pki_types::PrivateKeyDer::Pkcs8(k));
-                    }
-                    rustls_pemfile::Item::Sec1Key(k) => {
-                        key = Some(rustls::pki_types::PrivateKeyDer::Sec1(k));
-                    }
-                    _ => {}
-                }
-            }
-        }
-
-        let key = key.ok_or_else(|| {
-            std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "no private key found in PEM",
-            )
-        })?;
+        let key = PrivateKeyDer::from_pem_slice(pem_bytes)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
 
         if certs.is_empty() {
             return Err(std::io::Error::new(

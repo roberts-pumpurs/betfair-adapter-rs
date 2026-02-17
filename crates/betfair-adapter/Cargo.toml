@@ -20,7 +20,6 @@ http-body-util.workspace = true
 http.workspace = true
 bytes.workspace = true
 rustls.workspace = true
-rustls-pemfile.workspace = true
 rustls-native-certs.workspace = true
 serde.workspace = true
 thiserror.workspace = true
